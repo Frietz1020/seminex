@@ -1,0 +1,526 @@
+/*
+ * ============================================================
+ *  SEMINEX — Animations
+ *  Shared animation layer. Import after all other stylesheets.
+ *  Respects prefers-reduced-motion throughout.
+ * ============================================================
+ */
+
+/* ── Keyframes ──────────────────────────────────────────── */
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-24px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(24px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.93); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position:  400px 0; }
+}
+
+/* ── Utility classes ────────────────────────────────────── */
+
+.anim-fade-up   { animation: fadeUp     0.42s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.anim-fade-in   { animation: fadeIn     0.35s ease both; }
+.anim-slide-left{ animation: slideInLeft 0.38s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.anim-scale-in  { animation: scaleIn    0.32s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* Stagger delays for repeated elements */
+.anim-delay-1 { animation-delay: 0.06s; }
+.anim-delay-2 { animation-delay: 0.12s; }
+.anim-delay-3 { animation-delay: 0.18s; }
+.anim-delay-4 { animation-delay: 0.24s; }
+.anim-delay-5 { animation-delay: 0.30s; }
+
+
+/* ═══════════════════════════════════════════════════════════
+   1. AUTH PAGES  (signin / signup — both portals)
+   Layout: .left-panel > .form-container | .right-panel
+   ═══════════════════════════════════════════════════════════ */
+
+.left-panel {
+  animation: slideInLeft 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.right-panel {
+  animation: slideInRight 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Back button */
+.left-panel .back-btn {
+  animation: fadeIn 0.35s 0.15s ease both;
+}
+
+/* Form title */
+.form-title {
+  animation: fadeUp 0.4s 0.18s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Form description */
+.form-desc {
+  animation: fadeUp 0.4s 0.24s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Each field staggers in */
+.field {
+  animation: fadeUp 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.field:nth-child(1) { animation-delay: 0.28s; }
+.field:nth-child(2) { animation-delay: 0.34s; }
+.field:nth-child(3) { animation-delay: 0.40s; }
+.field:nth-child(4) { animation-delay: 0.46s; }
+.field:nth-child(5) { animation-delay: 0.52s; }
+
+/* Row options + submit button */
+.row-options,
+.terms-row,
+.remember {
+  animation: fadeUp 0.38s 0.52s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.btn-primary {
+  animation: fadeUp 0.38s 0.56s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.alt-link {
+  animation: fadeIn 0.35s 0.62s ease both;
+}
+
+/* Input focus ring animation */
+.input-wrap input {
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.input-wrap input:focus {
+  box-shadow: 0 0 0 3px rgba(139, 32, 32, 0.12);
+}
+
+/* Submit button press */
+.btn-primary {
+  transition: background 0.18s, transform 0.12s, box-shadow 0.18s;
+}
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(139, 32, 32, 0.28);
+}
+.btn-primary:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   2. PORTAL LANDING PAGE  (index.html)
+   ═══════════════════════════════════════════════════════════ */
+
+.brand {
+  animation: fadeUp 0.45s 0.05s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.portal-grid {
+  animation: fadeUp 0.45s 0.18s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.portal-card {
+  transition: box-shadow 0.22s, border-color 0.22s, transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   3. SIDEBAR  (all dashboard pages)
+   ═══════════════════════════════════════════════════════════ */
+
+.sidebar {
+  animation: slideInLeft 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Nav items stagger */
+.nav-item {
+  animation: fadeIn 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+  transition: background 0.15s, transform 0.15s;
+}
+.nav-item:nth-child(1) { animation-delay: 0.20s; }
+.nav-item:nth-child(2) { animation-delay: 0.26s; }
+.nav-item:nth-child(3) { animation-delay: 0.32s; }
+.nav-item:nth-child(4) { animation-delay: 0.38s; }
+.nav-item:nth-child(5) { animation-delay: 0.44s; }
+.nav-item:nth-child(6) { animation-delay: 0.50s; }
+
+.nav-item:hover {
+  transform: translateX(3px);
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   4. MAIN CONTENT AREA  (all dashboard pages)
+   ═══════════════════════════════════════════════════════════ */
+
+.content {
+  animation: fadeUp 0.45s 0.12s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Page title */
+.page-title {
+  animation: fadeUp 0.4s 0.18s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Search box */
+.search-box {
+  animation: fadeUp 0.38s 0.22s cubic-bezier(0.22, 1, 0.36, 1) both;
+  transition: box-shadow 0.2s, border-color 0.2s;
+}
+.search-box:focus {
+  box-shadow: 0 0 0 3px rgba(139, 32, 32, 0.12);
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   5. HOME DASHBOARD CARDS
+   ═══════════════════════════════════════════════════════════ */
+
+.welcome-card {
+  animation: fadeUp 0.45s 0.24s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.card {
+  animation: fadeUp 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
+  transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+              box-shadow 0.22s;
+}
+
+/* Stagger lower-row cards */
+.lower-row .card:nth-child(1) { animation-delay: 0.30s; }
+.lower-row .card:nth-child(2) { animation-delay: 0.38s; }
+.lower-row .card:nth-child(3) { animation-delay: 0.46s; }
+
+.card:hover {
+  transform: translateY(-3px);
+  box-shadow: 4px 8px 0px rgba(139, 32, 32, 0.20);
+}
+
+/* Action buttons inside cards */
+.btn-solid,
+.btn-outline {
+  transition: background 0.18s, color 0.18s, transform 0.12s, box-shadow 0.18s;
+}
+.btn-solid:hover,
+.btn-outline:hover {
+  transform: translateY(-1px);
+}
+.btn-solid:active,
+.btn-outline:active {
+  transform: translateY(0);
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   6. SEMINAR CARDS (available-seminar, your-seminar)
+   ═══════════════════════════════════════════════════════════ */
+
+.seminar-card {
+  animation: fadeUp 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
+  transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+              box-shadow 0.22s,
+              border-color 0.22s;
+}
+
+.card-grid .seminar-card:nth-child(1) { animation-delay: 0.20s; }
+.card-grid .seminar-card:nth-child(2) { animation-delay: 0.28s; }
+.card-grid .seminar-card:nth-child(3) { animation-delay: 0.36s; }
+.card-grid .seminar-card:nth-child(4) { animation-delay: 0.44s; }
+.card-grid .seminar-card:nth-child(5) { animation-delay: 0.52s; }
+.card-grid .seminar-card:nth-child(6) { animation-delay: 0.60s; }
+
+.seminar-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 4px 10px 0px rgba(139, 32, 32, 0.18);
+  border-color: rgba(139, 32, 32, 0.30);
+}
+
+/* View button */
+.view-btn {
+  transition: color 0.15s, letter-spacing 0.15s;
+}
+.seminar-card:hover .view-btn {
+  letter-spacing: 0.03em;
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   7. HISTORY ROWS & CARDS
+   ═══════════════════════════════════════════════════════════ */
+
+.history-row,
+.history-card {
+  animation: fadeUp 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+  transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+              box-shadow 0.2s;
+}
+
+.history-row:nth-child(1),
+.history-card:nth-child(1) { animation-delay: 0.18s; }
+.history-row:nth-child(2),
+.history-card:nth-child(2) { animation-delay: 0.24s; }
+.history-row:nth-child(3),
+.history-card:nth-child(3) { animation-delay: 0.30s; }
+.history-row:nth-child(4),
+.history-card:nth-child(4) { animation-delay: 0.36s; }
+.history-row:nth-child(5),
+.history-card:nth-child(5) { animation-delay: 0.42s; }
+.history-row:nth-child(6),
+.history-card:nth-child(6) { animation-delay: 0.48s; }
+
+.history-row:hover,
+.history-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 2px 6px 0px rgba(139, 32, 32, 0.14);
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   8. DETAIL PAGES (seminar-detail, available-seminar-detail,
+      history-seminar-detail, org-your-seminar)
+   ═══════════════════════════════════════════════════════════ */
+
+.back-btn {
+  animation: fadeIn 0.3s 0.05s ease both;
+  transition: color 0.15s, transform 0.15s;
+}
+.back-btn:hover {
+  transform: translateX(-3px);
+}
+
+.img-placeholder,
+.detail-banner {
+  animation: scaleIn 0.45s 0.10s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.detail-row-top {
+  animation: fadeUp 0.4s 0.18s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.detail-row-mid {
+  animation: fadeUp 0.4s 0.24s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.detail-row-single {
+  animation: fadeUp 0.4s 0.30s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.info-card {
+  animation: fadeUp 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+.info-card:nth-child(1) { animation-delay: 0.34s; }
+.info-card:nth-child(2) { animation-delay: 0.40s; }
+.info-card:nth-child(3) { animation-delay: 0.46s; }
+
+.info-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 2px 5px 0px rgba(139, 32, 32, 0.12);
+}
+
+/* Register / action buttons */
+.btn-register,
+.btn-qr,
+.btn-cert,
+.btn-submit,
+.btn-finish {
+  transition: background 0.18s, transform 0.12s, box-shadow 0.18s;
+}
+.btn-register:hover,
+.btn-qr:hover,
+.btn-cert:hover,
+.btn-submit:hover,
+.btn-finish:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(139, 32, 32, 0.28);
+}
+.btn-register:active,
+.btn-qr:active,
+.btn-cert:active,
+.btn-submit:active,
+.btn-finish:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+/* Badge */
+.badge-status {
+  animation: scaleIn 0.3s 0.22s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Evaluation section */
+.eval-section,
+.eval-header-card {
+  animation: fadeUp 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Certificate area */
+.cert-placeholder,
+.cert-workspace {
+  animation: scaleIn 0.45s 0.25s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   9. PROFILE PAGES
+   ═══════════════════════════════════════════════════════════ */
+
+.avatar {
+  animation: scaleIn 0.4s 0.16s cubic-bezier(0.22, 1, 0.36, 1) both;
+  transition: transform 0.22s;
+}
+.avatar:hover {
+  transform: scale(1.04);
+}
+
+.completed-card {
+  animation: fadeUp 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.completed-card:nth-child(1) { animation-delay: 0.20s; }
+.completed-card:nth-child(2) { animation-delay: 0.28s; }
+.completed-card:nth-child(3) { animation-delay: 0.36s; }
+
+.completed-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 3px 6px 0px rgba(139, 32, 32, 0.16);
+}
+
+/* Save button */
+.btn-save {
+  transition: background 0.18s, transform 0.12s, box-shadow 0.18s;
+}
+.btn-save:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(139, 32, 32, 0.25);
+}
+.btn-save:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   10. MODALS  (overlay + box)
+   Modals use .open class toggled by JS — we enhance the
+   existing transition rather than replace it.
+   ═══════════════════════════════════════════════════════════ */
+
+.modal-overlay {
+  transition: opacity 0.25s cubic-bezier(0.22, 1, 0.36, 1) !important;
+}
+
+.modal-box {
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+              opacity 0.25s cubic-bezier(0.22, 1, 0.36, 1) !important;
+  opacity: 0;
+}
+
+.modal-overlay.open .modal-box {
+  opacity: 1;
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   11. ORG CREATE SEMINAR — form sections & bottom bar
+   ═══════════════════════════════════════════════════════════ */
+
+.img-upload-area {
+  transition: border-color 0.2s, background 0.2s, transform 0.15s;
+}
+.img-upload-area:hover {
+  transform: scale(1.01);
+}
+
+.bottom-bar {
+  animation: fadeUp 0.38s 0.1s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.add-question-block {
+  animation: fadeUp 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+  transition: transform 0.18s, box-shadow 0.18s;
+}
+.add-question-block:hover {
+  transform: translateY(-1px);
+}
+
+/* Color swatches */
+.color-swatches span,
+.color-swatches button {
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.color-swatches span:hover,
+.color-swatches button:hover {
+  transform: scale(1.18);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+}
+
+/* Go button */
+.go-btn {
+  transition: color 0.15s, letter-spacing 0.15s, transform 0.15s;
+}
+.go-btn:hover {
+  letter-spacing: 0.03em;
+  transform: translateX(2px);
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   12. LOGOUT BUTTON
+   ═══════════════════════════════════════════════════════════ */
+
+.logout-btn {
+  transition: background 0.15s, transform 0.15s, color 0.15s;
+}
+.logout-btn:hover {
+  transform: translateX(2px);
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   13. TAGS / PILLS
+   ═══════════════════════════════════════════════════════════ */
+
+.tag, .pill {
+  transition: background 0.15s, transform 0.12s;
+}
+.tag:hover, .pill:hover {
+  transform: scale(1.05);
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   REDUCED MOTION — disable all animations & transitions
+   for users who prefer it
+   ═══════════════════════════════════════════════════════════ */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
