@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Seminex – Your Seminar</title>
+
+  <!--
+    ╔══════════════════════════════════════════════════╗
+    ║  CUSTOM FONT — replace the import & font-family  ║
+    ║  in :root below with your downloaded font.       ║
+    ╚══════════════════════════════════════════════════╝
+  -->
+  <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;600;700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --font-display: 'Lora', serif;   /* CUSTOM FONT ↓ */
+      --font-body:    'DM Sans', sans-serif;
+      --cream:        #fdf8e1;
+      --maroon:       #8b2020;
+      --maroon-dark:  #6e1a1a;
+      --orange:       #e8722a;
+      --sidebar-bg:   #d4601a;
+      --text-dark:    #3a2e2e;
+      --text-muted:   #7a6a5a;
+      --border:       #d4c9a0;
+      --card-shadow:  rgba(139,32,32,.18);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      display: flex;
+      min-height: 100vh;
+      font-family: var(--font-body);
+      background: var(--cream);
+    }
+
+    /* ── Sidebar (shared) ─────────────────────────── */
+    .sidebar {
+      width: 220px;
+      background: var(--sidebar-bg);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      position: fixed;
+      top: 0; left: 0;
+      height: 100vh;
+      z-index: 100;
+    }
+    .sidebar-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 20px 18px 22px;
+      border-bottom: 1px solid rgba(255,255,255,.15);
+    }
+    /* LOGO PLACEHOLDER — replace .logo-mini with <img src="assets/logo-mini.png"> */
+    .logo-mini {
+      width: 36px; height: 36px;
+      background: rgba(255,255,255,.15);
+      border: 1.5px dashed rgba(255,255,255,.5);
+      border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .logo-mini span { font-size: 9px; color: rgba(255,255,255,.6); text-align: center; line-height: 1.2; }
+    .brand-label {
+      font-family: var(--font-display); /* CUSTOM FONT ↓ */
+      font-size: 20px; font-weight: 700; color: #fff; letter-spacing: .02em;
+    }
+    .sidebar-nav { flex: 1; padding: 16px 12px; display: flex; flex-direction: column; gap: 4px; }
+    .nav-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 11px 14px; border-radius: 10px;
+      color: rgba(255,255,255,.85);
+      font-family: var(--font-body); font-size: 14px; font-weight: 500;
+      text-decoration: none; transition: background .15s; cursor: pointer;
+    }
+    .nav-item:hover { background: rgba(255,255,255,.15); }
+    .nav-item.active { background: rgba(255,255,255,.22); color: #fff; font-weight: 600; }
+    .nav-item svg { width: 18px; height: 18px; flex-shrink: 0; }
+    .sidebar-footer { padding: 12px 12px 24px; }
+    .logout-btn {
+      display: flex; align-items: center; gap: 12px;
+      padding: 11px 14px; border-radius: 10px;
+      color: rgba(255,255,255,.8); font-family: var(--font-body);
+      font-size: 14px; font-weight: 500;
+      cursor: pointer; border: none; background: none; width: 100%;
+      transition: background .15s;
+    }
+    .logout-btn:hover { background: rgba(255,255,255,.15); }
+    .logout-btn svg { width: 18px; height: 18px; }
+
+    /* ── Main ─────────────────────────────────────── */
+    .main { margin-left: 220px; flex: 1; display: flex; flex-direction: column; min-height: 100vh; }
+
+    .topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 22px 36px 18px;
+      border-bottom: 1.5px solid var(--border);
+      background: var(--cream);
+    }
+    .page-title {
+      font-family: var(--font-display); /* CUSTOM FONT ↓ */
+      font-size: 32px; font-weight: 700; color: var(--maroon);
+    }
+
+    /* Search box */
+    .search-box {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--cream);
+      border: 1.5px solid var(--border);
+      border-radius: 50px;
+      padding: 9px 16px;
+      width: 240px;
+    }
+    .search-box svg { width: 16px; height: 16px; color: var(--text-muted); flex-shrink: 0; }
+    .search-box input {
+      border: none; background: transparent; outline: none;
+      font-family: var(--font-body); font-size: 14px; color: var(--text-dark); width: 100%;
+    }
+    .search-box input::placeholder { color: var(--text-muted); }
+
+    /* ── Seminar card grid ─────────────────────────── */
+    .content { padding: 28px 36px; }
+
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+
+    .seminar-card {
+      background: var(--cream);
+      border: 1.5px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 3px 5px 0px var(--card-shadow);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .card-img-placeholder {
+      background: var(--cream);
+      border: 1.5px dashed var(--border);
+      border-radius: 10px;
+      margin: 10px 10px 0;
+      height: 110px;
+      flex-shrink: 0;
+    }
+
+    .card-tags {
+      display: flex; gap: 6px;
+      padding: 10px 10px 0;
+    }
+
+    .tag {
+      background: var(--maroon);
+      color: #fdf8e1;
+      font-family: var(--font-body);
+      font-size: 11px;
+      border-radius: 6px;
+      padding: 5px 10px;
+    }
+
+    .card-title {
+      font-family: var(--font-display); /* CUSTOM FONT ↓ */
+      font-size: 13px; font-weight: 700;
+      color: var(--maroon);
+      padding: 10px 10px 6px;
+      line-height: 1.35;
+      flex: 1;
+    }
+
+    .card-meta {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 10px 12px;
+    }
+
+    .org-row { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--maroon); }
+    .org-dot { width: 11px; height: 11px; border-radius: 50%; background: #c0392b; flex-shrink: 0; }
+
+    .view-btn {
+      display: flex; align-items: center; gap: 4px;
+      background: var(--maroon);
+      color: #fdf8e1;
+      border: none; border-radius: 50px;
+      padding: 6px 12px;
+      font-family: var(--font-body); font-size: 12px;
+      cursor: pointer;
+      box-shadow: 1px 2px 0px rgba(0,0,0,.15);
+      text-decoration: none;
+      transition: background .15s;
+    }
+    .view-btn:hover { background: var(--maroon-dark); }
+      .brand-logo { display: block; object-fit: contain; background: transparent !important; border: 0 !important; border-radius: 0 !important; }
+    .sidebar-brand .brand-logo { width: 36px; height: 36px; flex-shrink: 0; }
+    .right-panel .brand-logo { width: 160px; height: 160px; margin-bottom: 24px; }
+    .logo-mark-img { width: 50px; height: 50px; flex: 0 0 auto; }
+  </style>
+  <link rel="stylesheet" href="../shared/css/attendee-portal.min.css">
+</head>
+<body class="attendee-portal">
+
+  <!-- ═══════════════ SIDEBAR ═══════════════ -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <!-- LOGO PLACEHOLDER — replace with <img src="assets/logo-mini.png"> -->
+      <img class="logo-mini brand-logo" src="../assets/svg/seminex-logo-white.svg" alt="Seminex logo">
+      <span class="brand-label">Seminex</span>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="home.html" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z"/><path d="M9 21V12h6v9"/></svg>
+        Home
+      </a>
+      <a href="your-seminar.html" class="nav-item active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Your Seminars
+      </a>
+      <a href="available-seminar.html" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        Available Seminars
+      </a>
+      <a href="history.html" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="12 8 12 12 14 14"/><path d="M3.05 11a9 9 0 1 0 .5-4.5"/><polyline points="3 3 3 8 8 8"/></svg>
+        History
+      </a>
+      <a href="profile.html" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Profile
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="logout-btn" onclick="window.location.href='signin.html'">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Logout
+      </button>
+    </div>
+  </aside>
+
+  <!-- ═══════════════ MAIN ═══════════════ -->
+  <main class="main">
+    <div class="topbar">
+      <h1 class="page-title">Your Seminar</h1>
+      <div class="search-box">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="22" y2="22"/></svg>
+        <input type="text" placeholder="Search seminar" />
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="card-grid">
+
+        <!-- Card 1 — short title -->
+        <div class="seminar-card">
+          <div class="card-img-placeholder"></div>
+          <div class="card-tags">
+            <span class="tag">Date</span>
+            <span class="tag">Time</span>
+            <span class="tag">Place</span>
+          </div>
+          <div class="card-title"># Seminar Title</div>
+          <div class="card-meta">
+            <div class="org-row"><span class="org-dot"></span><span>#Organization Name</span></div>
+            <a href="seminar-detail.html?seminar_id=SEM-001&user_id=USER-001&user_name=Participant%20Name%20Here&seminar_title=%23%20Seminar%20Title" class="view-btn">View ›</a>
+          </div>
+        </div>
+
+        <!-- Card 2 — long title -->
+        <div class="seminar-card">
+          <div class="card-img-placeholder"></div>
+          <div class="card-tags">
+            <span class="tag">Date</span>
+            <span class="tag">Time</span>
+            <span class="tag">Place</span>
+          </div>
+          <div class="card-title"># Seminar Title but long kasi para sa test case wawa</div>
+          <div class="card-meta">
+            <div class="org-row"><span class="org-dot"></span><span>#Organization Name</span></div>
+            <a href="seminar-detail.html?seminar_id=SEM-002&user_id=USER-001&user_name=Participant%20Name%20Here&seminar_title=%23%20Seminar%20Title%20but%20long%20kasi%20para%20sa%20test%20case%20wawa" class="view-btn">View ›</a>
+          </div>
+        </div>
+
+        <!-- Card 3 — long title -->
+        <div class="seminar-card">
+          <div class="card-img-placeholder"></div>
+          <div class="card-tags">
+            <span class="tag">Date</span>
+            <span class="tag">Time</span>
+            <span class="tag">Place</span>
+          </div>
+          <div class="card-title"># Seminar Title but long kasi para sa test case wawa</div>
+          <div class="card-meta">
+            <div class="org-row"><span class="org-dot"></span><span>#Organization Name</span></div>
+            <a href="seminar-detail.html?seminar_id=SEM-003&user_id=USER-001&user_name=Participant%20Name%20Here&seminar_title=%23%20Seminar%20Title%20but%20long%20kasi%20para%20sa%20test%20case%20wawa" class="view-btn">View ›</a>
+          </div>
+        </div>
+
+        <!-- Card 4 -->
+        <div class="seminar-card">
+          <div class="card-img-placeholder"></div>
+          <div class="card-tags">
+            <span class="tag">Date</span>
+            <span class="tag">Time</span>
+            <span class="tag">Place</span>
+          </div>
+          <div class="card-title"># Seminar Title</div>
+          <div class="card-meta">
+            <div class="org-row"><span class="org-dot"></span><span>#Organization Name</span></div>
+            <a href="seminar-detail.html?seminar_id=SEM-004&user_id=USER-001&user_name=Participant%20Name%20Here&seminar_title=%23%20Seminar%20Title" class="view-btn">View ›</a>
+          </div>
+        </div>
+
+        <!-- Card 5 -->
+        <div class="seminar-card">
+          <div class="card-img-placeholder"></div>
+          <div class="card-tags">
+            <span class="tag">Date</span>
+            <span class="tag">Time</span>
+            <span class="tag">Place</span>
+          </div>
+          <div class="card-title"># Seminar Title but long kasi para sa test case wawa</div>
+          <div class="card-meta">
+            <div class="org-row"><span class="org-dot"></span><span>#Organization Name</span></div>
+            <a href="seminar-detail.html?seminar_id=SEM-005&user_id=USER-001&user_name=Participant%20Name%20Here&seminar_title=%23%20Seminar%20Title%20but%20long%20kasi%20para%20sa%20test%20case%20wawa" class="view-btn">View ›</a>
+          </div>
+        </div>
+
+        <!-- Card 6 -->
+        <div class="seminar-card">
+          <div class="card-img-placeholder"></div>
+          <div class="card-tags">
+            <span class="tag">Date</span>
+            <span class="tag">Time</span>
+            <span class="tag">Place</span>
+          </div>
+          <div class="card-title"># Seminar Title but long kasi para sa test case wawa</div>
+          <div class="card-meta">
+            <div class="org-row"><span class="org-dot"></span><span>#Organization Name</span></div>
+            <a href="seminar-detail.html?seminar_id=SEM-006&user_id=USER-001&user_name=Participant%20Name%20Here&seminar_title=%23%20Seminar%20Title%20but%20long%20kasi%20para%20sa%20test%20case%20wawa" class="view-btn">View ›</a>
+          </div>
+        </div>
+
+        <!-- Card 7 -->
+        <div class="seminar-card">
+          <div class="card-img-placeholder"></div>
+          <div class="card-tags">
+            <span class="tag">Date</span>
+            <span class="tag">Time</span>
+            <span class="tag">Place</span>
+          </div>
+          <div class="card-title"># Seminar Title</div>
+          <div class="card-meta">
+            <div class="org-row"><span class="org-dot"></span><span>#Organization Name</span></div>
+            <a href="seminar-detail.html?seminar_id=SEM-007&user_id=USER-001&user_name=Participant%20Name%20Here&seminar_title=%23%20Seminar%20Title" class="view-btn">View ›</a>
+          </div>
+        </div>
+
+        <!-- Card 8 -->
+        <div class="seminar-card">
+          <div class="card-img-placeholder"></div>
+          <div class="card-tags">
+            <span class="tag">Date</span>
+            <span class="tag">Time</span>
+            <span class="tag">Place</span>
+          </div>
+          <div class="card-title"># Seminar Title but long kasi para sa test case wawa</div>
+          <div class="card-meta">
+            <div class="org-row"><span class="org-dot"></span><span>#Organization Name</span></div>
+            <a href="seminar-detail.html?seminar_id=SEM-008&user_id=USER-001&user_name=Participant%20Name%20Here&seminar_title=%23%20Seminar%20Title%20but%20long%20kasi%20para%20sa%20test%20case%20wawa" class="view-btn">View ›</a>
+          </div>
+        </div>
+
+        <!-- Card 9 -->
+        <div class="seminar-card">
+          <div class="card-img-placeholder"></div>
+          <div class="card-tags">
+            <span class="tag">Date</span>
+            <span class="tag">Time</span>
+            <span class="tag">Place</span>
+          </div>
+          <div class="card-title"># Seminar Title but long kasi para sa test case wawa</div>
+          <div class="card-meta">
+            <div class="org-row"><span class="org-dot"></span><span>#Organization Name</span></div>
+            <a href="seminar-detail.html?seminar_id=SEM-009&user_id=USER-001&user_name=Participant%20Name%20Here&seminar_title=%23%20Seminar%20Title%20but%20long%20kasi%20para%20sa%20test%20case%20wawa" class="view-btn">View ›</a>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+</body>
+</html>

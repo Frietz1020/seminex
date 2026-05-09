@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Seminex — Welcome</title>
+  <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;600;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="src/shared/css/tokens.css">
+  <style>
+    body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: var(--color-bg);
+      font-family: var(--font-body);
+      padding: var(--space-xl) var(--space-lg);
+    }
+
+    .brand {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-sm);
+      margin-bottom: var(--space-2xl);
+    }
+
+    .brand-logo {
+      width: 56px;
+      height: 56px;
+      background: var(--color-primary);
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .brand-logo svg {
+      width: 32px;
+      height: 32px;
+      fill: var(--color-text-on-primary);
+    }
+
+    .brand-name {
+      font-family: var(--font-display);
+      font-size: 36px;
+      font-weight: 700;
+      color: var(--color-primary);
+      letter-spacing: -0.5px;
+    }
+
+    .brand-tagline {
+      font-size: 15px;
+      color: var(--color-text-muted);
+      text-align: center;
+      max-width: 320px;
+      line-height: 1.5;
+    }
+
+    .portal-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-lg);
+      width: 100%;
+      max-width: 640px;
+    }
+
+    .portal-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-md);
+      padding: var(--space-xl) var(--space-lg);
+      background: #fff;
+      border: 1.5px solid var(--color-border);
+      border-radius: var(--radius-card);
+      text-decoration: none;
+      color: var(--color-text-dark);
+      transition: box-shadow 0.18s, border-color 0.18s, transform 0.18s;
+      cursor: pointer;
+    }
+
+    .portal-card:hover {
+      box-shadow: var(--shadow-card);
+      border-color: var(--color-primary);
+      transform: translateY(-2px);
+    }
+
+    .portal-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .portal-icon.attendee {
+      background: #fdf1e0;
+    }
+
+    .portal-icon.org {
+      background: #fde8e8;
+    }
+
+    .portal-icon svg {
+      width: 26px;
+      height: 26px;
+    }
+
+    .portal-label {
+      font-family: var(--font-display);
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--color-text-dark);
+      text-align: center;
+    }
+
+    .portal-desc {
+      font-size: 13px;
+      color: var(--color-text-muted);
+      text-align: center;
+      line-height: 1.5;
+    }
+
+    .portal-cta {
+      display: inline-block;
+      margin-top: var(--space-xs);
+      padding: 9px 22px;
+      background: var(--color-primary);
+      color: var(--color-text-on-primary);
+      font-family: var(--font-body);
+      font-size: 13px;
+      font-weight: 500;
+      border-radius: var(--radius-btn);
+      text-decoration: none;
+      transition: background 0.15s;
+    }
+
+    .portal-card:hover .portal-cta {
+      background: var(--color-primary-dark);
+    }
+
+    .footer {
+      margin-top: var(--space-2xl);
+      font-size: 12px;
+      color: var(--color-muted);
+      text-align: center;
+    }
+
+    @media (max-width: 520px) {
+      .portal-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .brand-name {
+        font-size: 28px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── Brand ─────────────────────────────────────── -->
+  <div class="brand">
+    <div class="brand-logo">
+      <!-- Replace with <img src="src/assets/svg/seminex-logo-white.svg"> when asset is available -->
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+      </svg>
+    </div>
+    <h1 class="brand-name">Seminex</h1>
+    <p class="brand-tagline">Seminar management platform — choose your portal to continue.</p>
+  </div>
+
+  <!-- ── Portal selection ───────────────────────────── -->
+  <div class="portal-grid">
+
+    <!-- Attendee Portal -->
+    <a class="portal-card" href="src/attendee/signin.html">
+      <div class="portal-icon attendee">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#e8722a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+          <circle cx="12" cy="7" r="4"/>
+        </svg>
+      </div>
+      <span class="portal-label">Attendee Portal</span>
+      <span class="portal-desc">Browse seminars, register, track your history, and manage your profile.</span>
+      <span class="portal-cta">Sign In →</span>
+    </a>
+
+    <!-- Organization Portal -->
+    <a class="portal-card" href="src/org/org-signin.html">
+      <div class="portal-icon org">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#8b2020" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="7" width="20" height="14" rx="2"/>
+          <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>
+          <line x1="12" y1="12" x2="12" y2="16"/>
+          <line x1="10" y1="14" x2="14" y2="14"/>
+        </svg>
+      </div>
+      <span class="portal-label">Organization Portal</span>
+      <span class="portal-desc">Create and manage seminars, view registrations, and oversee your events.</span>
+      <span class="portal-cta">Sign In →</span>
+    </a>
+
+  </div>
+
+  <p class="footer">© 2025 Seminex. All rights reserved.</p>
+
+</body>
+</html>

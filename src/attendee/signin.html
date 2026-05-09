@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Seminex – Sign In</title>
+
+  <!--
+    ╔══════════════════════════════════════════════════╗
+    ║  CUSTOM FONT — replace the import & font-family  ║
+    ║  in :root below with your downloaded font.       ║
+    ╚══════════════════════════════════════════════════╝
+  -->
+  <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;600;700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+
+  <style>
+    /* ── Design tokens ─────────────────────────────── */
+    :root {
+      /* CUSTOM FONT ↓ change 'Lora' to your font name */
+      --font-display: 'Lora', serif;
+      --font-body:    'DM Sans', sans-serif;
+
+      --cream:        #fdf8e1;
+      --maroon:       #8b2020;
+      --maroon-dark:  #6e1a1a;
+      --orange:       #e8722a;
+      --orange-hover: #d4621c;
+      --text-dark:    #3a2e2e;
+      --text-muted:   #7a6a5a;
+      --border:       #d4c9a0;
+      --input-bg:     #fffdf0;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      display: flex;
+      min-height: 100vh;
+      font-family: var(--font-body);
+      background: var(--cream);
+    }
+
+    /* ── Left panel (form) ─────────────────────────── */
+    .left-panel {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 48px;
+      background: var(--cream);
+    }
+
+    .form-container {
+      width: 100%;
+      max-width: 400px;
+    }
+
+    .form-title {
+      /* CUSTOM FONT ↓ */
+      font-family: var(--font-display);
+      font-size: 36px;
+      font-weight: 700;
+      color: var(--text-dark);
+      margin-bottom: 8px;
+    }
+
+    .form-desc {
+      font-family: var(--font-body);
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-bottom: 36px;
+    }
+
+    .field { margin-bottom: 20px; }
+
+    .field label {
+      display: block;
+      font-family: var(--font-body);
+      font-size: 13px;
+      color: var(--text-dark);
+      margin-bottom: 6px;
+    }
+
+    .input-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .input-wrap input {
+      width: 100%;
+      padding: 10px 40px 10px 12px;
+      background: var(--input-bg);
+      border: 1.5px solid var(--border);
+      border-radius: 6px;
+      font-family: var(--font-body);
+      font-size: 14px;
+      color: var(--text-dark);
+      outline: none;
+      transition: border-color .2s;
+    }
+
+    .input-wrap input:focus { border-color: var(--maroon); }
+
+    .input-wrap input::placeholder { color: #b8a890; }
+
+    .input-suffix {
+      position: absolute;
+      right: 10px;
+      font-size: 12px;
+      color: var(--text-muted);
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
+    .toggle-pw {
+      position: absolute;
+      right: 10px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text-muted);
+      font-size: 16px;
+      line-height: 1;
+      padding: 2px;
+    }
+
+    .row-options {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 28px;
+    }
+
+    .remember {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 13px;
+      color: var(--text-dark);
+      cursor: pointer;
+    }
+
+    .remember input[type="checkbox"] {
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+      accent-color: var(--maroon);
+    }
+
+    .forgot-link {
+      font-size: 13px;
+      color: var(--text-dark);
+      text-decoration: none;
+      transition: color .15s;
+    }
+    .forgot-link:hover { color: var(--maroon); }
+
+    .btn-primary {
+      width: 100%;
+      padding: 13px;
+      background: var(--orange);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-family: var(--font-body);
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background .2s;
+      margin-bottom: 20px;
+    }
+    .btn-primary:hover { background: var(--orange-hover); }
+
+    .alt-link {
+      text-align: center;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+    .alt-link a {
+      color: var(--text-dark);
+      font-weight: 600;
+      text-decoration: none;
+      transition: color .15s;
+    }
+    .alt-link a:hover { color: var(--maroon); }
+
+    /* ── Right panel (branding) ─────────────────────── */
+    .right-panel {
+      width: 48%;
+      background: var(--maroon);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 40px;
+      position: relative;
+    }
+
+    /*
+      ┌─────────────────────────────────────────────────┐
+      │  LOGO PLACEHOLDER                               │
+      │  Replace the <img> src with your logo file.     │
+      │  Suggested size: 160×160 px, transparent PNG.   │
+      └─────────────────────────────────────────────────┘
+    */
+    .logo-img {
+      width: 160px;
+      height: 160px;
+      object-fit: contain;
+      margin-bottom: 24px;
+      /* Placeholder style — remove once real logo is set */
+      background: rgba(255,255,255,.08);
+      border: 2px dashed rgba(255,255,255,.3);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .logo-placeholder-text {
+      color: rgba(255,255,255,.4);
+      font-size: 12px;
+      text-align: center;
+      line-height: 1.5;
+    }
+
+    .brand-name {
+      /* CUSTOM FONT ↓ */
+      font-family: var(--font-display);
+      font-size: 40px;
+      font-weight: 700;
+      letter-spacing: .12em;
+      color: #fdf8e1;
+      margin-bottom: 12px;
+    }
+
+    .brand-tagline {
+      /* CUSTOM FONT ↓ */
+      font-family: var(--font-display);
+      font-size: 16px;
+      color: rgba(253,248,225,.75);
+      text-align: center;
+      max-width: 320px;
+      line-height: 1.5;
+    }
+
+    .brand-meta {
+      position: absolute;
+      bottom: 32px;
+      font-family: var(--font-body);
+      font-size: 12px;
+      color: rgba(253,248,225,.45);
+      letter-spacing: .04em;
+    }
+      .brand-logo { display: block; object-fit: contain; background: transparent !important; border: 0 !important; border-radius: 0 !important; }
+    .sidebar-brand .brand-logo { width: 36px; height: 36px; flex-shrink: 0; }
+    .right-panel .brand-logo { width: 160px; height: 160px; margin-bottom: 24px; }
+    .logo-mark-img { width: 50px; height: 50px; flex: 0 0 auto; }
+  </style>
+  <link rel="stylesheet" href="../shared/css/attendee-portal.min.css">
+</head>
+<body class="attendee-portal">
+
+  <!-- ── LEFT: form ─────────────────────────────────── -->
+  <div class="left-panel">
+    <div class="form-container">
+      <h1 class="form-title">Welcome Back!</h1>
+      <p class="form-desc">A welcoming description here awelcomg descriptionhere</p>
+
+      <div class="field">
+        <label>Email Address</label>
+        <div class="input-wrap">
+          <input type="email" placeholder="" />
+          <span class="input-suffix">@gordoncollege.edu.ph</span>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Password</label>
+        <div class="input-wrap">
+          <input type="password" id="pw-signin" placeholder="" />
+          <button class="toggle-pw" onclick="togglePw('pw-signin', this)" title="Show/hide password">
+            <!--  eye-off icon  -->
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+              <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+              <line x1="1" y1="1" x2="23" y2="23"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="row-options">
+        <label class="remember">
+          <input type="checkbox" /> Remember me
+        </label>
+        <a href="#" class="forgot-link">Forgot Password?</a>
+      </div>
+
+      <a href="home.html"><button class="btn-primary">Sign In</button></a>
+
+      <p class="alt-link">
+        Don't have an account? <a href="signup.html">Create an Account</a>
+      </p>
+    </div>
+  </div>
+
+  <!-- ── RIGHT: branding ────────────────────────────── -->
+  <div class="right-panel">
+
+    <!--
+      LOGO — replace src with your logo path, e.g. src="assets/logo.png"
+      Remove the inner div once the real image is in place.
+    -->
+    <img class="logo-img brand-logo" src="../assets/svg/seminex-logo.svg" alt="Seminex logo">
+
+    <div class="brand-name">SEMINEX</div>
+    <p class="brand-tagline">Tagline here taglinehere tagline here</p>
+    <p class="brand-meta">Version . Year of Deployment . Team Name</p>
+  </div>
+
+  <script>
+    function togglePw(id, btn) {
+      const input = document.getElementById(id);
+      const isHidden = input.type === 'password';
+      input.type = isHidden ? 'text' : 'password';
+      btn.innerHTML = isHidden
+        ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`
+        : `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`;
+    }
+  </script>
+</body>
+</html>

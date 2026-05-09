@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Seminex Org – Create Seminar</title>
+  <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;600;700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --font-display: 'Lora', serif;   /* CUSTOM FONT ↓ */
+      --font-body:    'DM Sans', sans-serif;
+      --cream: #fdf8e1; --maroon: #8b2020; --maroon-dark: #6e1a1a;
+      --sidebar-bg: #d4601a; --text-dark: #3a2e2e; --text-muted: #7a6a5a;
+      --border: #d4c9a0; --card-shadow: rgba(139,32,32,.18);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { display: flex; min-height: 100vh; font-family: var(--font-body); background: var(--cream); }
+
+    /* ══ SIDEBAR ══ */
+    .sidebar { width: 220px; background: var(--sidebar-bg); display: flex; flex-direction: column; flex-shrink: 0; position: fixed; top: 0; left: 0; height: 100vh; z-index: 100; }
+    .sidebar-brand { display: flex; align-items: center; gap: 10px; padding: 20px 18px 22px; border-bottom: 1px solid rgba(255,255,255,.15); }
+    /* LOGO PLACEHOLDER — replace .logo-mini with <img src="assets/logo-mini.png" style="width:36px;height:36px;object-fit:contain;"> */
+    .logo-mini { width: 36px; height: 36px; background: rgba(255,255,255,.15); border: 1.5px dashed rgba(255,255,255,.5); border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .logo-mini span { font-size: 9px; color: rgba(255,255,255,.6); text-align: center; line-height: 1.2; }
+    .brand-label { font-family: var(--font-display); font-size: 20px; font-weight: 700; color: #fff; letter-spacing: .02em; } /* CUSTOM FONT ↓ */
+    .sidebar-nav { flex: 1; padding: 16px 12px; display: flex; flex-direction: column; gap: 4px; }
+    .nav-item { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-radius: 10px; color: rgba(255,255,255,.85); font-family: var(--font-body); font-size: 14px; font-weight: 500; text-decoration: none; transition: background .15s; }
+    .nav-item:hover { background: rgba(255,255,255,.15); }
+    .nav-item.active { background: rgba(255,255,255,.22); color: #fff; font-weight: 600; }
+    .nav-item svg { width: 18px; height: 18px; flex-shrink: 0; }
+    .sidebar-footer { padding: 12px 12px 24px; }
+    .logout-btn { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-radius: 10px; color: rgba(255,255,255,.8); font-family: var(--font-body); font-size: 14px; font-weight: 500; cursor: pointer; border: none; background: none; width: 100%; transition: background .15s; }
+    .logout-btn:hover { background: rgba(255,255,255,.15); }
+    .logout-btn svg { width: 18px; height: 18px; }
+
+    /* ══ MAIN ══ */
+    .main { margin-left: 220px; flex: 1; display: flex; flex-direction: column; min-height: 100vh; overflow: hidden; }
+
+    /* ══ TAB BAR ══ */
+    .topbar { display: flex; align-items: center; justify-content: flex-start; padding: 0 36px; border-bottom: 1.5px solid var(--border); background: var(--cream); min-height: 64px; flex-shrink: 0; gap: 0; }
+
+    .tab-btn {
+      position: relative; background: none; border: none;
+      font-family: var(--font-display); /* CUSTOM FONT ↓ */
+      font-size: 16px; font-weight: 600;
+      color: var(--text-muted); padding: 20px 32px; transition: color .2s;
+    }
+    /* Active tab — maroon + underline */
+    .tab-btn.active { color: var(--maroon); cursor: pointer; }
+    .tab-btn.active::after { content: ''; position: absolute; bottom: -1px; left: 0; right: 0; height: 2.5px; background: var(--maroon); border-radius: 2px 2px 0 0; }
+
+    /* Locked tabs — grayed out, no pointer */
+    .tab-btn.locked { color: #c4b898; cursor: not-allowed; }
+
+    /* Unlocked but not active — clickable */
+    .tab-btn.unlocked { color: var(--text-muted); cursor: pointer; }
+    .tab-btn.unlocked:hover { color: var(--maroon); }
+
+    /* ══ SLIDING PANELS ══ */
+    .panels-wrapper { flex: 1; overflow: hidden; position: relative; }
+    .panels-track { display: flex; width: 300%; height: 100%; transition: transform .35s cubic-bezier(.4,0,.2,1); }
+    .panels-track.show-cert  { transform: translateX(-33.333%); }
+    .panels-track.show-eval  { transform: translateX(-66.666%); }
+    .panel {
+      width: 33.333%;
+      padding: 28px 36px;
+      overflow-y: auto;
+      height: 100%;
+    }
+
+    /* ══ DETAILS PANEL ══ */
+    .img-upload-area {
+      background: var(--cream); border: 1.5px dashed var(--border);
+      border-radius: 12px; height: 240px; margin-bottom: 16px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: border-color .2s; position: relative; overflow: hidden;
+    }
+    .img-upload-area:hover { border-color: var(--maroon); }
+    .img-upload-area input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+    .img-upload-hint { color: var(--text-muted); font-size: 13px; text-align: center; pointer-events: none; }
+    .img-upload-hint svg { width: 32px; height: 32px; margin-bottom: 8px; display: block; margin-inline: auto; }
+
+    /* Title input — large, borderless inside card */
+    .title-card { background: var(--cream); border: 1.5px solid var(--border); border-radius: 12px; padding: 16px 20px; margin-bottom: 12px; }
+    .title-input { width: 100%; border: none; background: transparent; outline: none; font-family: var(--font-display); /* CUSTOM FONT ↓ */ font-size: 22px; font-weight: 700; color: var(--maroon); }
+    .title-input::placeholder { color: #c4b898; }
+
+    /* Meta row — date, slots, venue */
+    .meta-row { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+    .meta-input { flex: 1; min-width: 140px; border: 1.5px solid var(--border); border-radius: 8px; padding: 10px 14px; background: var(--cream); font-family: var(--font-body); font-size: 14px; color: var(--text-dark); outline: none; transition: border-color .2s; }
+    .meta-input:focus { border-color: var(--maroon); }
+    .meta-input::placeholder { color: #c4b898; }
+
+    /* Status badge input */
+    .status-wrap { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; }
+    .status-badge {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--maroon); color: #fdf8e1;
+      border-radius: 8px; padding: 10px 16px; flex-shrink: 0;
+    }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #ffd580; flex-shrink: 0; }
+    .status-select {
+      border: none; background: transparent; color: #fdf8e1;
+      font-family: var(--font-body); font-size: 14px;
+      outline: none; cursor: pointer; appearance: none; -webkit-appearance: none;
+    }
+    .status-select option { color: var(--text-dark); background: var(--cream); }
+
+    /* Description input */
+    .desc-input { width: 100%; border: 1.5px solid var(--border); border-radius: 8px; padding: 10px 14px; background: var(--cream); font-family: var(--font-body); font-size: 14px; color: var(--text-dark); outline: none; resize: vertical; min-height: 60px; transition: border-color .2s; }
+    .desc-input:focus { border-color: var(--maroon); }
+    .desc-input::placeholder { color: #c4b898; }
+
+    /* ══ SHARED BOTTOM BAR ══ */
+    .bottom-bar {
+      position: sticky; bottom: 0;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 0 0;
+    }
+
+    /* Rich text toolbar */
+    .toolbar { display: flex; gap: 6px; }
+    .tool-btn {
+      width: 38px; height: 38px; border-radius: 8px;
+      background: var(--maroon); color: #fdf8e1;
+      border: none; cursor: pointer; font-family: var(--font-body);
+      font-size: 14px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      transition: background .15s;
+    }
+    .tool-btn:hover { background: var(--maroon-dark); }
+    .tool-btn svg { width: 16px; height: 16px; }
+
+    .btn-finish {
+      background: var(--maroon-dark); color: #fdf8e1;
+      border: none; border-radius: 8px; padding: 11px 28px;
+      font-family: var(--font-body); font-size: 15px; font-weight: 500;
+      cursor: pointer; transition: background .15s;
+    }
+    .btn-finish:hover { background: #5a1212; }
+
+    /* ══ CERTIFICATE PANEL ══ */
+    .cert-workspace {
+      background: var(--cream); border: 1.5px solid var(--border);
+      border-radius: 14px; padding: 28px; margin-bottom: 16px;
+      display: flex; gap: 24px; align-items: flex-start;
+      box-shadow: 3px 5px 0px var(--card-shadow);
+    }
+
+    /*
+      ┌─────────────────────────────────────────────────────────┐
+      │  CERTIFICATE CANVAS PLACEHOLDER                        │
+      │  This is where your groupmate's certificate editor     │
+      │  code will go. The div below is the target container.  │
+      │  Replace its contents with the actual canvas/editor.   │
+      │  Current size: 380×260px — adjust as needed.           │
+      └─────────────────────────────────────────────────────────┘
+    */
+    .cert-canvas-wrapper {
+      flex-shrink: 0;
+      width: 380px; /* ← CHANGE CANVAS WIDTH */
+      height: 260px; /* ← CHANGE CANVAS HEIGHT */
+      background: var(--cream);
+      border: 1.5px dashed var(--border);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      position: relative; overflow: hidden;
+    }
+    /* Your groupmate inserts the canvas/editor element here */
+    #certCanvas { width: 100%; height: 100%; }
+    .cert-canvas-hint { color: var(--text-muted); font-size: 12px; text-align: center; line-height: 1.6; }
+
+    /* Certificate controls */
+    .cert-controls { flex: 1; display: flex; flex-direction: column; gap: 14px; }
+
+    .ctrl-label { font-family: var(--font-display); /* CUSTOM FONT ↓ */ font-size: 15px; font-weight: 700; color: var(--maroon); margin-bottom: 4px; }
+
+    .ctrl-row { display: flex; gap: 10px; }
+    .ctrl-select {
+      flex: 1; border: 1.5px solid var(--border); border-radius: 8px;
+      padding: 8px 12px; background: var(--cream);
+      font-family: var(--font-body); font-size: 13px; color: var(--text-dark);
+      outline: none; appearance: none; -webkit-appearance: none; cursor: pointer;
+      transition: border-color .2s;
+    }
+    .ctrl-select:focus { border-color: var(--maroon); }
+
+    /* Color swatches */
+    .color-swatches { display: flex; gap: 6px; flex-wrap: wrap; }
+    .swatch {
+      width: 28px; height: 28px; border-radius: 5px; cursor: pointer;
+      border: 2px solid transparent; transition: border-color .15s, transform .1s;
+      flex-shrink: 0;
+    }
+    .swatch:hover { transform: scale(1.1); }
+    .swatch.selected { border-color: var(--maroon); }
+
+    /* Place Name toggles */
+    .place-name-btns { display: flex; gap: 8px; }
+    .place-btn {
+      width: 38px; height: 38px; border-radius: 8px;
+      border: 1.5px solid var(--border); background: var(--cream);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; color: var(--maroon); font-family: var(--font-body);
+      font-size: 13px; font-weight: 700; transition: background .15s, color .15s;
+    }
+    .place-btn:hover, .place-btn.active { background: var(--maroon); color: #fdf8e1; border-color: var(--maroon); }
+    .place-btn svg { width: 18px; height: 18px; }
+
+    /* ══ EVALUATION PANEL ══ */
+    .eval-header-card { background: var(--cream); border: 1.5px solid var(--border); border-radius: 12px; padding: 20px 22px; margin-bottom: 14px; }
+    .eval-title-input { width: 100%; border: none; background: transparent; outline: none; font-family: var(--font-display); /* CUSTOM FONT ↓ */ font-size: 22px; font-weight: 700; color: var(--maroon); }
+    .eval-title-input::placeholder { color: #c4b898; }
+    .eval-desc-input { width: 100%; border: none; background: transparent; outline: none; font-family: var(--font-body); font-size: 14px; color: var(--maroon); margin-top: 8px; resize: none; }
+    .eval-desc-input::placeholder { color: #c4b898; }
+
+    /* Question block */
+    .question-block { background: var(--cream); border: 1.5px solid var(--border); border-radius: 12px; padding: 16px 18px; margin-bottom: 12px; }
+    .question-top { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; }
+    .question-input { flex: 1; border: 1.5px solid var(--border); border-radius: 8px; padding: 9px 14px; background: var(--cream); font-family: var(--font-body); font-size: 14px; color: var(--text-dark); outline: none; transition: border-color .2s; }
+    .question-input:focus { border-color: var(--maroon); }
+    .question-input::placeholder { color: #c4b898; }
+
+    /* Type selector */
+    .type-select-wrap { position: relative; min-width: 160px; }
+    .type-select {
+      width: 100%; padding: 9px 36px 9px 36px;
+      background: var(--maroon); color: #fdf8e1;
+      border: none; border-radius: 8px;
+      font-family: var(--font-body); font-size: 13px;
+      outline: none; appearance: none; -webkit-appearance: none; cursor: pointer;
+    }
+    .type-select-wrap .type-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #fdf8e1; display: flex; align-items: center; pointer-events: none; }
+    .type-select-wrap .type-icon svg { width: 14px; height: 14px; }
+    .type-select-wrap::after { content: ''; position: absolute; right: 10px; top: 50%; width: 8px; height: 8px; border-right: 2px solid #fdf8e1; border-bottom: 2px solid #fdf8e1; transform: translateY(-70%) rotate(45deg); pointer-events: none; }
+
+    /* Multiple choice options */
+    .mc-choices { display: flex; flex-direction: column; gap: 6px; }
+    .mc-choice-row { display: flex; align-items: center; gap: 8px; }
+    .mc-radio { width: 15px; height: 15px; border: 2px solid var(--border); border-radius: 50%; flex-shrink: 0; }
+    .choice-input { flex: 1; border: none; border-bottom: 1.5px solid var(--border); background: transparent; outline: none; font-family: var(--font-body); font-size: 13px; color: var(--maroon); padding: 4px 0; }
+    .choice-input::placeholder { color: #c4b898; }
+
+    /* Paragraph answer */
+    .para-answer { width: 100%; border: none; border-bottom: 1.5px solid var(--border); background: transparent; outline: none; font-family: var(--font-body); font-size: 13px; color: var(--maroon); padding: 4px 0; }
+    .para-answer::placeholder { color: #c4b898; }
+
+    /* Linear scale */
+    .scale-row { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+    .scale-num-select { border: 1.5px solid var(--border); border-radius: 6px; padding: 5px 8px; background: var(--cream); font-family: var(--font-body); font-size: 13px; color: var(--text-dark); outline: none; cursor: pointer; }
+    .scale-label-input { flex: 1; border: none; border-bottom: 1.5px solid var(--border); background: transparent; outline: none; font-family: var(--font-body); font-size: 13px; color: var(--maroon); padding: 4px 0; }
+    .scale-label-input::placeholder { color: #c4b898; }
+
+    /* Add question block */
+    .add-question-block { background: var(--cream); border: 1.5px dashed var(--border); border-radius: 12px; padding: 20px; margin-bottom: 12px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: border-color .15s; }
+    .add-question-block:hover { border-color: var(--maroon); }
+    .add-question-block svg { width: 24px; height: 24px; color: var(--text-muted); }
+
+    /* ══ MODAL ══ */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(50,30,20,.45); backdrop-filter: blur(3px); z-index: 200; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity .22s; }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+    .modal-box { background: var(--cream); border-radius: 14px; padding: 32px 36px; box-shadow: 0 8px 32px rgba(0,0,0,.25); transform: scale(.94); transition: transform .22s cubic-bezier(.4,0,.2,1); display: flex; flex-direction: column; align-items: center; gap: 12px; min-width: 260px; text-align: center; }
+    .modal-overlay.open .modal-box { transform: scale(1); }
+    .modal-icon { width: 52px; height: 52px; border-radius: 50%; background: var(--maroon); display: flex; align-items: center; justify-content: center; }
+    .modal-icon svg { width: 28px; height: 28px; color: #fdf8e1; }
+    .modal-title { font-family: var(--font-display); /* CUSTOM FONT ↓ */ font-size: 18px; font-weight: 700; color: var(--maroon); }
+    .modal-sub { font-family: var(--font-body); font-size: 13px; color: var(--text-muted); }
+    .btn-ok { background: var(--maroon); color: #fdf8e1; border: none; border-radius: 8px; padding: 10px 32px; font-family: var(--font-body); font-size: 14px; font-weight: 500; cursor: pointer; transition: background .15s; margin-top: 4px; }
+    .btn-ok:hover { background: var(--maroon-dark); }
+      .brand-logo { display: block; object-fit: contain; background: transparent !important; border: 0 !important; border-radius: 0 !important; }
+    .sidebar-brand .brand-logo { width: 36px; height: 36px; flex-shrink: 0; }
+    .right-panel .brand-logo { width: 160px; height: 160px; margin-bottom: 24px; }
+    .logo-mark-img { width: 50px; height: 50px; flex: 0 0 auto; }
+  </style>
+</head>
+<body>
+
+  <!-- ═══ SIDEBAR ═══ -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <img class="logo-mini brand-logo" src="../assets/svg/seminex-logo-white.svg" alt="Seminex logo">
+      <span class="brand-label">Seminex</span>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="org-home.html" class="nav-item active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z"/><path d="M9 21V12h6v9"/></svg>Home
+      </a>
+      <a href="org-your-seminar.html" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Your Seminars
+      </a>
+      <a href="org-history.html" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="12 8 12 12 14 14"/><path d="M3.05 11a9 9 0 1 0 .5-4.5"/><polyline points="3 3 3 8 8 8"/></svg>History
+      </a>
+      <a href="org-profile.html" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Profile
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="logout-btn" onclick="window.location.href='org-signin.html'">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Logout
+      </button>
+    </div>
+  </aside>
+
+  <!-- ═══ MAIN ═══ -->
+  <main class="main">
+
+    <!-- Tab bar — starts with only Details active; others locked -->
+    <div class="topbar">
+      <button class="tab-btn active"  id="tab-details" onclick="goToTab('details')">Details</button>
+      <button class="tab-btn locked"  id="tab-cert"    onclick="goToTab('cert')">Certificate</button>
+      <button class="tab-btn locked"  id="tab-eval"    onclick="goToTab('eval')">Evaluation</button>
+    </div>
+
+    <div class="panels-wrapper">
+      <div class="panels-track" id="panelsTrack">
+
+        <!-- ══════════════════════════════
+             PANEL 1: DETAILS
+        ══════════════════════════════ -->
+        <div class="panel" id="panel-details">
+
+          <!-- Image upload -->
+          <div class="img-upload-area" id="imgUploadArea">
+            <input type="file" accept="image/*" onchange="previewImage(event)" />
+            <div class="img-upload-hint">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              Click to upload seminar banner
+            </div>
+          </div>
+
+          <!-- Seminar title -->
+          <div class="title-card">
+            <input class="title-input" type="text" placeholder="#Seminar Title Input Here" id="seminarTitle" />
+          </div>
+
+          <!-- Date, Slots, Venue -->
+          <div class="meta-row">
+            <input class="meta-input" type="datetime-local" id="dateTime" placeholder="#Date&amp;Time Input" title="Date & Time" />
+            <input class="meta-input" type="number" min="1" placeholder="#Slots Input" id="slots" />
+            <input class="meta-input" type="text" placeholder="#Venue Input" id="venue" />
+          </div>
+
+          <!-- Status + Speaker -->
+          <div class="status-wrap">
+            <div class="badge-status" style="display:flex;align-items:center;gap:8px;background:var(--maroon);color:#fdf8e1;border-radius:8px;padding:10px 16px;">
+              <span style="width:8px;height:8px;border-radius:50%;background:#ffd580;flex-shrink:0;display:inline-block;"></span>
+              <select class="status-select" id="statusSelect">
+                <option value="upcoming">Upcoming</option>
+                <option value="ongoing">Ongoing</option>
+                <option value="completed">Completed</option>
+              </select>
+            </div>
+            <input class="meta-input" type="text" placeholder="#SpeakerName Input" id="speaker" style="flex:1;" />
+          </div>
+
+          <!-- Description -->
+          <textarea class="desc-input" placeholder="#Seminar Description Input" id="description" rows="3"></textarea>
+
+          <!-- Bottom bar -->
+          <div class="bottom-bar">
+            <div class="toolbar">
+              <!-- Bold -->
+              <button class="tool-btn" title="Bold" onclick="execFmt('bold')"><b>B</b></button>
+              <!-- Italic -->
+              <button class="tool-btn" title="Italic" onclick="execFmt('italic')"><i>I</i></button>
+              <!-- Underline -->
+              <button class="tool-btn" title="Underline" onclick="execFmt('underline')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 3v7a6 6 0 0 0 12 0V3"/><line x1="4" y1="21" x2="20" y2="21"/></svg>
+              </button>
+              <!-- Strikethrough -->
+              <button class="tool-btn" title="Strikethrough" onclick="execFmt('strikeThrough')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="4" y1="12" x2="20" y2="12"/><path d="M8 7a4 4 0 0 1 8 0c0 1.5-.8 2.6-2 3.3"/><path d="M8 17a4 4 0 0 0 8 0"/></svg>
+              </button>
+            </div>
+            <!-- Finish on Details → unlock Certificate tab, slide to it -->
+            <button class="btn-finish" onclick="finishDetails()">Finish</button>
+          </div>
+        </div>
+
+        <!-- ══════════════════════════════
+             PANEL 2: CERTIFICATE
+        ══════════════════════════════ -->
+        <div class="panel" id="panel-cert">
+          <div class="cert-workspace">
+
+            <!--
+              ╔══════════════════════════════════════════════════════════════════╗
+              ║  CERTIFICATE EDITOR — GROUPMATE'S CODE GOES HERE               ║
+              ║                                                                  ║
+              ║  The .cert-canvas-wrapper div is the target container.          ║
+              ║  Replace the placeholder <div> inside with the actual editor:   ║
+              ║    • A <canvas> element for canvas-based editors                ║
+              ║    • A contenteditable <div> for rich-text overlays             ║
+              ║    • A React/Vue component mount point                           ║
+              ║                                                                  ║
+              ║  To resize the editor:                                           ║
+              ║    Change width/height on .cert-canvas-wrapper in the CSS above ║
+              ╚══════════════════════════════════════════════════════════════════╝
+            -->
+            <div class="cert-canvas-wrapper" id="certCanvasWrapper">
+              <!-- ↓ REPLACE THIS WITH THE ACTUAL EDITOR / CANVAS ELEMENT ↓ -->
+              <div class="cert-canvas-hint">
+                Certificate editor / canvas<br>
+                <span style="font-size:11px;opacity:.7;">Replace this placeholder with your groupmate's code</span>
+              </div>
+              <!-- ↑ END REPLACEMENT ZONE ↑ -->
+            </div>
+
+            <!-- Controls -->
+            <div class="cert-controls">
+              <div>
+                <div class="ctrl-label">Font Style</div>
+                <div class="ctrl-row">
+                  <select class="ctrl-select" id="certFontStyle" onchange="certCtrlChange()">
+                    <option>Serif</option>
+                    <option>Sans-serif</option>
+                    <option>Monospace</option>
+                    <option>Cursive</option>
+                    <option>Fantasy</option>
+                  </select>
+                  <select class="ctrl-select" id="certFontSize" style="max-width:90px;" onchange="certCtrlChange()">
+                    <option>12</option><option>14</option><option>16</option>
+                    <option selected>18</option><option>20</option><option>24</option>
+                    <option>28</option><option>32</option><option>36</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <div class="ctrl-label">Font Color</div>
+                <div class="color-swatches" id="colorSwatches">
+                  <!-- Swatches — add more colors as needed -->
+                  <div class="swatch selected" style="background:#4a4a4a;" data-color="#4a4a4a" onclick="selectColor(this)"></div>
+                  <div class="swatch" style="background:#6b5a4a;" data-color="#6b5a4a" onclick="selectColor(this)"></div>
+                  <div class="swatch" style="background:#7a6a5a;" data-color="#7a6a5a" onclick="selectColor(this)"></div>
+                  <div class="swatch" style="background:#8b6a4a;" data-color="#8b6a4a" onclick="selectColor(this)"></div>
+                  <div class="swatch" style="background:#9a7a6a;" data-color="#9a7a6a" onclick="selectColor(this)"></div>
+                  <div class="swatch" style="background:#a07850;" data-color="#a07850" onclick="selectColor(this)"></div>
+                  <div class="swatch" style="background:#b08060;" data-color="#b08060" onclick="selectColor(this)"></div>
+                  <div class="swatch" style="background:#c09070;" data-color="#c09070" onclick="selectColor(this)"></div>
+                  <div class="swatch" style="background:#d0a080;" data-color="#d0a080" onclick="selectColor(this)"></div>
+                </div>
+              </div>
+
+              <div>
+                <div class="ctrl-label">Place Name</div>
+                <div class="place-name-btns">
+                  <!--
+                    PLACE NAME BUTTONS
+                    These toggle where the participant name appears on the certificate.
+                    Wire them to your groupmate's editor via the certCtrlChange() function.
+                    Button 1: text/position toggle, Button 2: bold toggle
+                  -->
+                  <button class="place-btn active" id="placeNameBtn1" onclick="togglePlaceBtn(this)" title="Toggle name position">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                  </button>
+                  <button class="place-btn" id="placeNameBtn2" onclick="togglePlaceBtn(this)" title="Bold name">
+                    <b>B</b>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bottom bar -->
+          <div class="bottom-bar" style="padding-top:0;">
+            <div></div><!-- spacer -->
+            <!-- Finish on Certificate → unlock Evaluation tab, slide to it -->
+            <button class="btn-finish" onclick="finishCert()">Finish</button>
+          </div>
+        </div>
+
+        <!-- ══════════════════════════════
+             PANEL 3: EVALUATION
+        ══════════════════════════════ -->
+        <div class="panel" id="panel-eval">
+
+          <!-- Eval header -->
+          <div class="eval-header-card">
+            <input class="eval-title-input" type="text" placeholder="#Seminar Title Here" />
+            <textarea class="eval-desc-input" placeholder="#Form Description Here" rows="2"></textarea>
+          </div>
+
+          <!-- Question 1 — Multiple Choice -->
+          <div class="question-block" data-type="mc">
+            <div class="question-top">
+              <input class="question-input" type="text" placeholder="#Question Here" />
+              <div class="type-select-wrap">
+                <span class="type-icon"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/></svg></span>
+                <select class="type-select" onchange="changeQuestionType(this)">
+                  <option value="mc" selected>Multiple Choice</option>
+                  <option value="paragraph">Paragraph</option>
+                  <option value="scale">Linear Scale</option>
+                </select>
+              </div>
+            </div>
+            <div class="question-body">
+              <div class="mc-choices">
+                <div class="mc-choice-row"><div class="mc-radio"></div><input class="choice-input" type="text" placeholder="#Choice" /></div>
+                <div class="mc-choice-row"><div class="mc-radio"></div><input class="choice-input" type="text" placeholder="#Choice" /></div>
+                <div class="mc-choice-row"><div class="mc-radio"></div><input class="choice-input" type="text" placeholder="#Choice" /></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Question 2 — Paragraph -->
+          <div class="question-block" data-type="paragraph">
+            <div class="question-top">
+              <input class="question-input" type="text" placeholder="#Question Here" />
+              <div class="type-select-wrap">
+                <span class="type-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="15" y2="18"/></svg>
+                </span>
+                <select class="type-select" onchange="changeQuestionType(this)">
+                  <option value="mc">Multiple Choice</option>
+                  <option value="paragraph" selected>Paragraph</option>
+                  <option value="scale">Linear Scale</option>
+                </select>
+              </div>
+            </div>
+            <div class="question-body">
+              <input class="para-answer" type="text" placeholder="#Long Answer" />
+            </div>
+          </div>
+
+          <!-- Question 3 — Linear Scale -->
+          <div class="question-block" data-type="scale">
+            <div class="question-top">
+              <input class="question-input" type="text" placeholder="#Question Here" />
+              <div class="type-select-wrap">
+                <span class="type-icon">
+                  <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="15" cy="12" r="2"/></svg>
+                </span>
+                <select class="type-select" onchange="changeQuestionType(this)">
+                  <option value="mc">Multiple Choice</option>
+                  <option value="paragraph">Paragraph</option>
+                  <option value="scale" selected>Linear Scale</option>
+                </select>
+              </div>
+            </div>
+            <div class="question-body">
+              <div class="scale-row">
+                <select class="scale-num-select"><option>1</option></select>
+                <input class="scale-label-input" type="text" placeholder="# Label" />
+              </div>
+              <div class="scale-row">
+                <select class="scale-num-select"><option>5</option></select>
+                <input class="scale-label-input" type="text" placeholder="# Label" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Add question block -->
+          <div class="add-question-block" onclick="addQuestion()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+          </div>
+
+          <!-- Bottom bar -->
+          <div class="bottom-bar">
+            <div class="toolbar">
+              <button class="tool-btn" title="Bold"><b>B</b></button>
+              <button class="tool-btn" title="Italic"><i>I</i></button>
+              <button class="tool-btn" title="Underline">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 3v7a6 6 0 0 0 12 0V3"/><line x1="4" y1="21" x2="20" y2="21"/></svg>
+              </button>
+              <button class="tool-btn" title="Strikethrough">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="4" y1="12" x2="20" y2="12"/><path d="M8 7a4 4 0 0 1 8 0c0 1.5-.8 2.6-2 3.3"/><path d="M8 17a4 4 0 0 0 8 0"/></svg>
+              </button>
+            </div>
+            <!-- Final Finish — show success modal -->
+            <button class="btn-finish" onclick="finishEval()">Finish</button>
+          </div>
+        </div>
+
+      </div><!-- /panels-track -->
+    </div><!-- /panels-wrapper -->
+
+  </main>
+
+  <!-- ══ SEMINAR CREATED MODAL ══ -->
+  <div class="modal-overlay" id="successModal" onclick="handleOverlay(event)">
+    <div class="modal-box" id="successBox">
+      <div class="modal-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+      </div>
+      <div class="modal-title">Seminar Created Successfully</div>
+      <p class="modal-sub">Your seminar has been published and is now visible to students.</p>
+      <button class="btn-ok" onclick="closeSuccess()">OK</button>
+    </div>
+  </div>
+
+  <script>
+    /* ────────────────────────────────────────────────
+       TAB STATE
+       unlockedTabs tracks which tabs the user has
+       earned access to. Starts with only 'details'.
+    ──────────────────────────────────────────────── */
+    const unlockedTabs = new Set(['details']);
+    let currentTab = 'details';
+
+    const tabOrder = ['details', 'cert', 'eval'];
+
+    function goToTab(tab) {
+      if (!unlockedTabs.has(tab)) return; // still locked
+      slideToTab(tab);
+    }
+
+    function slideToTab(tab) {
+      currentTab = tab;
+      const track = document.getElementById('panelsTrack');
+      track.className = 'panels-track';
+      if (tab === 'cert') track.classList.add('show-cert');
+      if (tab === 'eval') track.classList.add('show-eval');
+
+      // Update tab styles
+      ['details','cert','eval'].forEach(t => {
+        const btn = document.getElementById('tab-' + t);
+        btn.className = 'tab-btn';
+        if (t === tab) {
+          btn.classList.add('active');
+        } else if (unlockedTabs.has(t)) {
+          btn.classList.add('unlocked');
+        } else {
+          btn.classList.add('locked');
+        }
+      });
+    }
+
+    /* Finish Details → unlock Certificate */
+    function finishDetails() {
+      unlockedTabs.add('cert');
+      slideToTab('cert');
+    }
+
+    /* Finish Certificate → unlock Evaluation */
+    function finishCert() {
+      unlockedTabs.add('eval');
+      slideToTab('eval');
+    }
+
+    /* Finish Evaluation → show success modal */
+    function finishEval() {
+      document.getElementById('successModal').classList.add('open');
+    }
+
+    function closeSuccess() {
+      document.getElementById('successModal').classList.remove('open');
+      window.location.href = 'org-home.html';
+    }
+
+    function handleOverlay(e) {
+      if (!document.getElementById('successBox').contains(e.target)) {
+        // don't close on overlay click for final success — user must press OK
+      }
+    }
+
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && document.getElementById('successModal').classList.contains('open')) {
+        // intentionally prevented — user must click OK
+      }
+    });
+
+    /* ────────────────────────────────────────────────
+       IMAGE PREVIEW
+    ──────────────────────────────────────────────── */
+    function previewImage(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = ev => {
+        const area = document.getElementById('imgUploadArea');
+        area.style.backgroundImage = `url(${ev.target.result})`;
+        area.style.backgroundSize  = 'cover';
+        area.style.backgroundPosition = 'center';
+        area.querySelector('.img-upload-hint').style.display = 'none';
+      };
+      reader.readAsDataURL(file);
+    }
+
+    /* ────────────────────────────────────────────────
+       RICH TEXT (placeholder — wires to description)
+       Your groupmate can extend these to target a
+       contenteditable area instead of the textarea.
+    ──────────────────────────────────────────────── */
+    function execFmt(cmd) {
+      // Placeholder: implement with contenteditable or a rich-text library
+      console.log('Format command:', cmd);
+    }
+
+    /* ────────────────────────────────────────────────
+       CERTIFICATE CONTROLS
+       certCtrlChange() is the hook for your groupmate
+       to connect to the canvas/editor.
+    ──────────────────────────────────────────────── */
+    function certCtrlChange() {
+      const fontStyle = document.getElementById('certFontStyle').value;
+      const fontSize  = document.getElementById('certFontSize').value;
+      const selectedSwatch = document.querySelector('.swatch.selected');
+      const fontColor = selectedSwatch ? selectedSwatch.dataset.color : '#4a4a4a';
+
+      /*
+        ╔══════════════════════════════════════════════════════════╗
+        ║  CERTIFICATE EDITOR HOOK                                ║
+        ║  Pass these values to your groupmate's editor:          ║
+        ║    fontStyle  → e.g. 'Serif'                            ║
+        ║    fontSize   → e.g. '18' (px)                         ║
+        ║    fontColor  → hex string, e.g. '#4a4a4a'             ║
+        ║                                                          ║
+        ║  Example (canvas):                                       ║
+        ║    ctx.font = `${fontSize}px ${fontStyle}`;             ║
+        ║    ctx.fillStyle = fontColor;                           ║
+        ╚══════════════════════════════════════════════════════════╝
+      */
+      console.log({ fontStyle, fontSize, fontColor });
+    }
+
+    function selectColor(el) {
+      document.querySelectorAll('.swatch').forEach(s => s.classList.remove('selected'));
+      el.classList.add('selected');
+      certCtrlChange();
+    }
+
+    function togglePlaceBtn(btn) {
+      btn.classList.toggle('active');
+      certCtrlChange();
+    }
+
+    /* ────────────────────────────────────────────────
+       QUESTION TYPE SWITCHER
+    ──────────────────────────────────────────────── */
+    function changeQuestionType(selectEl) {
+      const block = selectEl.closest('.question-block');
+      const type  = selectEl.value;
+      const body  = block.querySelector('.question-body');
+
+      // Update the icon in the type selector
+      const iconEl = selectEl.closest('.type-select-wrap').querySelector('.type-icon');
+      if (type === 'mc') {
+        iconEl.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/></svg>`;
+        body.innerHTML = `<div class="mc-choices">
+          <div class="mc-choice-row"><div class="mc-radio"></div><input class="choice-input" type="text" placeholder="#Choice"></div>
+          <div class="mc-choice-row"><div class="mc-radio"></div><input class="choice-input" type="text" placeholder="#Choice"></div>
+          <div class="mc-choice-row"><div class="mc-radio"></div><input class="choice-input" type="text" placeholder="#Choice"></div>
+        </div>`;
+      } else if (type === 'paragraph') {
+        iconEl.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="15" y2="18"/></svg>`;
+        body.innerHTML = `<input class="para-answer" type="text" placeholder="#Long Answer">`;
+      } else if (type === 'scale') {
+        iconEl.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><circle cx="5" cy="12" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="15" cy="12" r="2"/></svg>`;
+        body.innerHTML = `
+          <div class="scale-row"><select class="scale-num-select"><option>1</option></select><input class="scale-label-input" type="text" placeholder="# Label"></div>
+          <div class="scale-row"><select class="scale-num-select"><option>5</option></select><input class="scale-label-input" type="text" placeholder="# Label"></div>`;
+      }
+    }
+    /* ────────────────────────────────────────────────
+       ADD QUESTION
+    ──────────────────────────────────────────────── */
+    function addQuestion() {
+      const addBlock = document.querySelector('.add-question-block');
+      const newBlock = document.createElement('div');
+      newBlock.className = 'question-block';
+      newBlock.dataset.type = 'mc';
+      newBlock.innerHTML = `
+        <div class="question-top">
+          <input class="question-input" type="text" placeholder="#Question Here">
+          <div class="type-select-wrap">
+            <span class="type-icon"><svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/></svg></span>
+            <select class="type-select" onchange="changeQuestionType(this)">
+              <option value="mc" selected>Multiple Choice</option>
+              <option value="paragraph">Paragraph</option>
+              <option value="scale">Linear Scale</option>
+            </select>
+          </div>
+        </div>
+        <div class="question-body">
+          <div class="mc-choices">
+            <div class="mc-choice-row"><div class="mc-radio"></div><input class="choice-input" type="text" placeholder="#Choice"></div>
+            <div class="mc-choice-row"><div class="mc-radio"></div><input class="choice-input" type="text" placeholder="#Choice"></div>
+          </div>
+        </div>`;
+      addBlock.parentNode.insertBefore(newBlock, addBlock);
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Seminex – Seminar Detail (History)</title>
+  <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;600;700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --font-display: 'Lora', serif;   /* CUSTOM FONT ↓ */
+      --font-body:    'DM Sans', sans-serif;
+      --cream: #fdf8e1; --maroon: #8b2020; --maroon-dark: #6e1a1a;
+      --sidebar-bg: #d4601a; --text-dark: #3a2e2e; --text-muted: #7a6a5a;
+      --border: #d4c9a0; --card-shadow: rgba(139,32,32,.18);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { display: flex; min-height: 100vh; font-family: var(--font-body); background: var(--cream); }
+    .sidebar { width: 220px; background: var(--sidebar-bg); display: flex; flex-direction: column; flex-shrink: 0; position: fixed; top: 0; left: 0; height: 100vh; z-index: 100; }
+    .sidebar-brand { display: flex; align-items: center; gap: 10px; padding: 20px 18px 22px; border-bottom: 1px solid rgba(255,255,255,.15); }
+    /* LOGO PLACEHOLDER — replace .logo-mini with <img src="assets/logo-mini.png" style="width:36px;height:36px;object-fit:contain;"> */
+    .logo-mini { width: 36px; height: 36px; background: rgba(255,255,255,.15); border: 1.5px dashed rgba(255,255,255,.5); border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .logo-mini span { font-size: 9px; color: rgba(255,255,255,.6); text-align: center; line-height: 1.2; }
+    .brand-label { font-family: var(--font-display); font-size: 20px; font-weight: 700; color: #fff; letter-spacing: .02em; }
+    .sidebar-nav { flex: 1; padding: 16px 12px; display: flex; flex-direction: column; gap: 4px; }
+    .nav-item { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-radius: 10px; color: rgba(255,255,255,.85); font-family: var(--font-body); font-size: 14px; font-weight: 500; text-decoration: none; transition: background .15s; }
+    .nav-item:hover { background: rgba(255,255,255,.15); }
+    .nav-item.active { background: rgba(255,255,255,.22); color: #fff; font-weight: 600; }
+    .nav-item svg { width: 18px; height: 18px; flex-shrink: 0; }
+    .sidebar-footer { padding: 12px 12px 24px; }
+    .logout-btn { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-radius: 10px; color: rgba(255,255,255,.8); font-family: var(--font-body); font-size: 14px; font-weight: 500; cursor: pointer; border: none; background: none; width: 100%; transition: background .15s; }
+    .logout-btn:hover { background: rgba(255,255,255,.15); }
+    .logout-btn svg { width: 18px; height: 18px; }
+    .main { margin-left: 220px; flex: 1; display: flex; flex-direction: column; min-height: 100vh; overflow: hidden; }
+    .topbar { display: flex; align-items: center; padding: 0 36px; border-bottom: 1.5px solid var(--border); background: var(--cream); min-height: 64px; gap: 32px; flex-shrink: 0; }
+    .back-btn { display: flex; align-items: center; gap: 6px; background: none; border: none; font-family: var(--font-body); font-size: 15px; color: var(--text-dark); cursor: pointer; text-decoration: none; transition: color .15s; margin-right: 8px; }
+    .back-btn:hover { color: var(--maroon); }
+    .tabs { display: flex; }
+    .tab-btn { position: relative; background: none; border: none; font-family: var(--font-display); font-size: 16px; font-weight: 600; color: var(--text-muted); padding: 20px 24px; cursor: pointer; transition: color .2s; } /* CUSTOM FONT ↓ */
+    .tab-btn::after { content: ''; position: absolute; bottom: -1px; left: 0; right: 0; height: 2.5px; background: var(--maroon); border-radius: 2px 2px 0 0; transform: scaleX(0); transition: transform .3s cubic-bezier(.4,0,.2,1); }
+    .tab-btn.active { color: var(--maroon); }
+    .tab-btn.active::after { transform: scaleX(1); }
+    .panels-wrapper { flex: 1; overflow: hidden; position: relative; }
+    .panels-track { display: flex; width: 200%; height: 100%; transition: transform .35s cubic-bezier(.4,0,.2,1); }
+    .panels-track.show-evaluation { transform: translateX(-50%); }
+    .panel { width: 50%; padding: 28px 36px; overflow-y: auto; height: 100%; }
+    .img-placeholder { background: var(--cream); border: 1.5px dashed var(--border); border-radius: 12px; height: 280px; margin-bottom: 20px; }
+    .detail-row-top { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+    .badge-status { display: flex; align-items: center; gap: 8px; background: var(--maroon); color: #fdf8e1; border-radius: 8px; padding: 10px 16px; font-family: var(--font-body); font-size: 14px; }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #ffd580; flex-shrink: 0; }
+    .pill { border: 1.5px solid var(--border); border-radius: 8px; padding: 10px 16px; font-family: var(--font-body); font-size: 14px; color: var(--text-dark); background: transparent; }
+    .btn-cert { margin-left: auto; background: var(--maroon-dark); color: #fdf8e1; border: none; border-radius: 8px; padding: 10px 18px; font-family: var(--font-body); font-size: 14px; cursor: pointer; transition: background .15s; white-space: nowrap; }
+    .btn-cert:hover { background: #5a1212; }
+    .detail-row-mid { display: flex; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+    .detail-row-single { margin-bottom: 20px; }
+    .info-card { background: var(--cream); border: 1.5px solid var(--border); border-radius: 12px; padding: 20px 22px; margin-bottom: 12px; }
+    .seminar-big-title { font-family: var(--font-display); font-size: 22px; font-weight: 700; color: var(--maroon); line-height: 1.35; } /* CUSTOM FONT ↓ */
+    .seminar-desc { font-family: var(--font-body); font-size: 14px; color: var(--maroon); line-height: 1.7; }
+    .eval-header-card { background: var(--cream); border: 1.5px solid var(--border); border-radius: 12px; padding: 22px; margin-bottom: 18px; }
+    .eval-header-card .seminar-big-title { margin-bottom: 10px; }
+    .eval-desc { font-size: 14px; color: var(--maroon); line-height: 1.7; }
+    .eval-section { background: var(--cream); border: 1.5px solid var(--border); border-radius: 12px; padding: 18px 22px; margin-bottom: 14px; }
+    .eval-section-title { font-size: 14px; color: var(--maroon); }
+    .eval-question { font-size: 14px; color: var(--maroon); margin-bottom: 10px; font-weight: 500; }
+    .answer-line { width: 100%; border: none; border-bottom: 1.5px solid var(--border); background: transparent; outline: none; font-family: var(--font-body); font-size: 13px; color: var(--maroon); padding: 6px 4px; }
+    .answer-line::placeholder { color: var(--text-muted); }
+    .mc-option { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--maroon); margin-bottom: 6px; cursor: pointer; }
+    .mc-option input[type="radio"] { accent-color: var(--maroon); width: 15px; height: 15px; }
+    .rating-row { display: flex; gap: 28px; justify-content: center; margin-top: 10px; }
+    .rating-row input[type="radio"] { accent-color: var(--maroon); width: 18px; height: 18px; cursor: pointer; }
+    .submit-row { display: flex; justify-content: flex-end; margin-top: 8px; }
+    .btn-submit { background: var(--maroon-dark); color: #fdf8e1; border: none; border-radius: 8px; padding: 11px 28px; font-family: var(--font-body); font-size: 15px; cursor: pointer; transition: background .15s; }
+    .btn-submit:hover { background: #5a1212; }
+
+    /* ══ CERTIFICATE MODAL ══ */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(50,30,20,.45); backdrop-filter: blur(3px); z-index: 200; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity .22s; }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+    .modal-box { background: var(--cream); border-radius: 14px; padding: 28px 32px; box-shadow: 0 8px 32px rgba(0,0,0,.25); transform: scale(.94); transition: transform .22s cubic-bezier(.4,0,.2,1); display: flex; flex-direction: column; align-items: center; gap: 14px; }
+    .modal-overlay.open .modal-box { transform: scale(1); }
+    .cert-icon { width: 52px; height: 52px; border-radius: 50%; background: var(--maroon); display: flex; align-items: center; justify-content: center; }
+    .cert-icon svg { width: 28px; height: 28px; color: #fdf8e1; }
+    .cert-title { font-family: var(--font-display); font-size: 17px; font-weight: 700; color: var(--maroon); text-align: center; } /* CUSTOM FONT ↓ */
+    .cert-sub { font-family: var(--font-body); font-size: 13px; color: var(--text-muted); text-align: center; }
+    /*
+      CERTIFICATE PLACEHOLDER
+      To resize: change --cert-w and --cert-h below.
+      To use real certificate image: replace .cert-placeholder div with
+        <img src="certificate.png" style="width:var(--cert-w);border-radius:8px;display:block;">
+      To embed a PDF:
+        <iframe src="certificate.pdf" style="width:var(--cert-w);height:var(--cert-h);border:none;border-radius:8px;"></iframe>
+    */
+    .cert-placeholder {
+      --cert-w: 320px;  /* ← CHANGE CERTIFICATE WIDTH HERE  */
+      --cert-h: 220px;  /* ← CHANGE CERTIFICATE HEIGHT HERE */
+      width: var(--cert-w); height: var(--cert-h);
+      background: #e8e0c8; border: 1.5px dashed var(--border);
+      border-radius: 10px; display: flex; align-items: center; justify-content: center;
+    }
+    .cert-placeholder span { font-size: 12px; color: var(--text-muted); }
+    .btn-close-modal { background: var(--maroon); color: #fdf8e1; border: none; border-radius: 8px; padding: 10px 32px; font-family: var(--font-body); font-size: 14px; font-weight: 500; cursor: pointer; transition: background .15s; margin-top: 4px; }
+    .btn-close-modal:hover { background: var(--maroon-dark); }
+      .brand-logo { display: block; object-fit: contain; background: transparent !important; border: 0 !important; border-radius: 0 !important; }
+    .sidebar-brand .brand-logo { width: 36px; height: 36px; flex-shrink: 0; }
+    .right-panel .brand-logo { width: 160px; height: 160px; margin-bottom: 24px; }
+    .logo-mark-img { width: 50px; height: 50px; flex: 0 0 auto; }
+  </style>
+  <link rel="stylesheet" href="../shared/css/attendee-portal.min.css">
+</head>
+<body class="attendee-portal">
+
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <img class="logo-mini brand-logo" src="../assets/svg/seminex-logo-white.svg" alt="Seminex logo">
+      <span class="brand-label">Seminex</span>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="home.html" class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z"/><path d="M9 21V12h6v9"/></svg>Home</a>
+      <a href="your-seminar.html" class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Your Seminars</a>
+      <a href="available-seminar.html" class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>Available Seminars</a>
+      <a href="history.html" class="nav-item active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="12 8 12 12 14 14"/><path d="M3.05 11a9 9 0 1 0 .5-4.5"/><polyline points="3 3 3 8 8 8"/></svg>History</a>
+      <a href="#" class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Profile</a>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="logout-btn" onclick="window.location.href='signin.html'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Logout</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <a href="history.html" class="back-btn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+        Back
+      </a>
+      <div class="tabs">
+        <button class="tab-btn active" id="tab-details" onclick="switchTab('details')">Details</button>
+        <button class="tab-btn"        id="tab-eval"    onclick="switchTab('eval')">Evaluation</button>
+      </div>
+    </div>
+
+    <div class="panels-wrapper">
+      <div class="panels-track" id="panelsTrack">
+
+        <!-- DETAILS -->
+        <div class="panel">
+          <div class="img-placeholder"></div>
+          <div class="detail-row-top">
+            <div class="badge-status"><span class="status-dot"></span>#Status</div>
+            <span class="pill">#Slots</span>
+            <button class="btn-cert" onclick="openCertModal()">View Certificate</button>
+          </div>
+          <div class="detail-row-mid">
+            <span class="pill">#Date&amp;Time</span>
+            <span class="pill">#Venue</span>
+          </div>
+          <div class="detail-row-single">
+            <span class="pill">#SpeakerName</span>
+          </div>
+          <div class="info-card">
+            <div class="seminar-big-title">#Seminar title seminartitle seminartitle seminartitle</div>
+          </div>
+          <div class="info-card">
+            <p class="seminar-desc">
+              #Seminar description Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
+              eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis
+              nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute
+              irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.
+              Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit
+              anim id est laborum.
+            </p>
+          </div>
+        </div>
+
+        <!-- EVALUATION -->
+        <div class="panel">
+          <div class="eval-header-card">
+            <div class="seminar-big-title">#Seminar title seminartitle seminartitle seminartitle</div>
+            <p class="eval-desc">
+              #Seminar Evaluation Description Lorem ipsum dolor sit amet, consectetur adipiscing elit,
+              sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim
+              veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+              Duis aute irure dolor in reprehenderit
+            </p>
+          </div>
+          <div class="eval-section"><div class="eval-section-title">#Evaluation Section title</div></div>
+          <div class="eval-section">
+            <div class="eval-question">#Evaluation Question Paragraph-type</div>
+            <input class="answer-line" type="text" placeholder="#Sample Answer" />
+          </div>
+          <div class="eval-section">
+            <div class="eval-question">#Evaluation Question Multiple-choice-type</div>
+            <label class="mc-option"><input type="radio" name="mc1" /> #Answer</label>
+            <label class="mc-option"><input type="radio" name="mc1" /> #Answer</label>
+            <label class="mc-option"><input type="radio" name="mc1" /> #Answer</label>
+          </div>
+          <div class="eval-section">
+            <div class="eval-question">#Evaluation Question Rating-type</div>
+            <div class="rating-row">
+              <input type="radio" name="rating1" />
+              <input type="radio" name="rating1" />
+              <input type="radio" name="rating1" />
+              <input type="radio" name="rating1" />
+              <input type="radio" name="rating1" />
+            </div>
+          </div>
+          <div class="submit-row"><button class="btn-submit">Submit</button></div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <!-- CERTIFICATE MODAL -->
+  <div class="modal-overlay" id="certModal" onclick="handleOverlay(event)">
+    <div class="modal-box" id="certBox">
+      <div class="cert-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="8" r="6"/>
+          <path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/>
+        </svg>
+      </div>
+      <div class="cert-title">Your Certificate</div>
+      <p class="cert-sub">Congratulations on completing this seminar!</p>
+      <!--
+        CERTIFICATE PLACEHOLDER
+        Resize: change --cert-w / --cert-h in the CSS above (.cert-placeholder).
+        Real image: <img src="certificate.png" style="width:var(--cert-w);border-radius:8px;display:block;">
+        PDF embed: <iframe src="certificate.pdf" style="width:var(--cert-w);height:var(--cert-h);border:none;border-radius:8px;"></iframe>
+      -->
+      <div class="cert-placeholder"><span>Certificate placeholder (320 × 220)</span></div>
+      <button class="btn-close-modal" onclick="document.getElementById('certModal').classList.remove('open')">Close</button>
+    </div>
+  </div>
+
+  <script>
+    function switchTab(tab) {
+      const track = document.getElementById('panelsTrack');
+      const d = document.getElementById('tab-details');
+      const e = document.getElementById('tab-eval');
+      if (tab === 'eval') { track.classList.add('show-evaluation'); e.classList.add('active'); d.classList.remove('active'); }
+      else { track.classList.remove('show-evaluation'); d.classList.add('active'); e.classList.remove('active'); }
+    }
+    function openCertModal() { document.getElementById('certModal').classList.add('open'); }
+    function handleOverlay(e) { if (!document.getElementById('certBox').contains(e.target)) document.getElementById('certModal').classList.remove('open'); }
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') document.getElementById('certModal').classList.remove('open'); });
+  </script>
+</body>
+</html>

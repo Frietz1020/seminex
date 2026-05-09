@@ -1,0 +1,1683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Seminex Org – Your Seminars</title>
+  <!-- CUSTOM FONTS — Replace with your own if needed -->
+  <!-- --font-display: 'Lora', serif   | --font-body: 'DM Sans', sans-serif -->
+  <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;600;700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    /* ══════════════════════════════════════════
+       DESIGN TOKENS
+       Change these to retheme the entire app.
+    ══════════════════════════════════════════ */
+    :root {
+      --font-display: 'Lora', serif;        /* CUSTOM FONT — display / headings */
+      --font-body:    'DM Sans', sans-serif; /* CUSTOM FONT — body / UI labels */
+
+      --cream:       #fdf8e1;
+      --maroon:      #8b2020;
+      --maroon-dark: #6e1a1a;
+      --sidebar-bg:  #d4601a;
+      --text-dark:   #3a2e2e;
+      --text-muted:  #7a6a5a;
+      --border:      #d4c9a0;
+      --card-shadow: rgba(139,32,32,.18);
+      --orange:      #e8722a;
+      --orange-hover:#d4621c;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { max-width: 100%; overflow-x: hidden; }
+    body { display: flex; min-height: 100vh; font-family: var(--font-body); background: var(--cream); }
+
+    /* ══════════════════════════════════════════
+       SIDEBAR
+    ══════════════════════════════════════════ */
+    .sidebar {
+      width: 220px; background: var(--sidebar-bg);
+      display: flex; flex-direction: column; flex-shrink: 0;
+      position: fixed; top: 0; left: 0; height: 100vh; z-index: 100;
+    }
+    .sidebar-brand {
+      display: flex; align-items: center; gap: 10px;
+      padding: 20px 18px 22px;
+      border-bottom: 1px solid rgba(255,255,255,.15);
+    }
+    /* LOGO PLACEHOLDER — replace .logo-mini with:
+       <img src="assets/logo-mini.png" style="width:36px;height:36px;object-fit:contain;"> */
+    .logo-mini {
+      width: 36px; height: 36px;
+      background: rgba(255,255,255,.15);
+      border: 1.5px dashed rgba(255,255,255,.5);
+      border-radius: 6px;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .logo-mini span { font-size: 9px; color: rgba(255,255,255,.6); text-align: center; line-height: 1.2; }
+    .brand-label {
+      font-family: var(--font-display); /* CUSTOM FONT */
+      font-size: 20px; font-weight: 700; color: #fff; letter-spacing: .02em;
+    }
+    .sidebar-nav { flex: 1; padding: 16px 12px; display: flex; flex-direction: column; gap: 4px; }
+    .nav-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 11px 14px; border-radius: 10px;
+      color: rgba(255,255,255,.85);
+      font-family: var(--font-body); font-size: 14px; font-weight: 500;
+      text-decoration: none; transition: background .15s;
+    }
+    .nav-item:hover { background: rgba(255,255,255,.15); }
+    .nav-item.active { background: rgba(255,255,255,.22); color: #fff; font-weight: 600; }
+    .nav-item svg { width: 18px; height: 18px; flex-shrink: 0; }
+    .sidebar-footer { padding: 12px 12px 24px; }
+    .logout-btn {
+      display: flex; align-items: center; gap: 12px;
+      padding: 11px 14px; border-radius: 10px;
+      color: rgba(255,255,255,.8); font-family: var(--font-body);
+      font-size: 14px; font-weight: 500;
+      cursor: pointer; border: none; background: none; width: 100%;
+      transition: background .15s;
+    }
+    .logout-btn:hover { background: rgba(255,255,255,.15); }
+    .logout-btn svg { width: 18px; height: 18px; }
+
+    /* ══════════════════════════════════════════
+       MAIN AREA
+    ══════════════════════════════════════════ */
+    .main {
+      margin-left: 220px;
+      width: calc(100% - 220px);
+      min-width: 0;
+      flex: none;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    /* ══════════════════════════════════════════
+       VIEW SWITCHING (list ↔ detail ↔ results)
+    ══════════════════════════════════════════ */
+    .view { display: none; flex-direction: column; min-height: 100vh; min-width: 0; }
+    .view.active { display: flex; }
+    /* Results panels need full remaining height */
+    #view-results { height: 100vh; overflow: hidden; }
+    #view-results .detail-topbar { flex-shrink: 0; }
+    .results-panel { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
+
+    /* ══════════════════════════════════════════
+       YOUR SEMINARS — LIST VIEW
+    ══════════════════════════════════════════ */
+    .list-topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 22px 36px 18px;
+      border-bottom: 1.5px solid var(--border);
+      background: var(--cream);
+      flex-shrink: 0;
+    }
+    .page-title {
+      font-family: var(--font-display); /* CUSTOM FONT */
+      font-size: 32px; font-weight: 700; color: var(--maroon);
+    }
+
+    /* Search box — from components.html */
+    .search-box {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--cream);
+      border: 2px solid var(--border);
+      border-radius: 50px;
+      padding: 10px 16px; width: 240px;
+    }
+    .search-box svg { width: 16px; height: 16px; flex-shrink: 0; color: var(--text-muted); }
+    .search-box input {
+      border: none; background: transparent; outline: none;
+      font-family: var(--font-body); font-size: 14px; color: var(--maroon); width: 100%;
+    }
+    .search-box input::placeholder { color: var(--text-muted); }
+
+    .seminar-grid {
+      padding: 28px 36px;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 22px;
+    }
+
+    /* Seminar card — from components.html */
+    .seminar-card {
+      background: var(--cream);
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 4px 6px 0px var(--card-shadow);
+      padding-bottom: 12px;
+      border: 1.5px solid var(--border);
+      cursor: pointer;
+      transition: transform .15s, box-shadow .15s;
+    }
+    .seminar-card:hover { transform: translateY(-2px); box-shadow: 4px 9px 0px var(--card-shadow); }
+
+    .seminar-card .img-placeholder {
+      background: var(--cream);
+      border: 2px dashed var(--border);
+      border-radius: 10px;
+      margin: 10px 10px 0;
+      height: 110px;
+    }
+    .seminar-card .img-placeholder.has-img {
+      background-size: cover; background-position: center;
+      border-style: solid;
+    }
+    .tag-row { display: flex; gap: 6px; padding: 10px 10px 0; }
+    .tag {
+      background: var(--maroon); color: #fdf8e1;
+      font-family: var(--font-body); font-size: 11px;
+      border-radius: 6px; padding: 5px 10px;
+    }
+    .seminar-title {
+      font-family: var(--font-display); /* CUSTOM FONT */
+      font-size: 13px; font-weight: 700; color: var(--maroon);
+      padding: 10px 10px 6px; line-height: 1.35;
+    }
+    .seminar-meta-row {
+      display: flex; align-items: center;
+      justify-content: space-between; padding: 0 10px;
+    }
+    .org-row {
+      display: flex; align-items: center; gap: 6px;
+      font-family: var(--font-body); font-size: 11px; color: var(--maroon);
+    }
+    .org-dot {
+      width: 12px; height: 12px; border-radius: 50%;
+      background: var(--maroon); flex-shrink: 0;
+    }
+    .view-btn {
+      display: flex; align-items: center; gap: 4px;
+      background: var(--maroon); color: #fdf8e1;
+      border: none; border-radius: 50px;
+      padding: 6px 14px;
+      font-family: var(--font-body); font-size: 12px;
+      cursor: pointer; box-shadow: 1px 2px 0px rgba(0,0,0,.18);
+      transition: background .15s;
+    }
+    .view-btn:hover { background: var(--maroon-dark); }
+
+    /* ══════════════════════════════════════════
+       DETAIL VIEW — TOP BAR WITH TABS
+    ══════════════════════════════════════════ */
+    .detail-topbar {
+      display: flex; align-items: center;
+      padding: 0 36px;
+      border-bottom: 1.5px solid var(--border);
+      background: var(--cream);
+      min-height: 64px; flex-shrink: 0; gap: 0;
+    }
+    .back-btn {
+      display: flex; align-items: center; gap: 6px;
+      background: none; border: none; cursor: pointer;
+      font-family: var(--font-body); font-size: 14px;
+      color: var(--text-muted); padding: 8px 16px 8px 0;
+      margin-right: 12px;
+      border-right: 1.5px solid var(--border);
+      white-space: nowrap;
+      transition: color .15s;
+    }
+    .back-btn:hover { color: var(--maroon); }
+    .btn-export {
+      margin-left: auto;
+      background: var(--maroon-dark);
+      color: #fdf8e1;
+      border: none;
+      border-radius: 8px;
+      padding: 9px 20px;
+      font-family: var(--font-body);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .15s;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .btn-export:hover { background: #5a1212; }
+    .tab-btn {
+      position: relative; background: none; border: none;
+      font-family: var(--font-display); /* CUSTOM FONT */
+      font-size: 16px; font-weight: 600;
+      color: var(--text-muted); padding: 20px 28px;
+      transition: color .2s; cursor: pointer;
+    }
+    .tab-btn.active { color: var(--maroon); }
+    .tab-btn.active::after {
+      content: ''; position: absolute; bottom: -1px; left: 0; right: 0;
+      height: 2.5px; background: var(--maroon);
+      border-radius: 2px 2px 0 0;
+    }
+    .tab-btn:not(.active):hover { color: var(--maroon); }
+
+    /* ══════════════════════════════════════════
+       TAB PANELS SLIDER
+    ══════════════════════════════════════════ */
+    .panels-wrapper { flex: 1; overflow: hidden; position: relative; width: 100%; min-width: 0; }
+    .panels-track {
+      display: flex; width: 400%; height: 100%;
+      transition: transform .35s cubic-bezier(.4,0,.2,1);
+    }
+    .panels-track.show-registrations { transform: translateX(-25%); }
+    .panels-track.show-attendances   { transform: translateX(-50%); }
+    .panels-track.show-evaluation    { transform: translateX(-75%); }
+    .panel {
+      flex: 0 0 25%;
+      width: 25%;
+      max-width: 25%;
+      min-width: 0;
+      padding: 28px 36px;
+      overflow-y: auto;
+      overflow-x: hidden;
+      height: 100%;
+    }
+
+    /* ══════════════════════════════════════════
+       TAB 1: DETAILS
+    ══════════════════════════════════════════ */
+    .detail-content {
+      width: 100%;
+    }
+    .detail-banner {
+      background: var(--cream);
+      border: 1.5px dashed var(--border);
+      border-radius: 12px; height: 240px; margin-bottom: 16px;
+      display: flex; align-items: center; justify-content: center;
+      position: relative; overflow: hidden;
+    }
+    .detail-banner-hint { color: var(--text-muted); font-size: 13px; text-align: center; }
+    .detail-banner-hint svg { width: 32px; height: 32px; margin-bottom: 8px; display: block; margin-inline: auto; }
+
+    /* Info pill badges — matching the mockup */
+    .info-row { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; align-items: center; }
+    .info-badge {
+      display: flex; align-items: center; gap: 8px;
+      border: 1.5px solid var(--border); border-radius: 8px;
+      padding: 10px 16px;
+      font-family: var(--font-body); font-size: 14px; color: var(--maroon);
+    }
+    .info-badge.status {
+      background: var(--maroon); color: #fdf8e1;
+    }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #ffd580; flex-shrink: 0; }
+    .scan-qr-btn {
+      margin-left: auto;
+      background: var(--maroon-dark); color: #fdf8e1;
+      border: none; border-radius: 8px; padding: 11px 22px;
+      font-family: var(--font-body); font-size: 14px; font-weight: 500;
+      cursor: pointer; transition: background .15s;
+    }
+    .scan-qr-btn:hover { background: #5a1212; }
+
+    .detail-title-card {
+      background: var(--cream); border: 1.5px solid var(--border);
+      border-radius: 12px; padding: 18px 22px; margin-bottom: 12px;
+    }
+    .detail-title {
+      font-family: var(--font-display); /* CUSTOM FONT */
+      font-size: 22px; font-weight: 700; color: var(--maroon); line-height: 1.35;
+    }
+    .detail-desc-card {
+      background: var(--cream); border: 1.5px solid var(--border);
+      border-radius: 12px; padding: 16px 22px;
+    }
+    .detail-desc {
+      font-family: var(--font-body); font-size: 14px; color: var(--maroon);
+      line-height: 1.65;
+    }
+
+    /* ══════════════════════════════════════════
+       SHARED TABLE STYLES (Registrations & Attendances)
+    ══════════════════════════════════════════ */
+    .table-card {
+      background: var(--cream); border: 1.5px solid var(--border);
+      border-radius: 14px; overflow: hidden;
+      box-shadow: 3px 5px 0px var(--card-shadow);
+    }
+    .data-table { width: 100%; border-collapse: collapse; }
+    .data-table th {
+      font-family: var(--font-body); font-size: 13px; font-weight: 700;
+      color: var(--maroon); padding: 14px 18px; text-align: left;
+      border-bottom: 1.5px solid var(--border);
+      background: var(--cream);
+    }
+    .data-table td {
+      font-family: var(--font-body); font-size: 13px; color: var(--maroon);
+      padding: 14px 18px; border-bottom: 1px solid var(--border);
+    }
+    .data-table tr:last-child td { border-bottom: none; }
+    .data-table tr:hover td { background: rgba(139,32,32,.04); }
+
+    /* Profile avatar circle */
+    .profile-avatar {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--border); flex-shrink: 0;
+    }
+
+    /* Kick button — from registrations mockup */
+    .kick-btn {
+      background: var(--maroon); color: #fdf8e1;
+      border: none; border-radius: 8px; padding: 6px 16px;
+      font-family: var(--font-body); font-size: 12px;
+      cursor: pointer; transition: background .15s;
+    }
+    .kick-btn:hover { background: var(--maroon-dark); }
+
+    /* ══════════════════════════════════════════
+       TAB 4: EVALUATION (view/read mode)
+    ══════════════════════════════════════════ */
+    .eval-header-card {
+      background: var(--cream); border: 1.5px solid var(--border);
+      border-radius: 12px; padding: 20px 22px; margin-bottom: 14px;
+    }
+    .eval-title {
+      font-family: var(--font-display); /* CUSTOM FONT */
+      font-size: 22px; font-weight: 700; color: var(--maroon); margin-bottom: 10px;
+    }
+    .eval-desc { font-family: var(--font-body); font-size: 14px; color: var(--maroon); line-height: 1.6; }
+
+    .eval-section-title {
+      background: var(--cream); border: 1.5px solid var(--border);
+      border-radius: 12px; padding: 14px 18px; margin-bottom: 12px;
+      font-family: var(--font-display); /* CUSTOM FONT */
+      font-size: 15px; font-weight: 700; color: var(--maroon);
+    }
+    .question-block {
+      background: var(--cream); border: 1.5px solid var(--border);
+      border-radius: 12px; padding: 16px 18px; margin-bottom: 12px;
+    }
+    .question-text {
+      font-family: var(--font-body); font-size: 14px; font-weight: 600;
+      color: var(--maroon); margin-bottom: 12px;
+    }
+    /* Paragraph type */
+    .para-answer-line {
+      border-bottom: 1.5px solid var(--border);
+      padding: 4px 0 6px;
+      font-family: var(--font-body); font-size: 13px; color: var(--text-muted);
+    }
+    /* Multiple choice */
+    .mc-option { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .mc-radio-display {
+      width: 16px; height: 16px; border-radius: 50%;
+      border: 2px solid var(--border); flex-shrink: 0;
+    }
+    .mc-option-text { font-family: var(--font-body); font-size: 13px; color: var(--maroon); }
+    /* Rating scale */
+    .rating-row { display: flex; align-items: center; justify-content: center; gap: 24px; margin-top: 6px; }
+    .rating-circle {
+      width: 20px; height: 20px; border-radius: 50%;
+      border: 2px solid var(--border);
+    }
+
+    /* View Results button */
+    .view-results-btn {
+      display: flex; justify-content: flex-end; margin-top: 8px;
+    }
+    .btn-view-results {
+      background: var(--maroon-dark); color: #fdf8e1;
+      border: none; border-radius: 8px; padding: 11px 28px;
+      font-family: var(--font-body); font-size: 15px; font-weight: 500;
+      cursor: pointer; transition: background .15s;
+    }
+    .btn-view-results:hover { background: #5a1212; }
+
+    /* ══════════════════════════════════════════
+       KICK CONFIRMATION MODAL
+       Styled to match components.html aesthetic
+    ══════════════════════════════════════════ */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(50,30,20,.45); backdrop-filter: blur(3px);
+      z-index: 300;
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none;
+      transition: opacity .22s;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+    .modal-box {
+      background: var(--cream); border-radius: 14px;
+      padding: 32px 36px;
+      box-shadow: 0 8px 32px rgba(0,0,0,.25);
+      transform: scale(.94);
+      transition: transform .22s cubic-bezier(.4,0,.2,1);
+      display: flex; flex-direction: column;
+      align-items: center; gap: 12px;
+      min-width: 300px; max-width: 380px; text-align: center;
+    }
+    .modal-overlay.open .modal-box { transform: scale(1); }
+    .modal-icon {
+      width: 52px; height: 52px; border-radius: 50%;
+      background: var(--maroon);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .modal-icon svg { width: 28px; height: 28px; color: #fdf8e1; }
+    .modal-title {
+      font-family: var(--font-display); /* CUSTOM FONT */
+      font-size: 18px; font-weight: 700; color: var(--maroon);
+    }
+    .modal-sub { font-family: var(--font-body); font-size: 13px; color: var(--text-muted); }
+    .modal-actions { display: flex; gap: 10px; margin-top: 4px; }
+    .btn-cancel {
+      background: transparent; color: var(--maroon);
+      border: 1.5px solid var(--maroon); border-radius: 8px;
+      padding: 10px 28px;
+      font-family: var(--font-body); font-size: 14px; font-weight: 500;
+      cursor: pointer; transition: background .15s, color .15s;
+    }
+    .btn-cancel:hover { background: var(--maroon); color: #fdf8e1; }
+    .btn-confirm-kick {
+      background: var(--maroon); color: #fdf8e1;
+      border: none; border-radius: 8px; padding: 10px 28px;
+      font-family: var(--font-body); font-size: 14px; font-weight: 500;
+      cursor: pointer; transition: background .15s;
+    }
+    .btn-confirm-kick:hover { background: var(--maroon-dark); }
+
+    /* ══════════════════════════════════════════
+       RESULTS VIEW
+    ══════════════════════════════════════════ */
+    .results-content {
+      flex: 1; overflow-y: auto;
+      padding: 28px 36px 8px;
+      display: flex; flex-direction: column; gap: 16px;
+      min-height: 0;
+      overflow-x: hidden;
+    }
+    #summaryContent {
+      gap: 0;
+      padding-bottom: 20px;
+    }
+    .summary-report-frame {
+      width: 100%;
+      background: var(--cream);
+      border: 1.5px solid var(--border);
+      border-radius: 14px;
+      box-shadow: 3px 5px 0px var(--card-shadow);
+      padding: 18px 22px 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+    .summary-report-frame .res-card {
+      border-radius: 10px;
+      box-shadow: none;
+    }
+    .summary-report-frame .res-card:first-child {
+      border-top-left-radius: 10px;
+      border-top-right-radius: 10px;
+    }
+
+    /* Result cards */
+    .res-card {
+      background: var(--cream); border: 1.5px solid var(--border);
+      border-radius: 14px; padding: 20px 22px;
+      box-shadow: 2px 4px 0 var(--card-shadow);
+    }
+    .res-card-title {
+      font-family: var(--font-display); /* CUSTOM FONT */
+      font-size: 24px; font-weight: 700; color: var(--maroon);
+      margin-bottom: 14px;
+    }
+    .res-q-label {
+      font-family: var(--font-display); /* CUSTOM FONT */
+      font-size: 15px; font-weight: 600; color: var(--maroon);
+      margin-bottom: 4px;
+    }
+    .res-n {
+      font-family: var(--font-body); font-size: 11px; color: var(--orange);
+      margin-bottom: 12px;
+    }
+    .res-who-label {
+      font-family: var(--font-body); font-size: 13px; font-weight: 600;
+      color: var(--maroon); margin-bottom: 8px;
+    }
+    .res-respondent {
+      font-family: var(--font-body); font-size: 12px; color: var(--maroon);
+      padding: 2px 0; line-height: 1.6;
+    }
+    .res-answer {
+      font-family: var(--font-body); font-size: 13px; color: var(--maroon);
+      line-height: 1.65; margin-bottom: 10px;
+    }
+    .res-answer:last-child { margin-bottom: 0; }
+
+    /* Pie chart layout */
+    .res-pie-wrap { display: flex; align-items: center; gap: 32px; padding: 8px 0; }
+    .res-pie-canvas { flex-shrink: 0; }
+    .res-pie-legend { display: flex; flex-direction: column; gap: 10px; }
+    .res-legend-item { display: flex; align-items: center; gap: 8px; }
+    .res-legend-dot { width: 16px; height: 16px; border-radius: 3px; flex-shrink: 0; }
+    .res-legend-text {
+      font-family: var(--font-body); font-size: 13px;
+      font-weight: 600; color: var(--maroon);
+    }
+
+    /* Bar chart */
+    .res-bar-canvas { width: 100%; height: 200px; display: block; }
+
+    /* Stars row for rating */
+    .res-avg-rating {
+      font-family: var(--font-body); font-size: 11px; color: var(--maroon);
+      text-align: center; margin-bottom: 4px;
+    }
+    .res-stars-row {
+      display: flex; justify-content: center; gap: 16px; margin-bottom: 8px;
+    }
+    .res-star-col { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+    .res-star { font-size: 18px; color: #c8bfd0; }
+    .res-star-num { font-family: var(--font-body); font-size: 10px; color: var(--maroon); }
+
+    /* Section title block (Question / Individual panel) */
+    .res-section-title-block {
+      background: var(--cream); border: 1.5px solid var(--border);
+      border-radius: 10px; padding: 12px 18px;
+      font-family: var(--font-display); /* CUSTOM FONT */
+      font-size: 14px; font-weight: 600; color: var(--maroon);
+    }
+
+    /* Question panel — answer area card */
+    .res-card-answer { padding: 16px 18px; }
+    .res-para-area {
+      font-family: var(--font-body); font-size: 13px; color: var(--text-muted);
+      padding-bottom: 8px; border-bottom: 1px solid var(--border);
+    }
+
+    /* Respondent pill (Question tab) */
+    .res-respondent-pill {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--cream); border: 1.5px solid var(--border);
+      border-radius: 50px; padding: 8px 16px;
+      font-family: var(--font-body); font-size: 13px; color: var(--maroon);
+    }
+    .res-pill-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: var(--maroon); flex-shrink: 0;
+    }
+
+    /* Individual panel */
+    .ind-nav-bar {
+      display: flex; align-items: center; gap: 10px;
+      background: var(--cream); border: 1.5px solid var(--border);
+      border-radius: 10px; padding: 10px 14px; margin-bottom: 12px;
+    }
+    .ind-email-field {
+      flex: 1; font-family: var(--font-body); font-size: 13px;
+      color: var(--maroon); border: 1.5px solid var(--border);
+      border-radius: 8px; padding: 6px 12px; background: var(--cream);
+    }
+    .ind-nav-controls {
+      display: flex; align-items: center; gap: 6px;
+      background: var(--cream); border: 1.5px solid var(--border);
+      border-radius: 8px; padding: 6px 12px;
+      font-family: var(--font-body); font-size: 13px; color: var(--maroon);
+    }
+    .ind-nav-btn {
+      background: none; border: none; cursor: pointer;
+      color: var(--maroon); font-size: 16px; line-height: 1;
+      padding: 0 4px;
+    }
+    .ind-nav-btn:disabled { opacity: .35; cursor: default; }
+    .ind-nav-icon { font-size: 14px; }
+    .ind-action-btns { display: flex; gap: 6px; }
+    .ind-action-btn {
+      background: var(--cream); border: 1.5px solid var(--border);
+      border-radius: 8px; padding: 6px 10px; cursor: pointer;
+      font-size: 14px; transition: background .15s;
+    }
+    .ind-action-btn:hover { background: var(--border); }
+    .ind-title-card { margin-bottom: 0; }
+    .ind-seminar-title {
+      font-family: var(--font-display); /* CUSTOM FONT */
+      font-size: 22px; font-weight: 700; color: var(--maroon);
+    }
+    .ind-email-badge {
+      display: inline-block;
+      border: 1.5px solid var(--border); border-radius: 8px;
+      padding: 8px 14px; font-family: var(--font-body);
+      font-size: 13px; color: var(--maroon);
+    }
+
+    /* ── Pagination bar ── */
+    .pagination-bar {
+      display: flex; align-items: center; justify-content: center;
+      gap: 10px; padding: 16px 0 20px; flex-shrink: 0;
+    }
+    .page-arrow {
+      background: none; border: none; cursor: pointer;
+      font-size: 20px; color: var(--maroon);
+      line-height: 1; padding: 0 4px;
+      transition: opacity .15s;
+    }
+    .page-arrow:disabled { opacity: .25; cursor: default; }
+    .page-dots { display: flex; gap: 8px; align-items: center; }
+    .page-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: var(--border); cursor: pointer;
+      transition: background .2s, transform .2s;
+    }
+    .page-dot.active { background: var(--orange); transform: scale(1.2); }
+    .page-dot:hover:not(.active) { background: var(--text-muted); }
+
+    /* ══════════════════════════════════════════
+       SCROLLBAR
+    ══════════════════════════════════════════ */
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--maroon); border-radius: 99px; opacity: .5; }
+      .brand-logo { display: block; object-fit: contain; background: transparent !important; border: 0 !important; border-radius: 0 !important; }
+    .sidebar-brand .brand-logo { width: 36px; height: 36px; flex-shrink: 0; }
+    .right-panel .brand-logo { width: 160px; height: 160px; margin-bottom: 24px; }
+    .logo-mark-img { width: 50px; height: 50px; flex: 0 0 auto; }
+  </style>
+</head>
+<body>
+
+  <!-- ═══════════════ SIDEBAR ═══════════════ -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <!-- LOGO PLACEHOLDER — replace .logo-mini with <img src="assets/logo-mini.png" style="width:36px;height:36px;object-fit:contain;"> -->
+      <img class="logo-mini brand-logo" src="../assets/svg/seminex-logo-white.svg" alt="Seminex logo">
+      <span class="brand-label">Seminex</span>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="org-home.html" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z"/><path d="M9 21V12h6v9"/></svg>Home
+      </a>
+      <a href="org-your-seminar.html" class="nav-item active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Your Seminars
+      </a>
+      <a href="org-history.html" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="12 8 12 12 14 14"/><path d="M3.05 11a9 9 0 1 0 .5-4.5"/><polyline points="3 3 3 8 8 8"/></svg>History
+      </a>
+      <a href="org-profile.html" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Profile
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="logout-btn" onclick="window.location.href='org-signin.html'">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Logout
+      </button>
+    </div>
+  </aside>
+
+  <!-- ═══════════════ MAIN ═══════════════ -->
+  <main class="main">
+
+    <!-- ══════════════════════════════════
+         VIEW 1: YOUR SEMINARS (grid list)
+    ══════════════════════════════════ -->
+    <div class="view active" id="view-list">
+      <div class="list-topbar">
+        <h1 class="page-title">Your Seminar</h1>
+        <div class="search-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="22" y2="22"/>
+          </svg>
+          <input type="text" placeholder="Search seminar" oninput="filterSeminars(this.value)" />
+        </div>
+      </div>
+
+      <div class="seminar-grid" id="seminarGrid">
+        <!-- Cards are generated by JS below, or replace with static HTML -->
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════
+         VIEW 2: SEMINAR DETAIL (tabs)
+    ══════════════════════════════════ -->
+    <div class="view" id="view-detail">
+
+      <!-- Tab bar -->
+      <div class="detail-topbar">
+        <button class="back-btn" onclick="showList()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="15 18 9 12 15 6"/></svg>
+          Back
+        </button>
+        <button class="tab-btn active" id="tab-details"       onclick="switchTab('details')">Details</button>
+        <button class="tab-btn"        id="tab-registrations" onclick="switchTab('registrations')">Registrations</button>
+        <button class="tab-btn"        id="tab-attendances"   onclick="switchTab('attendances')">Attendances</button>
+        <button class="tab-btn"        id="tab-evaluation"    onclick="switchTab('evaluation')">Evaluation</button>
+      </div>
+
+      <div class="panels-wrapper">
+        <div class="panels-track" id="panelsTrack">
+
+          <!-- ──────────────────────────────
+               PANEL 1: DETAILS
+          ────────────────────────────── -->
+          <div class="panel" id="panel-details">
+            <div class="detail-content">
+
+            <!-- Banner image area -->
+            <div class="detail-banner" id="detailBanner">
+              <div class="detail-banner-hint">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <rect x="3" y="3" width="18" height="18" rx="3"/>
+                  <circle cx="8.5" cy="8.5" r="1.5"/>
+                  <polyline points="21 15 16 10 5 21"/>
+                </svg>
+                Seminar Banner
+              </div>
+            </div>
+
+            <!-- Status, Slots, Scan QR -->
+            <div class="info-row">
+              <div class="info-badge status">
+                <span class="status-dot"></span>
+                <span id="detailStatus">#Status</span>
+              </div>
+              <div class="info-badge"><span id="detailSlots">#Slots</span></div>
+              <button class="scan-qr-btn">Scan QR</button>
+            </div>
+
+            <!-- Date & Venue row -->
+            <div class="info-row" style="margin-top:0;">
+              <div class="info-badge"><span id="detailDatetime">#Date&amp;Time</span></div>
+              <div class="info-badge"><span id="detailVenue">#Venue</span></div>
+            </div>
+
+            <!-- Speaker -->
+            <div class="info-row" style="margin-top:0; margin-bottom:14px;">
+              <div class="info-badge"><span id="detailSpeaker">#SpeakerName</span></div>
+            </div>
+
+            <!-- Seminar title -->
+            <div class="detail-title-card">
+              <div class="detail-title" id="detailTitle">#Seminar title seminartitle seminartitle seminartitle</div>
+            </div>
+
+            <!-- Description -->
+            <div class="detail-desc-card">
+              <p class="detail-desc" id="detailDesc">
+                #Seminar description Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+              </p>
+            </div>
+            </div>
+          </div>
+
+          <!-- ──────────────────────────────
+               PANEL 2: REGISTRATIONS
+          ────────────────────────────── -->
+          <div class="panel" id="panel-registrations">
+            <div class="table-card">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Profile</th>
+                    <th>Name</th>
+                    <th>Program</th>
+                    <th>Year Level</th>
+                    <th>Block</th>
+                    <th>Domain Email</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="registrationsBody">
+                  <!-- Populated by JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- ──────────────────────────────
+               PANEL 3: ATTENDANCES
+          ────────────────────────────── -->
+          <div class="panel" id="panel-attendances">
+            <div class="table-card">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>I.D. no.</th>
+                    <th>Name</th>
+                    <th>Program</th>
+                    <th>Year Level</th>
+                    <th>Block</th>
+                    <th>Time-In</th>
+                    <th>Time-Out</th>
+                  </tr>
+                </thead>
+                <tbody id="attendancesBody">
+                  <!-- Populated by JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- ──────────────────────────────
+               PANEL 4: EVALUATION
+          ────────────────────────────── -->
+          <div class="panel" id="panel-evaluation">
+
+            <!-- Eval header -->
+            <div class="eval-header-card">
+              <div class="eval-title" id="evalTitle">#Seminar title seminartitle seminartitle seminartitle</div>
+              <p class="eval-desc" id="evalDesc">
+                #Seminar Evaluation Description Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit
+              </p>
+            </div>
+
+            <!-- Evaluation Section Title -->
+            <div class="eval-section-title">#Evaluation Section title</div>
+
+            <!-- Question 1 — Paragraph type -->
+            <div class="question-block">
+              <div class="question-text">#Evaluation Question Paragraph-type</div>
+              <div class="para-answer-line">#Sample Answer</div>
+            </div>
+
+            <!-- Question 2 — Multiple choice type -->
+            <div class="question-block">
+              <div class="question-text">#Evaluation Question Multiple-choice-type</div>
+              <div class="mc-option"><div class="mc-radio-display"></div><span class="mc-option-text">#Answer</span></div>
+              <div class="mc-option"><div class="mc-radio-display"></div><span class="mc-option-text">#Answer</span></div>
+              <div class="mc-option"><div class="mc-radio-display"></div><span class="mc-option-text">#Answer</span></div>
+            </div>
+
+            <!-- Question 3 — Rating scale type -->
+            <div class="question-block">
+              <div class="question-text">#Evaluation Question Rating-type</div>
+              <div class="rating-row">
+                <div class="rating-circle"></div>
+                <div class="rating-circle"></div>
+                <div class="rating-circle"></div>
+                <div class="rating-circle"></div>
+                <div class="rating-circle"></div>
+              </div>
+            </div>
+
+            <!-- View Results — navigates to results page -->
+            <div class="view-results-btn">
+              <button class="btn-view-results" onclick="goToResults()">View Results</button>
+            </div>
+
+          </div><!-- /panel-evaluation -->
+
+        </div><!-- /panels-track -->
+      </div><!-- /panels-wrapper -->
+
+    </div><!-- /view-detail -->
+
+    <!-- ══════════════════════════════════
+         VIEW 3: EVALUATION RESULTS
+    ══════════════════════════════════ -->
+    <div class="view" id="view-results">
+
+      <!-- Results topbar -->
+      <div class="detail-topbar">
+        <button class="back-btn" onclick="backToDetail()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="15 18 9 12 15 6"/></svg>
+          Back
+        </button>
+        <button class="tab-btn active" id="rtab-summary"    onclick="switchResultTab('summary')">Summary</button>
+        <button class="tab-btn"        id="rtab-question"   onclick="switchResultTab('question')">Question</button>
+        <button class="tab-btn"        id="rtab-individual" onclick="switchResultTab('individual')">Individual</button>
+        <button class="btn-export" onclick="alert('Export coming soon')">Export</button>
+      </div>
+
+      <!-- Summary panel -->
+      <div id="rpanel-summary" class="results-panel">
+        <div id="summaryContent" class="results-content"></div>
+        <div class="pagination-bar">
+          <button class="page-arrow" id="prevPageBtn" onclick="goToSummaryPage(currentSummaryPage - 1)">‹</button>
+          <div class="page-dots" id="summaryDots"></div>
+          <button class="page-arrow" id="nextPageBtn" onclick="goToSummaryPage(currentSummaryPage + 1)">›</button>
+        </div>
+      </div>
+
+      <!-- Question panel -->
+      <div id="rpanel-question" class="results-panel" style="display:none;">
+        <div id="questionContent" class="results-content"></div>
+        <div class="pagination-bar">
+          <button class="page-arrow" disabled>‹</button>
+          <div class="page-dots">
+            <span class="page-dot active"></span><span class="page-dot"></span>
+            <span class="page-dot"></span><span class="page-dot"></span>
+          </div>
+          <button class="page-arrow">›</button>
+        </div>
+      </div>
+
+      <!-- Individual panel -->
+      <div id="rpanel-individual" class="results-panel" style="display:none;">
+        <div id="individualContent" class="results-content"></div>
+        <div class="pagination-bar">
+          <button class="page-arrow" disabled>‹</button>
+          <div class="page-dots">
+            <span class="page-dot active"></span><span class="page-dot"></span>
+            <span class="page-dot"></span><span class="page-dot"></span>
+          </div>
+          <button class="page-arrow">›</button>
+        </div>
+      </div>
+
+    </div><!-- /view-results -->
+
+  </main>
+
+  <!-- ═══════════════════════════════════
+       KICK CONFIRMATION MODAL
+       Based on components.html modal style
+  ═══════════════════════════════════ -->
+  <div class="modal-overlay" id="kickModal">
+    <div class="modal-box">
+      <div class="modal-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+        </svg>
+      </div>
+      <div class="modal-title">Remove Participant?</div>
+      <p class="modal-sub" id="kickModalSub">Are you sure you want to kick <strong id="kickName">this participant</strong> from the seminar?</p>
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closeKickModal()">Cancel</button>
+        <button class="btn-confirm-kick" onclick="confirmKick()">Yes, Kick</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* ════════════════════════════════════════════════
+       SAMPLE DATA
+       Replace with real data from your backend.
+    ════════════════════════════════════════════════ */
+    const seminars = [
+      {
+        id: 1,
+        title: '# Seminar Title',
+        date: 'Date', time: 'Time', place: 'Place',
+        org: '#Organization Name',
+        banner: null,
+      },
+      {
+        id: 2,
+        title: '# Seminar Title but long kasi para sa test case wawa',
+        date: 'Date', time: 'Time', place: 'Place',
+        org: '#Organization Name',
+        banner: null,
+      },
+      {
+        id: 3,
+        title: '# Seminar Title but long kasi para sa test case wawa',
+        date: 'Date', time: 'Time', place: 'Place',
+        org: '#Organization Name',
+        banner: null,
+      },
+      {
+        id: 4,
+        title: '# Seminar Title',
+        date: 'Date', time: 'Time', place: 'Place',
+        org: '#Organization Name',
+        banner: null,
+      },
+      {
+        id: 5,
+        title: '# Seminar Title but long kasi para sa test case wawa',
+        date: 'Date', time: 'Time', place: 'Place',
+        org: '#Organization Name',
+        banner: null,
+      },
+      {
+        id: 6,
+        title: '# Seminar Title but long kasi para sa test case wawa',
+        date: 'Date', time: 'Time', place: 'Place',
+        org: '#Organization Name',
+        banner: null,
+      },
+      {
+        id: 7,
+        title: '# Seminar Title',
+        date: 'Date', time: 'Time', place: 'Place',
+        org: '#Organization Name',
+        banner: null,
+      },
+      {
+        id: 8,
+        title: '# Seminar Title but long kasi para sa test case wawa',
+        date: 'Date', time: 'Time', place: 'Place',
+        org: '#Organization Name',
+        banner: null,
+      },
+      {
+        id: 9,
+        title: '# Seminar Title but long kasi para sa test case wawa',
+        date: 'Date', time: 'Time', place: 'Place',
+        org: '#Organization Name',
+        banner: null,
+      },
+    ];
+
+    const registrations = [
+      { id: 1, name: 'Juan Dela Cruz', program: 'BSCS', year: '2nd Year', block: 'Block A', email: '202412345@gordoncollege.edu.ph' },
+      { id: 2, name: 'Juan Dela Cruz', program: 'BSCS', year: '2nd Year', block: 'Block A', email: '202412345@gordoncollege.edu.ph' },
+      { id: 3, name: 'Juan Dela Cruz', program: 'BSCS', year: '2nd Year', block: 'Block A', email: '202412345@gordoncollege.edu.ph' },
+      { id: 4, name: 'Juan Dela Cruz', program: 'BSCS', year: '2nd Year', block: 'Block A', email: '202412345@gordoncollege.edu.ph' },
+      { id: 5, name: 'Juan Dela Cruz', program: 'BSCS', year: '2nd Year', block: 'Block A', email: '202412345@gordoncollege.edu.ph' },
+      { id: 6, name: 'Juan Dela Cruz', program: 'BSCS', year: '2nd Year', block: 'Block A', email: '202412345@gordoncollege.edu.ph' },
+      { id: 7, name: 'Juan Dela Cruz', program: 'BSCS', year: '2nd Year', block: 'Block A', email: '202412345@gordoncollege.edu.ph' },
+      { id: 8, name: 'Juan Dela Cruz', program: 'BSCS', year: '2nd Year', block: 'Block A', email: '202412345@gordoncollege.edu.ph' },
+      { id: 9, name: 'Juan Dela Cruz', program: 'BSCS', year: '2nd Year', block: 'Block A', email: '202412345@gordoncollege.edu.ph' },
+      { id: 10, name: 'Juan Dela Cruz', program: 'BSCS', year: '2nd Year', block: 'Block A', email: '202412345@gordoncollege.edu.ph' },
+      { id: 11, name: 'Juan Dela Cruz', program: 'BSCS', year: '2nd Year', block: 'Block A', email: '202412345@gordoncollege.edu.ph' },
+      { id: 12, name: 'Juan Dela Cruz', program: 'BSCS', year: '2nd Year', block: 'Block A', email: '202412345@gordoncollege.edu.ph' },
+    ];
+
+    const attendances = [
+      { studentId: '2024XXXX', name: 'Juan Dela Cruz', program: 'BSCS', year: '2nd Year', block: 'Block A', timeIn: 'HH:MM:SS', timeOut: 'HH:MM:SS' },
+      { studentId: '2024XXXX', name: 'Juan Dela Cruz', program: 'BSCS', year: '2nd Year', block: 'Block A', timeIn: 'HH:MM:SS', timeOut: 'HH:MM:SS' },
+      { studentId: '2024XXXX', name: 'Juan Dela Cruz', program: 'BSCS', year: '2nd Year', block: 'Block A', timeIn: 'HH:MM:SS', timeOut: 'HH:MM:SS' },
+      { studentId: '2024XXXX', name: 'Juan Dela Cruz', program: 'BSCS', year: '2nd Year', block: 'Block A', timeIn: 'HH:MM:SS', timeOut: 'HH:MM:SS' },
+    ];
+
+    /* ════════════════════════════════════════════════
+       RENDER SEMINAR GRID
+    ════════════════════════════════════════════════ */
+    function renderGrid(list) {
+      const grid = document.getElementById('seminarGrid');
+      grid.innerHTML = list.map(s => `
+        <div class="seminar-card" onclick="showDetail(${s.id})">
+          <div class="img-placeholder ${s.banner ? 'has-img' : ''}"
+               ${s.banner ? `style="background-image:url('${s.banner}')"` : ''}></div>
+          <div class="tag-row">
+            <span class="tag">${s.date}</span>
+            <span class="tag">${s.time}</span>
+            <span class="tag">${s.place}</span>
+          </div>
+          <div class="seminar-title">${s.title}</div>
+          <div class="seminar-meta-row">
+            <div class="org-row"><span class="org-dot"></span><span>${s.org}</span></div>
+            <button class="view-btn" onclick="event.stopPropagation();showDetail(${s.id})">View ›</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function filterSeminars(q) {
+      const filtered = seminars.filter(s => s.title.toLowerCase().includes(q.toLowerCase()));
+      renderGrid(filtered);
+    }
+
+    /* ════════════════════════════════════════════════
+       VIEW SWITCHING
+    ════════════════════════════════════════════════ */
+    function showList() {
+      document.getElementById('view-list').classList.add('active');
+      document.getElementById('view-detail').classList.remove('active');
+      switchTab('details'); // reset tabs
+    }
+
+    function showDetail(seminarId) {
+      document.getElementById('view-list').classList.remove('active');
+      document.getElementById('view-detail').classList.add('active');
+      // Populate detail data (extend this with real seminar data)
+      const s = seminars.find(x => x.id === seminarId);
+      if (s) {
+        document.getElementById('detailTitle').textContent = s.title;
+        document.getElementById('evalTitle').textContent = s.title;
+      }
+      switchTab('details');
+      renderRegistrations();
+      renderAttendances();
+    }
+
+    /* ════════════════════════════════════════════════
+       TAB SWITCHER
+    ════════════════════════════════════════════════ */
+    const tabs = ['details', 'registrations', 'attendances', 'evaluation'];
+    const trackClasses = {
+      details: '',
+      registrations: 'show-registrations',
+      attendances:   'show-attendances',
+      evaluation:    'show-evaluation',
+    };
+
+    function switchTab(tab) {
+      tabs.forEach(t => {
+        const btn = document.getElementById('tab-' + t);
+        btn.className = 'tab-btn' + (t === tab ? ' active' : '');
+      });
+      const track = document.getElementById('panelsTrack');
+      track.className = 'panels-track' + (trackClasses[tab] ? ' ' + trackClasses[tab] : '');
+    }
+
+    /* ════════════════════════════════════════════════
+       RENDER REGISTRATIONS TABLE
+    ════════════════════════════════════════════════ */
+    function renderRegistrations() {
+      const tbody = document.getElementById('registrationsBody');
+      tbody.innerHTML = registrations.map(r => `
+        <tr>
+          <td><div class="profile-avatar"></div></td>
+          <td>${r.name}</td>
+          <td>${r.program}</td>
+          <td>${r.year}</td>
+          <td>${r.block}</td>
+          <td>${r.email}</td>
+          <td>
+            <button class="kick-btn" onclick="openKickModal(${r.id}, '${r.name}')">Kick</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    /* ════════════════════════════════════════════════
+       RENDER ATTENDANCES TABLE
+    ════════════════════════════════════════════════ */
+    function renderAttendances() {
+      const tbody = document.getElementById('attendancesBody');
+      tbody.innerHTML = attendances.map(a => `
+        <tr>
+          <td>${a.studentId}</td>
+          <td>${a.name}</td>
+          <td>${a.program}</td>
+          <td>${a.year}</td>
+          <td>${a.block}</td>
+          <td>${a.timeIn}</td>
+          <td>${a.timeOut}</td>
+        </tr>
+      `).join('');
+    }
+
+    /* ════════════════════════════════════════════════
+       KICK MODAL
+    ════════════════════════════════════════════════ */
+    let kickTargetId = null;
+
+    function openKickModal(id, name) {
+      kickTargetId = id;
+      document.getElementById('kickName').textContent = name;
+      document.getElementById('kickModal').classList.add('open');
+    }
+
+    function closeKickModal() {
+      document.getElementById('kickModal').classList.remove('open');
+      kickTargetId = null;
+    }
+
+    function confirmKick() {
+      if (kickTargetId !== null) {
+        // Remove from registrations array
+        const idx = registrations.findIndex(r => r.id === kickTargetId);
+        if (idx !== -1) registrations.splice(idx, 1);
+        renderRegistrations();
+      }
+      closeKickModal();
+    }
+
+    // Close on overlay click
+    document.getElementById('kickModal').addEventListener('click', function(e) {
+      if (e.target === this) closeKickModal();
+    });
+
+    // Close on Escape
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') closeKickModal();
+    });
+
+    /* ════════════════════════════════════════════════
+       VIEW RESULTS — transition in-page
+    ════════════════════════════════════════════════ */
+    function goToResults() {
+      document.getElementById('view-detail').classList.remove('active');
+      document.getElementById('view-results').classList.add('active');
+      switchResultTab('summary');
+      renderSummaryPage(0);
+    }
+
+    function backToDetail() {
+      document.getElementById('view-results').classList.remove('active');
+      document.getElementById('view-detail').classList.add('active');
+      switchTab('evaluation');
+    }
+
+    /* ════════════════════════════════════════════════
+       RESULTS — TAB SWITCHER
+    ════════════════════════════════════════════════ */
+    const resultTabs = ['summary', 'question', 'individual'];
+    function switchResultTab(tab) {
+      resultTabs.forEach(t => {
+        document.getElementById('rtab-' + t).className = 'tab-btn' + (t === tab ? ' active' : '');
+        const p = document.getElementById('rpanel-' + t);
+        if (p) p.style.display = t === tab ? 'flex' : 'none';
+      });
+      if (tab === 'summary') renderSummaryPage(currentSummaryPage);
+      if (tab === 'question') renderQuestionPanel();
+      if (tab === 'individual') renderIndividualPanel();
+    }
+
+    /* ════════════════════════════════════════════════
+       SAMPLE RESULTS DATA
+    ════════════════════════════════════════════════ */
+    const respondents = [
+      'lorem ipsum eme eme emee.gmail.com',
+      'lorem ipsum eme eme emee.gmail.com',
+      'lorem ipsum eme eme emee.gmail.com',
+    ];
+
+    // Summary pages: each page is an array of question result blocks
+    const summaryPages = [
+      // Page 1 — who responded + paragraph answers
+      {
+        type: 'respondents',
+        questions: [
+          { type: 'paragraph', label: 'Paragraph question here?(Section)', nResponses: 3,
+            answers: [
+              'Lorem ipsum dolor sit amet consectetur. Diam ultrices pellentesque id ipsum. Ultricies eu suspendisse egestas venenatis lacinia nulla.',
+              'Lorem ipsum dolor sit amet consectetur. Diam ultrices pellentesque id ipsum. Ultricies eu suspendisse egestas venenatis lacinia nulla.',
+              'Lorem ipsum dolor sit amet consectetur. Diam ultrices pellentesque id ipsum. Ultricies eu suspendisse egestas venenatis lacinia nulla.',
+              'Lorem ipsum dolor sit amet consectetur. Diam ultrices pellentesque id ipsum. Ultricies eu suspendisse egestas venenatis lacinia nulla.',
+              'Lorem ipsum dolor sit amet consectetur. Diam ultrices pellentesque id ipsum. Ultricies eu suspendisse egestas venenatis lacinia nulla.',
+            ]
+          },
+          { type: 'paragraph', label: 'Paragraph question here?(Section)', nResponses: 3,
+            answers: [
+              'Lorem ipsum dolor sit amet consectetur. Diam ultrices pellentesque id ipsum. Ultricies eu suspendisse egestas venenatis lacinia nulla.',
+              'Lorem ipsum dolor sit amet consectetur. Diam ultrices pellentesque id ipsum. Ultricies eu suspendisse egestas venenatis lacinia nulla.',
+              'Lorem ipsum dolor sit amet consectetur. Diam ultrices pellentesque id ipsum. Ultricies eu suspendisse egestas venenatis lacinia nulla.',
+              'Lorem ipsum dolor sit amet consectetur. Diam ultrices pellentesque id ipsum. Ultricies eu suspendisse egestas venenatis lacinia nulla.',
+              'Lorem ipsum dolor sit amet consectetur. Diam ultrices pellentesque id ipsum. Ultricies eu suspendisse egestas venenatis lacinia nulla.',
+            ]
+          },
+          { type: 'paragraph', label: 'Paragraph question here?(Section)', nResponses: 3,
+            answers: [
+              'Lorem ipsum dolor sit amet consectetur. Diam ultrices pellentesque id ipsum. Ultricies eu suspendisse egestas venenatis lacinia nulla.',
+              'Lorem ipsum dolor sit amet consectetur. Diam ultrices pellentesque id ipsum. Ultricies eu suspendisse egestas venenatis lacinia nulla.',
+              'Lorem ipsum dolor sit amet consectetur. Diam ultrices pellentesque id ipsum. Ultricies eu suspendisse egestas venenatis lacinia nulla.',
+              'Lorem ipsum dolor sit amet consectetur. Diam ultrices pellentesque id ipsum. Ultricies eu suspendisse egestas venenatis lacinia nulla.',
+              'Lorem ipsum dolor sit amet consectetur. Diam ultrices pellentesque id ipsum. Ultricies eu suspendisse egestas venenatis lacinia nulla.',
+            ]
+          },
+          { type: 'paragraph', label: 'Paragraph question here?(Section)', nResponses: 3,
+            answers: [
+              'Lorem ipsum dolor sit amet consectetur. Diam ultrices pellentesque id ipsum. Ultricies eu suspendisse egestas venenatis lacinia nulla.',
+              'Lorem ipsum dolor sit amet consectetur. Diam ultrices pellentesque id ipsum. Ultricies eu suspendisse egestas venenatis lacinia nulla.',
+              'Lorem ipsum dolor sit amet consectetur. Diam ultrices pellentesque id ipsum. Ultricies eu suspendisse egestas venenatis lacinia nulla.',
+              'Lorem ipsum dolor sit amet consectetur. Diam ultrices pellentesque id ipsum. Ultricies eu suspendisse egestas venenatis lacinia nulla.',
+              'Lorem ipsum dolor sit amet consectetur. Diam ultrices pellentesque id ipsum. Ultricies eu suspendisse egestas venenatis lacinia nulla.',
+            ]
+          },
+        ]
+      },
+      // Page 2 — pie charts (multiple choice)
+      {
+        type: 'charts-pie',
+        questions: [
+          { type: 'pie', label: 'Paragraph question here?(Section)', nResponses: 3,
+            choices: ['Response 1', 'Response 2'], values: [55, 45] },
+          { type: 'pie', label: 'Paragraph question here?(Section)', nResponses: 3,
+            choices: ['Response 1', 'Response 2', 'Response 3'], values: [40, 35, 25] },
+          { type: 'pie', label: 'Paragraph question here?(Section)', nResponses: 3,
+            choices: ['Response 1', 'Response 2'], values: [60, 40] },
+          { type: 'pie', label: 'Paragraph question here?(Section)', nResponses: 3,
+            choices: ['Response 1', 'Response 2', 'Response 3'], values: [33, 42, 25] },
+        ]
+      },
+      // Page 3 — bar charts (multiple choice)
+      {
+        type: 'charts-bar',
+        questions: [
+          { type: 'bar', label: 'Paragraph question here?(Section)', nResponses: 3,
+            choices: ['Choice 1','Choice 1','Choice 1','Choice 1'], values: [4,4,4,4] },
+          { type: 'bar', label: 'Paragraph question here?(Section)', nResponses: 3,
+            choices: ['Choice 1','Choice 1','Choice 1','Choice 1'], values: [4,3,4,2] },
+          { type: 'bar', label: 'Paragraph question here?(Section)', nResponses: 3,
+            choices: ['Choice 1','Choice 1','Choice 1','Choice 1'], values: [4,4,3,4] },
+          { type: 'bar', label: 'Paragraph question here?(Section)', nResponses: 3,
+            choices: ['Choice 1','Choice 1','Choice 1','Choice 1'], values: [4,4,4,3] },
+        ]
+      },
+      // Page 4 — bar charts with 5 bars + rating stars
+      {
+        type: 'charts-rating',
+        questions: [
+          { type: 'bar', label: 'Paragraph question here?(Section)', nResponses: null, showStars: false,
+            choices: ['Choice 1','Choice 1','Choice 1','Choice 1','Choice 1'], values: [4,4,4,4,4] },
+          { type: 'bar', label: 'Paragraph question here?(Section)', nResponses: 3, showStars: false,
+            choices: ['Choice 1','Choice 1','Choice 1','Choice 1','Choice 1'], values: [4,4,4,3,4] },
+          { type: 'bar', label: 'Paragraph question here?(Section)', nResponses: null, showStars: true, avgRating: 5.00,
+            choices: ['Choice 1','Choice 1','Choice 1','Choice 1','Choice 1'], values: [4,4,3,4,4] },
+          { type: 'bar', label: 'Paragraph question here?(Section)', nResponses: 3, showStars: true, avgRating: 5.00,
+            choices: ['Choice 1','Choice 1','Choice 1','Choice 1','Choice 1'], values: [4,3,4,4,4] },
+        ]
+      },
+    ];
+
+    const TOTAL_PAGES = summaryPages.length;
+    let currentSummaryPage = 0;
+
+    /* ─── Chart color palette ─── */
+    const PIE_COLORS  = ['#d4601a','#8b2020','#e8b84b','#5a8a3c','#4a6fa5','#c0392b'];
+    const BAR_COLOR   = '#b0a8c8'; // muted lavender matching mockup
+
+    /* ════════════════════════════════════════════════
+       RENDER SUMMARY PAGE
+    ════════════════════════════════════════════════ */
+    function renderSummaryPage(pageIdx) {
+      currentSummaryPage = pageIdx;
+      const container = document.getElementById('summaryContent');
+      const page = summaryPages[pageIdx];
+      let html = '';
+
+      if (pageIdx === 0) {
+        // Who responded block
+        html += `<div class="res-card">
+          <div class="res-card-title">#N Reponses</div>
+          <div class="res-who-label">Who Responded?</div>
+          ${respondents.map(r => `<div class="res-respondent">${r}</div>`).join('')}
+        </div>`;
+      }
+
+      page.questions.forEach(q => {
+        html += '<div class="res-card">';
+        html += `<div class="res-q-label">${q.label}</div>`;
+        if (q.nResponses !== null && q.nResponses !== undefined) {
+          html += `<div class="res-n">#N Responses</div>`;
+        }
+
+        if (q.type === 'paragraph') {
+          q.answers.forEach(a => {
+            html += `<p class="res-answer">${a}</p>`;
+          });
+        } else if (q.type === 'pie') {
+          html += `<div class="res-pie-wrap">
+            <canvas class="res-pie-canvas" width="180" height="180"
+              data-values='${JSON.stringify(q.values)}'
+              data-colors='${JSON.stringify(PIE_COLORS)}'></canvas>
+            <div class="res-pie-legend">
+              ${q.choices.map((c,i) => `
+                <div class="res-legend-item">
+                  <span class="res-legend-dot" style="background:${PIE_COLORS[i]}"></span>
+                  <span class="res-legend-text">${c}</span>
+                </div>`).join('')}
+            </div>
+          </div>`;
+        } else if (q.type === 'bar') {
+          if (q.showStars) {
+            html += `<div class="res-avg-rating">Average Rating (${q.avgRating.toFixed(2)})</div>
+              <div class="res-stars-row">
+                ${[1,2,3,4,5].map(i => `<div class="res-star-col"><span class="res-star">★</span><span class="res-star-num">${i}</span></div>`).join('')}
+              </div>`;
+          }
+          html += `<canvas class="res-bar-canvas"
+            data-values='${JSON.stringify(q.values)}'
+            data-labels='${JSON.stringify(q.choices)}'
+            data-color='${BAR_COLOR}'></canvas>`;
+        }
+        html += '</div>';
+      });
+
+      container.innerHTML = `<div class="summary-report-frame">${html}</div>`;
+      container.scrollTop = 0;
+      updatePagination();
+
+      // Draw canvases
+      requestAnimationFrame(() => {
+        container.querySelectorAll('.res-pie-canvas').forEach(drawPie);
+        container.querySelectorAll('.res-bar-canvas').forEach(drawBar);
+      });
+    }
+
+    /* ─── Draw pie chart ─── */
+    function drawPie(canvas) {
+      const values = JSON.parse(canvas.dataset.values);
+      const colors = JSON.parse(canvas.dataset.colors);
+      const ctx = canvas.getContext('2d');
+      const cx = canvas.width / 2, cy = canvas.height / 2, r = Math.min(cx, cy) - 6;
+      const total = values.reduce((a, b) => a + b, 0);
+      let startAngle = -Math.PI / 2;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      values.forEach((v, i) => {
+        const slice = (v / total) * 2 * Math.PI;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.arc(cx, cy, r, startAngle, startAngle + slice);
+        ctx.closePath();
+        ctx.fillStyle = colors[i];
+        ctx.fill();
+        // Separator line
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx + r * Math.cos(startAngle), cy + r * Math.sin(startAngle));
+        ctx.strokeStyle = '#fdf8e1';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        startAngle += slice;
+      });
+    }
+
+    /* ─── Draw bar chart ─── */
+    function drawBar(canvas) {
+      const values = JSON.parse(canvas.dataset.values);
+      const labels = JSON.parse(canvas.dataset.labels);
+      const color  = canvas.dataset.color;
+      const W = canvas.offsetWidth || 460;
+      const H = 200;
+      canvas.width  = W;
+      canvas.height = H;
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, W, H);
+
+      const maxVal = Math.max(...values, 4);
+      const padL = 32, padR = 12, padT = 16, padB = 32;
+      const chartW = W - padL - padR;
+      const chartH = H - padT - padB;
+      const n = values.length;
+      const barW = (chartW / n) * 0.5;
+      const gap   = chartW / n;
+
+      // Grid lines & Y labels
+      const gridVals = [0, 2, 4];
+      ctx.strokeStyle = '#d4c9a0';
+      ctx.lineWidth = 1;
+      ctx.font = '11px DM Sans, sans-serif';
+      ctx.fillStyle = '#8b2020';
+      ctx.textAlign = 'right';
+      gridVals.forEach(gv => {
+        const y = padT + chartH - (gv / maxVal) * chartH;
+        ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(W - padR, y); ctx.stroke();
+        ctx.fillText(gv, padL - 4, y + 4);
+      });
+
+      // Bars
+      values.forEach((v, i) => {
+        const x = padL + i * gap + gap / 2 - barW / 2;
+        const barH = (v / maxVal) * chartH;
+        const y = padT + chartH - barH;
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.roundRect ? ctx.roundRect(x, y, barW, barH, 3) : ctx.rect(x, y, barW, barH);
+        ctx.fill();
+      });
+
+      // X-axis line
+      ctx.strokeStyle = '#8b2020';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(padL, padT + chartH);
+      ctx.lineTo(W - padR, padT + chartH);
+      ctx.stroke();
+
+      // X labels
+      ctx.fillStyle = '#8b2020';
+      ctx.textAlign = 'center';
+      ctx.font = '11px DM Sans, sans-serif';
+      labels.forEach((l, i) => {
+        const x = padL + i * gap + gap / 2;
+        ctx.fillText(l, x, H - 8);
+      });
+    }
+
+    /* ════════════════════════════════════════════════
+       PAGINATION DOTS
+    ════════════════════════════════════════════════ */
+    function updatePagination() {
+      const dotsEl = document.getElementById('summaryDots');
+      dotsEl.innerHTML = Array.from({length: TOTAL_PAGES}, (_, i) =>
+        `<span class="page-dot ${i === currentSummaryPage ? 'active' : ''}"
+               onclick="goToSummaryPage(${i})"></span>`
+      ).join('');
+      document.getElementById('prevPageBtn').disabled = currentSummaryPage === 0;
+      document.getElementById('nextPageBtn').disabled = currentSummaryPage === TOTAL_PAGES - 1;
+    }
+
+    function goToSummaryPage(i) {
+      if (i < 0 || i >= TOTAL_PAGES) return;
+      renderSummaryPage(i);
+    }
+
+    /* ════════════════════════════════════════════════
+       QUESTION PANEL
+    ════════════════════════════════════════════════ */
+    function renderQuestionPanel() {
+      const c = document.getElementById('questionContent');
+      c.innerHTML = `
+        <div class="res-section-title-block">#Evaluation Section title</div>
+
+        <div class="res-card res-card-answer">
+          <div class="res-para-area">#Sample Answer</div>
+        </div>
+        <div class="res-respondent-pill"><span class="res-pill-dot"></span> #Number &nbsp; #Lorem Ipsum Question</div>
+
+        <div class="res-card res-card-answer">
+          <div class="res-para-area">#Sample Answer</div>
+        </div>
+        <div class="res-respondent-pill"><span class="res-pill-dot"></span> #Number &nbsp; #Lorem Ipsum Question</div>
+
+        <div class="res-card res-card-answer">
+          <div class="res-para-area">#Sample Answer</div>
+        </div>
+        <div class="res-respondent-pill"><span class="res-pill-dot"></span> #Number &nbsp; #Lorem Ipsum Question</div>
+
+        <div class="res-card">
+          <div class="res-q-label">#Evaluation Question Multiple-choice-type</div>
+          <div class="mc-option"><div class="mc-radio-display"></div><span class="mc-option-text">#Answer</span></div>
+          <div class="mc-option"><div class="mc-radio-display"></div><span class="mc-option-text">#Answer</span></div>
+          <div class="mc-option"><div class="mc-radio-display"></div><span class="mc-option-text">#Answer</span></div>
+        </div>
+        <div class="res-respondent-pill"><span class="res-pill-dot"></span> #Number &nbsp; #Lorem Ipsum Question</div>
+        <div class="res-respondent-pill"><span class="res-pill-dot"></span> #Number &nbsp; #Lorem Ipsum Question</div>
+        <div class="res-respondent-pill"><span class="res-pill-dot"></span> #Number &nbsp; #Lorem Ipsum Question</div>
+
+        <div class="res-card">
+          <div class="res-q-label">#Evaluation Question Rating-type</div>
+          <div class="rating-row">
+            <div class="rating-circle"></div><div class="rating-circle"></div>
+            <div class="rating-circle"></div><div class="rating-circle"></div>
+            <div class="rating-circle"></div>
+          </div>
+        </div>
+        <div class="res-respondent-pill"><span class="res-pill-dot"></span> #Number &nbsp; #Lorem Ipsum Question</div>
+        <div class="res-respondent-pill"><span class="res-pill-dot"></span> #Number &nbsp; #Lorem Ipsum Question</div>
+        <div class="res-respondent-pill"><span class="res-pill-dot"></span> #Number &nbsp; #Lorem Ipsum Question</div>
+        <div class="res-respondent-pill"><span class="res-pill-dot"></span> #Number &nbsp; #Lorem Ipsum Question</div>
+        <div class="res-respondent-pill"><span class="res-pill-dot"></span> #Number &nbsp; #Lorem Ipsum Question</div>
+      `;
+    }
+
+    /* ════════════════════════════════════════════════
+       INDIVIDUAL PANEL
+    ════════════════════════════════════════════════ */
+    let currentIndividual = 0;
+    const totalIndividuals = respondents.length;
+
+    function renderIndividualPanel() {
+      const c = document.getElementById('individualContent');
+      const email = respondents[currentIndividual] || '#Respondent\'s email';
+      c.innerHTML = `
+        <!-- Navigation bar for respondent -->
+        <div class="ind-nav-bar">
+          <div class="ind-email-field">${email}</div>
+          <div class="ind-nav-controls">
+            <button class="ind-nav-btn" onclick="prevIndividual()" ${currentIndividual === 0 ? 'disabled' : ''}>‹</button>
+            <span class="ind-nav-icon">🌐</span>
+            <span class="ind-nav-of">of</span>
+            <span class="ind-nav-total">#</span>
+            <button class="ind-nav-btn" onclick="nextIndividual()" ${currentIndividual >= totalIndividuals - 1 ? 'disabled' : ''}>›</button>
+          </div>
+          <div class="ind-action-btns">
+            <button class="ind-action-btn" title="Print">🖨️</button>
+            <button class="ind-action-btn" title="Download">📁</button>
+          </div>
+        </div>
+
+        <!-- Seminar title -->
+        <div class="res-card ind-title-card">
+          <div class="ind-seminar-title">#Lorem Ipsum Seminar Title</div>
+        </div>
+
+        <div class="ind-email-badge">#Respondent's email</div>
+
+        <div class="res-section-title-block">#Evaluation Section title</div>
+
+        <div class="res-card">
+          <div class="res-q-label">#Evaluation Question Paragraph-type</div>
+          <div class="para-answer-line">#Sample Answer</div>
+        </div>
+        <div class="res-card">
+          <div class="res-q-label">#Evaluation Question Multiple-choice-type</div>
+          <div class="mc-option"><div class="mc-radio-display"></div><span class="mc-option-text">#Answer</span></div>
+          <div class="mc-option"><div class="mc-radio-display"></div><span class="mc-option-text">#Answer</span></div>
+          <div class="mc-option"><div class="mc-radio-display"></div><span class="mc-option-text">#Answer</span></div>
+        </div>
+        <div class="res-card">
+          <div class="res-q-label">#Evaluation Question Rating-type</div>
+          <div class="rating-row">
+            <div class="rating-circle"></div><div class="rating-circle"></div>
+            <div class="rating-circle"></div><div class="rating-circle"></div>
+            <div class="rating-circle"></div>
+          </div>
+        </div>
+
+        <div class="res-section-title-block">#Evaluation Section title</div>
+        <div class="res-card">
+          <div class="res-q-label">#Evaluation Question Paragraph-type</div>
+          <div class="para-answer-line">#Sample Answer</div>
+        </div>
+        <div class="res-card">
+          <div class="res-q-label">#Evaluation Question Multiple-choice-type</div>
+          <div class="mc-option"><div class="mc-radio-display"></div><span class="mc-option-text">#Answer</span></div>
+          <div class="mc-option"><div class="mc-radio-display"></div><span class="mc-option-text">#Answer</span></div>
+          <div class="mc-option"><div class="mc-radio-display"></div><span class="mc-option-text">#Answer</span></div>
+        </div>
+        <div class="res-card">
+          <div class="res-q-label">#Evaluation Question Rating-type</div>
+          <div class="rating-row">
+            <div class="rating-circle"></div><div class="rating-circle"></div>
+            <div class="rating-circle"></div><div class="rating-circle"></div>
+            <div class="rating-circle"></div>
+          </div>
+        </div>
+
+        <div class="res-section-title-block">#Evaluation Section title</div>
+        <div class="res-card">
+          <div class="res-q-label">#Evaluation Question Paragraph-type</div>
+          <div class="para-answer-line">#Sample Answer</div>
+        </div>
+        <div class="res-card">
+          <div class="res-q-label">#Evaluation Question Multiple-choice-type</div>
+          <div class="mc-option"><div class="mc-radio-display"></div><span class="mc-option-text">#Answer</span></div>
+          <div class="mc-option"><div class="mc-radio-display"></div><span class="mc-option-text">#Answer</span></div>
+          <div class="mc-option"><div class="mc-radio-display"></div><span class="mc-option-text">#Answer</span></div>
+        </div>
+        <div class="res-card">
+          <div class="res-q-label">#Evaluation Question Rating-type</div>
+          <div class="rating-row">
+            <div class="rating-circle"></div><div class="rating-circle"></div>
+            <div class="rating-circle"></div><div class="rating-circle"></div>
+            <div class="rating-circle"></div>
+          </div>
+        </div>
+      `;
+    }
+
+    function prevIndividual() { if (currentIndividual > 0) { currentIndividual--; renderIndividualPanel(); } }
+    function nextIndividual() { if (currentIndividual < totalIndividuals - 1) { currentIndividual++; renderIndividualPanel(); } }
+
+    /* ════════════════════════════════════════════════
+       INIT
+    ════════════════════════════════════════════════ */
+    renderGrid(seminars);
+  </script>
+</body>
+</html>

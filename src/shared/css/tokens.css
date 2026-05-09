@@ -1,0 +1,55 @@
+/*
+ * ============================================================
+ *  SEMINEX — Design Tokens
+ *  Single source of truth for all CSS custom properties.
+ *  Import this file first in any portal stylesheet.
+ * ============================================================
+ */
+
+@import url("https://fonts.googleapis.com/css2?family=Lora:wght@400;600;700&family=DM+Sans:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;500;700;800&display=swap");
+
+:root {
+  /* ── Color palette ──────────────────────────────── */
+  --color-bg:              #fdf8e1;   /* Warm cream background */
+  --color-primary:         #8b2020;   /* Deep maroon */
+  --color-primary-lt:      #a63030;   /* Lighter maroon (hover) */
+  --color-primary-dark:    #6e1a1a;   /* Darker maroon */
+  --color-accent:          #e8722a;   /* Orange accent */
+  --color-accent-hover:    #d4621c;   /* Orange accent (hover) */
+  --color-text-on-primary: #fdf8e1;
+  --color-text-dark:       #3a2e2e;
+  --color-text-label:      #8b2020;
+  --color-text-muted:      #7a6a5a;
+  --color-border:          #d4c9a0;
+  --color-shadow:          rgba(139, 32, 32, 0.25);
+  --color-muted:           #b0a080;
+  --color-input-bg:        #fffdf0;
+
+  /* ── Typography ─────────────────────────────────── */
+  --font-display:  'Lora', serif;
+  --font-body:     'DM Sans', sans-serif;
+  --font-jakarta:  'Plus Jakarta Sans', sans-serif;
+
+  /* ── Border radius ──────────────────────────────── */
+  --radius-card:   14px;
+  --radius-btn:    10px;
+  --radius-pill:   50px;
+
+  /* ── Spacing scale ──────────────────────────────── */
+  --space-xs:  4px;
+  --space-sm:  8px;
+  --space-md:  16px;
+  --space-lg:  24px;
+  --space-xl:  48px;
+  --space-2xl: 64px;
+
+  /* ── Shadows ────────────────────────────────────── */
+  --shadow-card: 0 2px 12px rgba(139, 32, 32, 0.10);
+  --shadow-btn:  0 2px 6px  rgba(139, 32, 32, 0.20);
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
