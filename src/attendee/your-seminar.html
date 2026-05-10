@@ -197,6 +197,13 @@
     .sidebar-brand .brand-logo { width: 36px; height: 36px; flex-shrink: 0; }
     .right-panel .brand-logo { width: 160px; height: 160px; margin-bottom: 24px; }
     .logo-mark-img { width: 50px; height: 50px; flex: 0 0 auto; }
+    .empty-state {
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 80px 24px;
+      text-align: center;
+    }
   </style>
   <link rel="stylesheet" href="../shared/css/attendee-portal.min.css">
   <link rel="stylesheet" href="../shared/css/animations.css">
@@ -252,146 +259,77 @@
     </div>
 
     <div class="content">
-      <div class="card-grid">
-
-        <!-- Card 1 — short title -->
-        <div class="seminar-card">
-          <div class="card-img-placeholder"></div>
-          <div class="card-tags">
-            <span class="tag">Date</span>
-            <span class="tag">Time</span>
-            <span class="tag">Place</span>
-          </div>
-          <div class="card-title"># Seminar Title</div>
-          <div class="card-meta">
-            <div class="org-row"><span class="org-dot"></span><span>#Organization Name</span></div>
-            <a href="seminar-detail.html?seminar_id=SEM-001&user_id=USER-001&user_name=Participant%20Name%20Here&seminar_title=%23%20Seminar%20Title" class="view-btn">View ›</a>
-          </div>
-        </div>
-
-        <!-- Card 2 — long title -->
-        <div class="seminar-card">
-          <div class="card-img-placeholder"></div>
-          <div class="card-tags">
-            <span class="tag">Date</span>
-            <span class="tag">Time</span>
-            <span class="tag">Place</span>
-          </div>
-          <div class="card-title"># Seminar Title but long kasi para sa test case wawa</div>
-          <div class="card-meta">
-            <div class="org-row"><span class="org-dot"></span><span>#Organization Name</span></div>
-            <a href="seminar-detail.html?seminar_id=SEM-002&user_id=USER-001&user_name=Participant%20Name%20Here&seminar_title=%23%20Seminar%20Title%20but%20long%20kasi%20para%20sa%20test%20case%20wawa" class="view-btn">View ›</a>
-          </div>
-        </div>
-
-        <!-- Card 3 — long title -->
-        <div class="seminar-card">
-          <div class="card-img-placeholder"></div>
-          <div class="card-tags">
-            <span class="tag">Date</span>
-            <span class="tag">Time</span>
-            <span class="tag">Place</span>
-          </div>
-          <div class="card-title"># Seminar Title but long kasi para sa test case wawa</div>
-          <div class="card-meta">
-            <div class="org-row"><span class="org-dot"></span><span>#Organization Name</span></div>
-            <a href="seminar-detail.html?seminar_id=SEM-003&user_id=USER-001&user_name=Participant%20Name%20Here&seminar_title=%23%20Seminar%20Title%20but%20long%20kasi%20para%20sa%20test%20case%20wawa" class="view-btn">View ›</a>
-          </div>
-        </div>
-
-        <!-- Card 4 -->
-        <div class="seminar-card">
-          <div class="card-img-placeholder"></div>
-          <div class="card-tags">
-            <span class="tag">Date</span>
-            <span class="tag">Time</span>
-            <span class="tag">Place</span>
-          </div>
-          <div class="card-title"># Seminar Title</div>
-          <div class="card-meta">
-            <div class="org-row"><span class="org-dot"></span><span>#Organization Name</span></div>
-            <a href="seminar-detail.html?seminar_id=SEM-004&user_id=USER-001&user_name=Participant%20Name%20Here&seminar_title=%23%20Seminar%20Title" class="view-btn">View ›</a>
-          </div>
-        </div>
-
-        <!-- Card 5 -->
-        <div class="seminar-card">
-          <div class="card-img-placeholder"></div>
-          <div class="card-tags">
-            <span class="tag">Date</span>
-            <span class="tag">Time</span>
-            <span class="tag">Place</span>
-          </div>
-          <div class="card-title"># Seminar Title but long kasi para sa test case wawa</div>
-          <div class="card-meta">
-            <div class="org-row"><span class="org-dot"></span><span>#Organization Name</span></div>
-            <a href="seminar-detail.html?seminar_id=SEM-005&user_id=USER-001&user_name=Participant%20Name%20Here&seminar_title=%23%20Seminar%20Title%20but%20long%20kasi%20para%20sa%20test%20case%20wawa" class="view-btn">View ›</a>
-          </div>
-        </div>
-
-        <!-- Card 6 -->
-        <div class="seminar-card">
-          <div class="card-img-placeholder"></div>
-          <div class="card-tags">
-            <span class="tag">Date</span>
-            <span class="tag">Time</span>
-            <span class="tag">Place</span>
-          </div>
-          <div class="card-title"># Seminar Title but long kasi para sa test case wawa</div>
-          <div class="card-meta">
-            <div class="org-row"><span class="org-dot"></span><span>#Organization Name</span></div>
-            <a href="seminar-detail.html?seminar_id=SEM-006&user_id=USER-001&user_name=Participant%20Name%20Here&seminar_title=%23%20Seminar%20Title%20but%20long%20kasi%20para%20sa%20test%20case%20wawa" class="view-btn">View ›</a>
-          </div>
-        </div>
-
-        <!-- Card 7 -->
-        <div class="seminar-card">
-          <div class="card-img-placeholder"></div>
-          <div class="card-tags">
-            <span class="tag">Date</span>
-            <span class="tag">Time</span>
-            <span class="tag">Place</span>
-          </div>
-          <div class="card-title"># Seminar Title</div>
-          <div class="card-meta">
-            <div class="org-row"><span class="org-dot"></span><span>#Organization Name</span></div>
-            <a href="seminar-detail.html?seminar_id=SEM-007&user_id=USER-001&user_name=Participant%20Name%20Here&seminar_title=%23%20Seminar%20Title" class="view-btn">View ›</a>
-          </div>
-        </div>
-
-        <!-- Card 8 -->
-        <div class="seminar-card">
-          <div class="card-img-placeholder"></div>
-          <div class="card-tags">
-            <span class="tag">Date</span>
-            <span class="tag">Time</span>
-            <span class="tag">Place</span>
-          </div>
-          <div class="card-title"># Seminar Title but long kasi para sa test case wawa</div>
-          <div class="card-meta">
-            <div class="org-row"><span class="org-dot"></span><span>#Organization Name</span></div>
-            <a href="seminar-detail.html?seminar_id=SEM-008&user_id=USER-001&user_name=Participant%20Name%20Here&seminar_title=%23%20Seminar%20Title%20but%20long%20kasi%20para%20sa%20test%20case%20wawa" class="view-btn">View ›</a>
-          </div>
-        </div>
-
-        <!-- Card 9 -->
-        <div class="seminar-card">
-          <div class="card-img-placeholder"></div>
-          <div class="card-tags">
-            <span class="tag">Date</span>
-            <span class="tag">Time</span>
-            <span class="tag">Place</span>
-          </div>
-          <div class="card-title"># Seminar Title but long kasi para sa test case wawa</div>
-          <div class="card-meta">
-            <div class="org-row"><span class="org-dot"></span><span>#Organization Name</span></div>
-            <a href="seminar-detail.html?seminar_id=SEM-009&user_id=USER-001&user_name=Participant%20Name%20Here&seminar_title=%23%20Seminar%20Title%20but%20long%20kasi%20para%20sa%20test%20case%20wawa" class="view-btn">View ›</a>
-          </div>
-        </div>
-
+      <div class="card-grid" id="seminarGrid"></div>
+      <div class="empty-state" id="emptyState" style="display:none;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:48px;height:48px;color:#d4c9a0;margin-bottom:12px;">
+          <rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>
+        </svg>
+        <p style="font-family:var(--font-display);font-size:18px;font-weight:700;color:#b0a080;margin-bottom:6px;">No seminars yet</p>
+        <p style="font-size:13px;color:#b0a080;">Seminars you register for will appear here.</p>
       </div>
     </div>
   </main>
+
+  <script>
+    /*
+     * YOUR SEMINARS — render hook
+     * ─────────────────────────────────────────────────────────
+     * Replace the empty `registeredSeminars` array below with
+     * real data from your backend when ready.
+     *
+     * Each seminar object shape:
+     * {
+     *   id:    string   — unique seminar ID
+     *   title: string   — seminar title
+     *   date:  string   — display date  e.g. "Jan 15, 2025"
+     *   time:  string   — display time  e.g. "9:00 AM"
+     *   place: string   — venue
+     *   org:   string   — organization name
+     *   img:   string   — banner URL (optional; shows placeholder if absent)
+     * }
+     */
+    const registeredSeminars = [];  // ← inject data here
+
+    const grid  = document.getElementById('seminarGrid');
+    const empty = document.getElementById('emptyState');
+    const searchInput = document.querySelector('.search-box input');
+
+    function buildCard(s) {
+      const imgHtml = s.img
+        ? `<img src="${s.img}" alt="${s.title}" style="width:100%;height:110px;object-fit:cover;border-radius:10px;margin:10px 10px 0;display:block;">`
+        : `<div class="card-img-placeholder"></div>`;
+      return `
+        <div class="seminar-card" data-title="${s.title.toLowerCase()}" data-org="${s.org.toLowerCase()}">
+          ${imgHtml}
+          <div class="card-tags">
+            <span class="tag">${s.date}</span>
+            <span class="tag">${s.time}</span>
+            <span class="tag">${s.place}</span>
+          </div>
+          <div class="card-title">${s.title}</div>
+          <div class="card-meta">
+            <div class="org-row"><span class="org-dot"></span><span>${s.org}</span></div>
+            <a href="seminar-detail.html?id=${encodeURIComponent(s.id)}" class="view-btn">View ›</a>
+          </div>
+        </div>`;
+    }
+
+    function renderCards(data) {
+      grid.innerHTML = data.map(buildCard).join('');
+      empty.style.display = data.length === 0 ? 'flex' : 'none';
+      grid.style.display  = data.length === 0 ? 'none'  : 'grid';
+    }
+
+    searchInput.addEventListener('input', () => {
+      const q = searchInput.value.trim().toLowerCase();
+      const filtered = registeredSeminars.filter(s =>
+        s.title.toLowerCase().includes(q) || s.org.toLowerCase().includes(q)
+      );
+      renderCards(filtered);
+    });
+
+    renderCards(registeredSeminars);
+  </script>
 
 </body>
 </html>

@@ -216,112 +216,85 @@
       </div>
     </div>
 
-    <div class="content">
-
-      <!-- Row 1 -->
-      <div class="history-row">
-        <div class="row-top">
-          <div class="row-title"># Seminar Title but long kasi para sa test case wawa</div>
-          <a href="history-seminar-detail.html" class="view-btn">View &rsaquo;</a>
-        </div>
-        <div class="row-tags">
-          <span class="tag">Date</span>
-          <span class="tag">Time</span>
-          <span class="tag">Place</span>
-        </div>
-        <div class="row-org">
-          <span class="org-dot"></span>
-          <span>#Organization Name</span>
-        </div>
+    <div class="content" id="historyContent"></div>
+      <div class="empty-state" id="emptyState" style="display:none;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:48px;height:48px;color:#d4c9a0;margin-bottom:12px;">
+          <polyline points="12 8 12 12 14 14"/><path d="M3.05 11a9 9 0 1 0 .5-4.5"/><polyline points="3 3 3 8 8 8"/>
+        </svg>
+        <p style="font-family:var(--font-display);font-size:18px;font-weight:700;color:#b0a080;margin-bottom:6px;">No history yet</p>
+        <p style="font-size:13px;color:#b0a080;">Completed seminars will appear here.</p>
       </div>
-
-      <!-- Row 2 -->
-      <div class="history-row">
-        <div class="row-top">
-          <div class="row-title"># Seminar Title but long kasi para sa test case wawa</div>
-          <a href="history-seminar-detail.html" class="view-btn">View &rsaquo;</a>
-        </div>
-        <div class="row-tags">
-          <span class="tag">Date</span>
-          <span class="tag">Time</span>
-          <span class="tag">Place</span>
-        </div>
-        <div class="row-org">
-          <span class="org-dot"></span>
-          <span>#Organization Name</span>
-        </div>
-      </div>
-
-      <!-- Row 3 -->
-      <div class="history-row">
-        <div class="row-top">
-          <div class="row-title"># Seminar Title but long kasi para sa test case wawa</div>
-          <a href="history-seminar-detail.html" class="view-btn">View &rsaquo;</a>
-        </div>
-        <div class="row-tags">
-          <span class="tag">Date</span>
-          <span class="tag">Time</span>
-          <span class="tag">Place</span>
-        </div>
-        <div class="row-org">
-          <span class="org-dot"></span>
-          <span>#Organization Name</span>
-        </div>
-      </div>
-
-      <!-- Row 4 -->
-      <div class="history-row">
-        <div class="row-top">
-          <div class="row-title"># Seminar Title but long kasi para sa test case wawa</div>
-          <a href="history-seminar-detail.html" class="view-btn">View &rsaquo;</a>
-        </div>
-        <div class="row-tags">
-          <span class="tag">Date</span>
-          <span class="tag">Time</span>
-          <span class="tag">Place</span>
-        </div>
-        <div class="row-org">
-          <span class="org-dot"></span>
-          <span>#Organization Name</span>
-        </div>
-      </div>
-
-      <!-- Row 5 -->
-      <div class="history-row">
-        <div class="row-top">
-          <div class="row-title"># Seminar Title but long kasi para sa test case wawa</div>
-          <a href="history-seminar-detail.html" class="view-btn">View &rsaquo;</a>
-        </div>
-        <div class="row-tags">
-          <span class="tag">Date</span>
-          <span class="tag">Time</span>
-          <span class="tag">Place</span>
-        </div>
-        <div class="row-org">
-          <span class="org-dot"></span>
-          <span>#Organization Name</span>
-        </div>
-      </div>
-
-      <!-- Row 6 -->
-      <div class="history-row">
-        <div class="row-top">
-          <div class="row-title"># Seminar Title but long kasi para sa test case wawa</div>
-          <a href="history-seminar-detail.html" class="view-btn">View &rsaquo;</a>
-        </div>
-        <div class="row-tags">
-          <span class="tag">Date</span>
-          <span class="tag">Time</span>
-          <span class="tag">Place</span>
-        </div>
-        <div class="row-org">
-          <span class="org-dot"></span>
-          <span>#Organization Name</span>
-        </div>
-      </div>
-
     </div>
   </main>
 
+
+  <style>
+    .empty-state {
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 80px 24px;
+      text-align: center;
+    }
+  </style>
+
+  <script>
+    /*
+     * HISTORY — render hook
+     * ─────────────────────────────────────────────────────────
+     * Replace the empty `completedSeminars` array below with
+     * real data from your backend when ready.
+     *
+     * Each seminar object shape:
+     * {
+     *   id:    string   — unique seminar ID
+     *   title: string   — seminar title
+     *   date:  string   — display date  e.g. "Jan 15, 2025"
+     *   time:  string   — display time  e.g. "9:00 AM"
+     *   place: string   — venue
+     *   org:   string   — organization name
+     * }
+     */
+    const completedSeminars = [];  // ← inject data here
+
+    const content     = document.getElementById('historyContent');
+    const empty       = document.getElementById('emptyState');
+    const searchInput = document.querySelector('.search-box input');
+
+    function buildRow(s) {
+      return `
+        <div class="history-row" data-title="${s.title.toLowerCase()}" data-org="${s.org.toLowerCase()}">
+          <div class="row-top">
+            <div class="row-title">${s.title}</div>
+            <a href="history-seminar-detail.html?id=${encodeURIComponent(s.id)}" class="view-btn">View &rsaquo;</a>
+          </div>
+          <div class="row-tags">
+            <span class="tag">${s.date}</span>
+            <span class="tag">${s.time}</span>
+            <span class="tag">${s.place}</span>
+          </div>
+          <div class="row-org">
+            <span class="org-dot"></span>
+            <span>${s.org}</span>
+          </div>
+        </div>`;
+    }
+
+    function renderRows(data) {
+      content.innerHTML = data.map(buildRow).join('');
+      empty.style.display   = data.length === 0 ? 'flex' : 'none';
+      content.style.display = data.length === 0 ? 'none' : 'flex';
+    }
+
+    searchInput.addEventListener('input', () => {
+      const q = searchInput.value.trim().toLowerCase();
+      const filtered = completedSeminars.filter(s =>
+        s.title.toLowerCase().includes(q) || s.org.toLowerCase().includes(q)
+      );
+      renderRows(filtered);
+    });
+
+    renderRows(completedSeminars);
+  </script>
 </body>
 </html>

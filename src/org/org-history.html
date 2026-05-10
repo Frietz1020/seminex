@@ -377,126 +377,85 @@
     </header>
 
     <section class="content" aria-label="Archived seminars">
-      <div class="history-list" id="historyList">
-        <article class="history-card" data-search="seminar title organization name date time place">
-          <h2 class="seminar-title"># Seminar Title but long kasi para sa test case wawa</h2>
-          <div class="meta-area">
-            <div class="tag-row">
-              <span class="tag">Date</span>
-              <span class="tag">Time</span>
-              <span class="tag">Place</span>
-            </div>
-            <div class="org-row">
-              <span class="org-dot" aria-hidden="true"></span>
-              <span>#Organization Name</span>
-            </div>
-          </div>
-          <a href="org-your-seminar.html" class="view-btn">View <span aria-hidden="true">&rsaquo;</span></a>
-        </article>
+      <div class="history-list" id="historyList"></div>
 
-        <article class="history-card" data-search="seminar title organization name date time place">
-          <h2 class="seminar-title"># Seminar Title but long kasi para sa test case wawa</h2>
-          <div class="meta-area">
-            <div class="tag-row">
-              <span class="tag">Date</span>
-              <span class="tag">Time</span>
-              <span class="tag">Place</span>
-            </div>
-            <div class="org-row">
-              <span class="org-dot" aria-hidden="true"></span>
-              <span>#Organization Name</span>
-            </div>
-          </div>
-          <a href="org-your-seminar.html" class="view-btn">View <span aria-hidden="true">&rsaquo;</span></a>
-        </article>
-
-        <article class="history-card" data-search="seminar title organization name date time place">
-          <h2 class="seminar-title"># Seminar Title but long kasi para sa test case wawa</h2>
-          <div class="meta-area">
-            <div class="tag-row">
-              <span class="tag">Date</span>
-              <span class="tag">Time</span>
-              <span class="tag">Place</span>
-            </div>
-            <div class="org-row">
-              <span class="org-dot" aria-hidden="true"></span>
-              <span>#Organization Name</span>
-            </div>
-          </div>
-          <a href="org-your-seminar.html" class="view-btn">View <span aria-hidden="true">&rsaquo;</span></a>
-        </article>
-
-        <article class="history-card" data-search="seminar title organization name date time place">
-          <h2 class="seminar-title"># Seminar Title but long kasi para sa test case wawa</h2>
-          <div class="meta-area">
-            <div class="tag-row">
-              <span class="tag">Date</span>
-              <span class="tag">Time</span>
-              <span class="tag">Place</span>
-            </div>
-            <div class="org-row">
-              <span class="org-dot" aria-hidden="true"></span>
-              <span>#Organization Name</span>
-            </div>
-          </div>
-          <a href="org-your-seminar.html" class="view-btn">View <span aria-hidden="true">&rsaquo;</span></a>
-        </article>
-
-        <article class="history-card" data-search="seminar title organization name date time place">
-          <h2 class="seminar-title"># Seminar Title but long kasi para sa test case wawa</h2>
-          <div class="meta-area">
-            <div class="tag-row">
-              <span class="tag">Date</span>
-              <span class="tag">Time</span>
-              <span class="tag">Place</span>
-            </div>
-            <div class="org-row">
-              <span class="org-dot" aria-hidden="true"></span>
-              <span>#Organization Name</span>
-            </div>
-          </div>
-          <a href="org-your-seminar.html" class="view-btn">View <span aria-hidden="true">&rsaquo;</span></a>
-        </article>
-
-        <article class="history-card" data-search="seminar title organization name date time place">
-          <h2 class="seminar-title"># Seminar Title but long kasi para sa test case wawa</h2>
-          <div class="meta-area">
-            <div class="tag-row">
-              <span class="tag">Date</span>
-              <span class="tag">Time</span>
-              <span class="tag">Place</span>
-            </div>
-            <div class="org-row">
-              <span class="org-dot" aria-hidden="true"></span>
-              <span>#Organization Name</span>
-            </div>
-          </div>
-          <a href="org-your-seminar.html" class="view-btn">View <span aria-hidden="true">&rsaquo;</span></a>
-        </article>
+      <div id="historyEmpty" style="display:none;flex-direction:column;align-items:center;justify-content:center;padding:80px 24px;text-align:center;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:48px;height:48px;color:#d4c9a0;margin-bottom:12px;"><polyline points="12 8 12 12 14 14"/><path d="M3.05 11a9 9 0 1 0 .5-4.5"/><polyline points="3 3 3 8 8 8"/></svg>
+        <p style="font-family:var(--font-display);font-size:18px;font-weight:700;color:#b0a080;margin-bottom:6px;">No archived seminars yet</p>
+        <p style="font-size:13px;color:#b0a080;">Finished seminars will appear here.</p>
       </div>
 
-      <p class="empty-message" id="emptyMessage">No archived seminars match your search.</p>
+      <p class="empty-message" id="emptyMessage" style="display:none;">No archived seminars match your search.</p>
     </section>
   </main>
 
   <script>
-    const searchInput = document.getElementById('historySearch');
-    const cards = Array.from(document.querySelectorAll('.history-card'));
+    /*
+     * ORG HISTORY — render hook
+     * ─────────────────────────────────────────────────────────
+     * Replace the empty `archivedSeminars` array below with
+     * real data from your backend when ready.
+     *
+     * Each seminar object shape:
+     * {
+     *   id:    string | number  — unique seminar ID
+     *   title: string           — seminar title
+     *   date:  string           — display date  e.g. "Jan 15, 2025"
+     *   time:  string           — display time  e.g. "9:00 AM"
+     *   place: string           — venue
+     *   org:   string           — organization name
+     * }
+     */
+    const archivedSeminars = [];  // ← inject data here
+
+    const historyList = document.getElementById('historyList');
+    const historyEmpty = document.getElementById('historyEmpty');
     const emptyMessage = document.getElementById('emptyMessage');
+    const searchInput  = document.getElementById('historySearch');
+
+    function buildCard(s) {
+      return `
+        <article class="history-card" data-search="${s.title.toLowerCase()} ${s.org.toLowerCase()}">
+          <h2 class="seminar-title">${s.title}</h2>
+          <div class="meta-area">
+            <div class="tag-row">
+              <span class="tag">${s.date}</span>
+              <span class="tag">${s.time}</span>
+              <span class="tag">${s.place}</span>
+            </div>
+            <div class="org-row">
+              <span class="org-dot" aria-hidden="true"></span>
+              <span>${s.org}</span>
+            </div>
+          </div>
+          <a href="org-your-seminar.html?id=${encodeURIComponent(s.id)}" class="view-btn">View <span aria-hidden="true">&rsaquo;</span></a>
+        </article>`;
+    }
+
+    function renderHistory(data) {
+      if (data.length === 0 && searchInput.value.trim() === '') {
+        historyList.innerHTML    = '';
+        historyList.style.display = 'none';
+        historyEmpty.style.display = 'flex';
+        emptyMessage.style.display = 'none';
+        return;
+      }
+      historyList.style.display  = 'flex';
+      historyEmpty.style.display = 'none';
+      historyList.innerHTML = data.map(buildCard).join('');
+      emptyMessage.style.display = data.length === 0 ? 'block' : 'none';
+    }
 
     searchInput.addEventListener('input', () => {
-      const query = searchInput.value.trim().toLowerCase();
-      let visibleCount = 0;
-
-      cards.forEach((card) => {
-        const text = `${card.dataset.search} ${card.textContent}`.toLowerCase();
-        const isVisible = text.includes(query);
-        card.hidden = !isVisible;
-        if (isVisible) visibleCount += 1;
-      });
-
-      emptyMessage.classList.toggle('visible', visibleCount === 0);
+      const q = searchInput.value.trim().toLowerCase();
+      const filtered = archivedSeminars.filter(s =>
+        s.title.toLowerCase().includes(q) || s.org.toLowerCase().includes(q)
+      );
+      renderHistory(filtered);
+      emptyMessage.style.display = (filtered.length === 0 && q !== '') ? 'block' : 'none';
     });
+
+    renderHistory(archivedSeminars);
   </script>
 </body>
 </html>

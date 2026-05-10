@@ -4,13 +4,6 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Seminex – Sign In</title>
-
-  <!--
-    ╔══════════════════════════════════════════════════╗
-    ║  CUSTOM FONT — replace the import & font-family  ║
-    ║  in :root below with your downloaded font.       ║
-    ╚══════════════════════════════════════════════════╝
-  -->
   <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;600;700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
 
   <style>
@@ -172,6 +165,22 @@
     }
     .btn-primary:hover { background: var(--orange-hover); }
 
+    /* ── Student ID validation ─────────────────────── */
+    .field-error {
+      display: block;
+      margin-top: 5px;
+      font-size: 12px;
+      color: #c0392b;
+      min-height: 16px;
+    }
+    .input-wrap.error input {
+      border-color: #c0392b !important;
+      background: #fff5f5;
+    }
+    .input-wrap.error .input-suffix {
+      border-color: #c0392b !important;
+    }
+
     .alt-link {
       text-align: center;
       font-size: 13px;
@@ -291,12 +300,20 @@
       <h1 class="form-title">Welcome Back!</h1>
       <p class="form-desc">A welcoming description here awelcomg descriptionhere</p>
 
-      <div class="field">
-        <label>Email Address</label>
+      <div class="field" id="field-studentid">
+        <label>Student ID</label>
         <div class="input-wrap">
-          <input type="email" placeholder="" />
+          <input
+            type="text"
+            id="student-id"
+            inputmode="numeric"
+            maxlength="9"
+            placeholder="20XXXXXXX"
+            autocomplete="off"
+          />
           <span class="input-suffix">@gordoncollege.edu.ph</span>
         </div>
+        <span class="field-error" id="error-studentid"></span>
       </div>
 
       <div class="field">
@@ -321,7 +338,7 @@
         <a href="#" class="forgot-link">Forgot Password?</a>
       </div>
 
-      <a href="home.html"><button class="btn-primary">Sign In</button></a>
+      <button class="btn-primary" onclick="handleSignIn()">Sign In</button>
 
       <p class="alt-link">
         Don't have an account? <a href="signup.html">Create an Account</a>
@@ -344,6 +361,7 @@
   </div>
 
   <script>
+    /* ── Password toggle ───────────────────────────── */
     function togglePw(id, btn) {
       const input = document.getElementById(id);
       const isHidden = input.type === 'password';
@@ -352,6 +370,72 @@
         ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`
         : `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`;
     }
+
+    /* ── Student ID validation ─────────────────────── */
+    const idInput  = document.getElementById('student-id');
+    const idError  = document.getElementById('error-studentid');
+    const idWrap   = idInput.closest('.input-wrap');
+
+    // Block non-numeric keypresses live
+    idInput.addEventListener('keydown', e => {
+      const allowed = ['Backspace','Delete','ArrowLeft','ArrowRight','Tab','Home','End'];
+      if (!allowed.includes(e.key) && !/^\d$/.test(e.key)) e.preventDefault();
+    });
+
+    // Strip non-digits on paste
+    idInput.addEventListener('input', () => {
+      const raw = idInput.value.replace(/\D/g, '').slice(0, 9);
+      idInput.value = raw;
+      if (raw.length > 0) validateID(raw); // live-clear error once typing is valid
+      else clearError();
+    });
+
+    function validateID(val) {
+      val = val ?? idInput.value;
+      idWrap.classList.remove('error');
+      idError.textContent = '';
+
+      if (val.length === 0) {
+        return showError('Student ID is required.');
+      }
+      if (!/^\d+$/.test(val)) {
+        return showError('Student ID must contain numbers only.');
+      }
+      if (!val.startsWith('20')) {
+        return showError('Student ID must start with "20".');
+      }
+      if (val.length !== 9) {
+        return showError(`Student ID must be exactly 9 digits (${val.length}/9).`);
+      }
+      return true; // valid
+    }
+
+    function showError(msg) {
+      idWrap.classList.add('error');
+      idError.textContent = msg;
+      idInput.focus();
+      return false;
+    }
+
+    function clearError() {
+      idWrap.classList.remove('error');
+      idError.textContent = '';
+    }
+
+    // Validate on blur (leaving the field)
+    idInput.addEventListener('blur', () => {
+      if (idInput.value.length > 0) validateID(idInput.value);
+    });
+
+    function handleSignIn() {
+      if (!validateID(idInput.value)) return; // stop if invalid
+      window.location.href = 'home.html';
+    }
+
+    // Allow Enter key to submit
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Enter') handleSignIn();
+    });
   </script>
 </body>
 </html>
