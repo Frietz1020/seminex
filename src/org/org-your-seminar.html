@@ -672,6 +672,8 @@
     .right-panel .brand-logo { width: 160px; height: 160px; margin-bottom: 24px; }
     .logo-mark-img { width: 50px; height: 50px; flex: 0 0 auto; }
   </style>
+  <link rel="stylesheet" href="../shared/css/animations.css">
+  <link rel="stylesheet" href="../shared/css/responsive.css">
 </head>
 <body>
 
@@ -1132,14 +1134,31 @@
       evaluation:    'show-evaluation',
     };
 
+    let _currentTab = 'details';
+
     function switchTab(tab) {
+      _currentTab = tab;
       tabs.forEach(t => {
         const btn = document.getElementById('tab-' + t);
         btn.className = 'tab-btn' + (t === tab ? ' active' : '');
       });
+
+      const isMobile = window.innerWidth <= 768;
       const track = document.getElementById('panelsTrack');
-      track.className = 'panels-track' + (trackClasses[tab] ? ' ' + trackClasses[tab] : '');
+      const panels = track.querySelectorAll('.panel');
+
+      if (isMobile) {
+        track.className = 'panels-track';
+        const order = ['details','registrations','attendances','evaluation'];
+        const idx = order.indexOf(tab);
+        panels.forEach((p, i) => p.style.display = i === idx ? 'block' : 'none');
+      } else {
+        panels.forEach(p => p.style.display = '');
+        track.className = 'panels-track' + (trackClasses[tab] ? ' ' + trackClasses[tab] : '');
+      }
     }
+
+    window.addEventListener('resize', () => switchTab(_currentTab));
 
     /* ════════════════════════════════════════════════
        RENDER REGISTRATIONS TABLE

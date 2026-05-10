@@ -1,0 +1,644 @@
+/*
+ * ============================================================
+ *  SEMINEX — Responsive Stylesheet
+ *  Breakpoints:
+ *    1024px  tablet landscape  — sidebar starts compressing
+ *     768px  tablet portrait   — grids go 2-col, topbar wraps
+ *     600px  large phone       — auth stack, sidebar collapses
+ *     420px  small phone       — single-col everything, tight padding
+ * ============================================================
+ */
+
+
+/* ═══════════════════════════════════════════════════════════
+   1. SIDEBAR — collapses to a horizontal bottom-nav on mobile
+   Applies to all dashboard pages (attendee + org).
+   ═══════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  /* Sidebar width shrinks — icons only, no labels */
+  .sidebar {
+    width: 72px;
+  }
+
+  .brand-label,
+  .sidebar-brand .brand-label {
+    display: none;
+  }
+
+  .nav-item span,
+  .logout-btn span {
+    display: none;
+  }
+
+  .sidebar-brand {
+    justify-content: center;
+    padding: 16px 10px;
+  }
+
+  .sidebar-brand .brand-logo,
+  .sidebar-brand .logo-mini {
+    width: 32px;
+    height: 32px;
+  }
+
+  .sidebar-nav {
+    padding: 12px 8px;
+    align-items: center;
+  }
+
+  .nav-item {
+    justify-content: center;
+    padding: 12px;
+    border-radius: 10px;
+  }
+
+  .sidebar-footer {
+    padding: 8px 8px 20px;
+    display: flex;
+    justify-content: center;
+  }
+
+  .logout-btn {
+    justify-content: center;
+    padding: 12px;
+  }
+
+  /* Main content shifts right by the narrower sidebar */
+  .main {
+    margin-left: 72px;
+    width: calc(100% - 72px);
+  }
+
+  .topbar {
+    padding: 16px 20px 14px;
+  }
+
+  .content {
+    padding: 20px;
+  }
+
+  .page-title {
+    font-size: 26px;
+  }
+}
+
+@media (max-width: 600px) {
+  /* Sidebar collapses to bottom navigation bar */
+  body {
+    flex-direction: column;
+    padding-bottom: 68px; /* reserve space for bottom nav */
+  }
+
+  .sidebar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    top: auto;
+    width: 100%;
+    height: 64px;
+    flex-direction: row;
+    z-index: 200;
+    border-top: 1.5px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  .sidebar-brand {
+    display: none;
+  }
+
+  .sidebar-nav {
+    flex-direction: row;
+    flex: 1;
+    padding: 0 8px;
+    gap: 0;
+    justify-content: space-around;
+    align-items: center;
+  }
+
+  .nav-item {
+    flex-direction: column;
+    gap: 3px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-size: 10px;
+    font-weight: 500;
+  }
+
+  /* Show short labels under icons on mobile bottom nav */
+  .nav-item svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .sidebar-footer {
+    padding: 0 8px;
+    display: flex;
+    align-items: center;
+  }
+
+  .logout-btn {
+    flex-direction: column;
+    gap: 3px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-size: 10px;
+  }
+
+  .logout-btn svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  /* Main fills full width, no left offset */
+  .main {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .topbar {
+    padding: 14px 16px 12px;
+  }
+
+  .content {
+    padding: 16px;
+  }
+
+  .page-title {
+    font-size: 22px;
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   2. TOPBAR — search box wraps below title on smaller screens
+   ═══════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  .topbar {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .search-box {
+    width: 100%;
+    order: 2;
+  }
+}
+
+@media (max-width: 600px) {
+  .search-box {
+    width: 100%;
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   3. HOME PAGE — lower-row cards stack on mobile
+   ═══════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  .lower-row {
+    grid-template-columns: 1fr;
+  }
+
+  .welcome-actions {
+    flex-wrap: wrap;
+  }
+
+  .welcome-actions a,
+  .welcome-actions button {
+    flex: 1;
+    min-width: 120px;
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   4. CARD GRIDS — 3-col → 2-col → 1-col
+   Covers: available-seminar, your-seminar, org-your-seminar
+   ═══════════════════════════════════════════════════════════ */
+
+@media (max-width: 900px) {
+  .card-grid,
+  .seminar-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 560px) {
+  .card-grid,
+  .seminar-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   5. HISTORY LIST ROWS — tighten padding & text on mobile
+   ═══════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  .history-row {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 14px 16px;
+  }
+
+  .row-top {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .history-card {
+    grid-template-columns: 1fr;
+    padding: 14px 18px;
+  }
+}
+
+@media (max-width: 600px) {
+  .history-row {
+    padding: 12px 14px;
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   6. PROFILE PAGES — header card & lower-row stack
+   ═══════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  .profile-header-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+  }
+
+  .lower-row {
+    grid-template-columns: 1fr;
+  }
+
+  .completed-card {
+    min-width: 0;
+    width: 100%;
+  }
+}
+
+@media (max-width: 600px) {
+  .avatar {
+    width: 72px;
+    height: 72px;
+  }
+
+  .profile-name {
+    font-size: 22px;
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   7. DETAIL PAGES — panels become full-width scrollable on mobile
+   Applies to: seminar-detail, available-seminar-detail,
+               history-seminar-detail, org-create-seminar,
+               org-your-seminar (view)
+   ═══════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  /* Disable the horizontal sliding panel track — stack vertically */
+  .panels-wrapper {
+    overflow-y: auto;
+    overflow-x: hidden;
+    height: auto;
+  }
+
+  .panels-track {
+    flex-direction: column;
+    width: 100% !important;
+    height: auto !important;
+    transform: none !important; /* override JS-driven translateX */
+  }
+
+  /* Each panel takes full width */
+  .panel {
+    width: 100% !important;
+    height: auto !important;
+    overflow-y: visible;
+    padding: 20px 16px;
+  }
+
+  /* Tab bar (create seminar / your-seminar detail) scrolls horizontally */
+  .tab-bar,
+  .ind-nav-bar {
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .tab-bar::-webkit-scrollbar,
+  .ind-nav-bar::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .detail-row-top {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .detail-row-mid {
+    flex-wrap: wrap;
+  }
+
+  .img-placeholder,
+  .detail-banner {
+    height: 180px;
+  }
+
+  .info-card {
+    padding: 16px;
+  }
+
+  .panel {
+    padding: 16px 14px;
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   8. SEMINAR DETAIL — QR / cert / eval button row
+   ═══════════════════════════════════════════════════════════ */
+
+@media (max-width: 600px) {
+  .btn-qr,
+  .btn-cert,
+  .btn-register,
+  .btn-submit,
+  .btn-finish {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .cert-actions {
+    flex-direction: column;
+    gap: 10px;
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   9. ORG CREATE SEMINAR — meta-row fields stack on mobile
+   ═══════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  .meta-row {
+    flex-direction: column;
+  }
+
+  .meta-row > * {
+    width: 100%;
+  }
+
+  .ctrl-row {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .bottom-bar {
+    flex-direction: column;
+    gap: 10px;
+    align-items: stretch;
+  }
+
+  .bottom-bar button,
+  .bottom-bar a {
+    width: 100%;
+    text-align: center;
+  }
+}
+
+@media (max-width: 600px) {
+  .img-upload-area {
+    height: 140px;
+  }
+
+  .scale-row {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   10. DATA TABLES — horizontally scrollable on mobile
+   Applies to org-your-seminar attendee tables
+   ═══════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  .data-table-wrap,
+  .table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* table-card uses overflow:hidden at desktop — open it on mobile */
+  .table-card {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .data-table {
+    min-width: 540px;
+  }
+
+  .data-table th,
+  .data-table td {
+    padding: 10px 12px;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   11. ORG YOUR-SEMINAR — detail topbar & action buttons
+   ═══════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  .detail-topbar {
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 14px 16px;
+  }
+
+  .detail-title-card {
+    width: 100%;
+  }
+
+  .ind-nav-controls {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .ind-action-btns {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .ind-action-btns button,
+  .btn-export,
+  .btn-view-results {
+    flex: 1;
+    min-width: 120px;
+    justify-content: center;
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   12. AUTH PAGES — stack panels vertically on mobile
+   signin, signup, org-signin, org-signup
+   ═══════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  /* Right branding panel shrinks */
+  .right-panel {
+    width: 38%;
+    padding: 40px 24px;
+  }
+
+  .brand-name {
+    font-size: 28px;
+  }
+
+  .brand-tagline {
+    font-size: 13px;
+  }
+
+  .logo-img,
+  .right-panel .brand-logo {
+    width: 100px;
+    height: 100px;
+  }
+
+  .left-panel {
+    padding: 40px 32px;
+  }
+}
+
+@media (max-width: 600px) {
+  /* Stack: form on top, branding panel hidden below */
+  body:has(.left-panel) {
+    flex-direction: column;
+  }
+
+  .left-panel {
+    width: 100%;
+    padding: 40px 24px 32px;
+    order: 1;
+  }
+
+  .right-panel {
+    display: none; /* hide branding on very small screens */
+  }
+
+  .form-container {
+    max-width: 100%;
+  }
+
+  .form-title {
+    font-size: 28px;
+  }
+
+  .row-options {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+}
+
+@media (max-width: 420px) {
+  .left-panel {
+    padding: 28px 18px 24px;
+  }
+
+  .form-title {
+    font-size: 24px;
+  }
+
+  .btn-primary {
+    padding: 12px;
+    font-size: 14px;
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   13. PORTAL LANDING (index.html)
+   ═══════════════════════════════════════════════════════════ */
+
+@media (max-width: 600px) {
+  .portal-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .portal-card {
+    padding: 28px 20px;
+  }
+
+  .brand-name {
+    font-size: 26px;
+  }
+}
+
+@media (max-width: 420px) {
+  .portal-card {
+    padding: 22px 16px;
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   14. MODAL — full-screen on mobile
+   ═══════════════════════════════════════════════════════════ */
+
+@media (max-width: 480px) {
+  .modal-box,
+  .qr-modal-box,
+  .success-modal-box,
+  .cert-modal {
+    width: 92vw;
+    max-width: 100%;
+    padding: 24px 20px;
+    border-radius: 12px;
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   15. MISC UTILITY — prevent horizontal overflow globally
+   ═══════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  html, body {
+    overflow-x: hidden;
+    max-width: 100vw;
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   REDUCED MOTION — honour system preference
+   (animations.css handles this too; keeping it here ensures
+   responsive.css works standalone if imported alone)
+   ═══════════════════════════════════════════════════════════ */
+
+@media (prefers-reduced-motion: reduce) {
+  .panels-track {
+    transition: none !important;
+  }
+}

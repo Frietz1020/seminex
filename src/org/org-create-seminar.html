@@ -272,6 +272,8 @@
     .right-panel .brand-logo { width: 160px; height: 160px; margin-bottom: 24px; }
     .logo-mark-img { width: 50px; height: 50px; flex: 0 0 auto; }
   </style>
+  <link rel="stylesheet" href="../shared/css/animations.css">
+  <link rel="stylesheet" href="../shared/css/responsive.css">
 </head>
 <body>
 
@@ -610,10 +612,21 @@
 
     function slideToTab(tab) {
       currentTab = tab;
+      const isMobile = window.innerWidth <= 768;
       const track = document.getElementById('panelsTrack');
-      track.className = 'panels-track';
-      if (tab === 'cert') track.classList.add('show-cert');
-      if (tab === 'eval') track.classList.add('show-eval');
+      const panels = track.querySelectorAll('.panel');
+
+      if (isMobile) {
+        track.className = 'panels-track';
+        panels.forEach(p => p.style.display = 'none');
+        const idx = { details: 0, cert: 1, eval: 2 }[tab] ?? 0;
+        if (panels[idx]) panels[idx].style.display = 'block';
+      } else {
+        panels.forEach(p => p.style.display = '');
+        track.className = 'panels-track';
+        if (tab === 'cert') track.classList.add('show-cert');
+        if (tab === 'eval') track.classList.add('show-eval');
+      }
 
       // Update tab styles
       ['details','cert','eval'].forEach(t => {
@@ -628,6 +641,8 @@
         }
       });
     }
+
+    window.addEventListener('resize', () => slideToTab(currentTab));
 
     /* Finish Details → unlock Certificate */
     function finishDetails() {

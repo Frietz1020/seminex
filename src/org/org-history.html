@@ -325,68 +325,13 @@
 
     .empty-message.visible { display: block; }
 
-    @media (max-width: 900px) {
-      :root { --sidebar-width: 220px; }
-
-      .topbar {
-        min-height: auto;
-        align-items: stretch;
-        flex-direction: column;
-      }
-
-      .page-title { font-size: 42px; }
-
-      .search-box { width: 100%; }
-
-      .history-card {
-        grid-template-columns: 1fr;
-        gap: 14px;
-      }
-
-      .view-btn {
-        justify-self: end;
-      }
-    }
-
-    @media (max-width: 680px) {
-      body { display: block; }
-
-      .sidebar {
-        position: static;
-        width: 100%;
-        height: auto;
-        box-shadow: none;
-      }
-
-      .sidebar-brand {
-        padding: 20px 22px;
-      }
-
-      .sidebar-nav {
-        padding: 0 12px 14px;
-        gap: 8px;
-      }
-
-      .sidebar-footer {
-        padding: 0 12px 16px;
-      }
-
-      .main {
-        margin-left: 0;
-        width: 100%;
-      }
-
-      .topbar,
-      .content {
-        padding-left: 18px;
-        padding-right: 18px;
-      }
-    }
       .brand-logo { display: block; object-fit: contain; background: transparent !important; border: 0 !important; border-radius: 0 !important; }
     .sidebar-brand .brand-logo { width: 36px; height: 36px; flex-shrink: 0; }
     .right-panel .brand-logo { width: 160px; height: 160px; margin-bottom: 24px; }
     .logo-mark-img { width: 36px; height: 36px; flex: 0 0 auto; }
   </style>
+  <link rel="stylesheet" href="../shared/css/animations.css">
+  <link rel="stylesheet" href="../shared/css/responsive.css">
 </head>
 <body>
   <aside class="sidebar">
