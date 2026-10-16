@@ -94,6 +94,7 @@ export default function SignInPage() {
 
   return (
     <AuthLayout
+      fixed
       footer={
         <p className="text-sm text-charcoal-700">
           New to Seminex?{' '}
