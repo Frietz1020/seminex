@@ -6,6 +6,7 @@ import ForgotPasswordStub from '../features/auth/pages/ForgotPasswordStub';
 import HomePage from '../features/home/pages/HomePage';
 import AvailableSeminarsPage from '../features/seminars/pages/AvailableSeminarsPage';
 import SeminarPage from '../features/seminars/pages/SeminarPage';
+import SeminarDetailsPage from '../features/seminars/pages/SeminarDetailsPage';
 import EvaluationPage from '../features/evaluation/pages/EvaluationPage';
 import HistoryPage from '../features/history/pages/HistoryPage';
 import ProfilePage from '../features/profile/pages/ProfilePage';
@@ -30,7 +31,7 @@ export function AppRoutes() {
           <Route path="/seminars" element={<AvailableSeminarsPage />} />
           <Route path="/my-seminars/:id" element={<SeminarPage />} />
 
-          <Route path="/seminars/:id" element={<PlaceholderPage title="Seminar details" />} />
+          <Route path="/seminars/:id" element={<SeminarDetailsPage />} />
           <Route path="/my-seminars" element={<MySeminarsPage />} />
           <Route path="/history" element={<HistoryPage />} />
           <Route path="/profile" element={<ProfilePage />} />
