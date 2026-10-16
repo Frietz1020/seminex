@@ -1,6 +1,8 @@
 import { Route, Routes } from 'react-router-dom';
 import SignInPage from '../features/auth/pages/SignInPage';
 import SignUpPage from '../features/auth/pages/SignUpPage';
+import OrganizationSignInPage from '../features/auth/pages/OrganizationSignInPage';
+import OrganizationSignUpPage from '../features/auth/pages/OrganizationSignUpPage';
 import VerifyEmailPage from '../features/auth/pages/VerifyEmailPage';
 import ForgotPasswordStub from '../features/auth/pages/ForgotPasswordStub';
 import LandingPage from '../features/home/pages/LandingPage';
@@ -25,6 +27,8 @@ export function AppRoutes() {
       <Route path="/" element={<LandingPage />} />
       <Route path="/sign-in" element={<SignInPage />} />
       <Route path="/sign-up" element={<SignUpPage />} />
+      <Route path="/organization/sign-in" element={<OrganizationSignInPage />} />
+      <Route path="/organization/sign-up" element={<OrganizationSignUpPage />} />
       <Route path="/verify-email" element={<VerifyEmailPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordStub />} />
 

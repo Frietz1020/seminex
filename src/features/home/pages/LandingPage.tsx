@@ -157,7 +157,7 @@ export default function LandingPage() {
                   title="Organization"
                   audience="Officers & Leads"
                   description="Create and run seminars for your student organization."
-                  onUnavailable={() => setUnavailablePortal('organization')}
+                  to="/organization/sign-in"
                 >
                   <UsersRound aria-hidden="true" className="h-7 w-7" />
                 </PortalCard>
