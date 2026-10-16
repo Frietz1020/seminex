@@ -3,6 +3,7 @@ import SignInPage from '../features/auth/pages/SignInPage';
 import SignUpPage from '../features/auth/pages/SignUpPage';
 import VerifyEmailPage from '../features/auth/pages/VerifyEmailPage';
 import ForgotPasswordStub from '../features/auth/pages/ForgotPasswordStub';
+import LandingPage from '../features/home/pages/LandingPage';
 import HomePage from '../features/home/pages/HomePage';
 import AvailableSeminarsPage from '../features/seminars/pages/AvailableSeminarsPage';
 import SeminarPage from '../features/seminars/pages/SeminarPage';
@@ -21,6 +22,7 @@ import { RequireSession } from './RequireSession';
 export function AppRoutes() {
   return (
     <Routes>
+      <Route path="/" element={<LandingPage />} />
       <Route path="/sign-in" element={<SignInPage />} />
       <Route path="/sign-up" element={<SignUpPage />} />
       <Route path="/verify-email" element={<VerifyEmailPage />} />
@@ -28,7 +30,7 @@ export function AppRoutes() {
 
       <Route element={<RequireSession />}>
         <Route element={<AppShell />}>
-          <Route path="/" element={<HomePage />} />
+          <Route path="/home" element={<HomePage />} />
           <Route path="/seminars" element={<AvailableSeminarsPage />} />
           <Route path="/my-seminars/:id" element={<SeminarPage />} />
 

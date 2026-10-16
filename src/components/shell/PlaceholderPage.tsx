@@ -14,7 +14,7 @@ export function PlaceholderPage({ title }: { title: string }) {
         <h1 className="font-headline-lg text-headline-lg text-on-surface">{title}</h1>
         <p className="font-body-base text-body-base text-text-secondary">This page is not available yet.</p>
         <Link
-          to="/"
+          to="/home"
           className="inline-flex min-h-11 w-fit items-center font-body-sm-medium text-body-sm-medium text-primary hover:underline"
         >
           Back to home

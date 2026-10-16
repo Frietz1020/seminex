@@ -29,7 +29,7 @@ export function TopBar() {
   return (
     <header className="fixed inset-x-0 top-0 z-40 flex h-[calc(3.5rem+env(safe-area-inset-top))] items-center justify-between bg-surface-light/90 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pt-[env(safe-area-inset-top)] shadow-shell backdrop-blur-xl lg:left-64 lg:h-16 lg:pl-space-xl lg:pr-space-xl lg:pt-0">
       <div className="flex items-center gap-space-md">
-        <Link to="/" aria-label="Seminex home" className="flex min-h-11 items-center rounded-lg lg:hidden">
+        <Link to="/home" aria-label="Seminex home" className="flex min-h-11 items-center rounded-lg lg:hidden">
           <BrandMark />
         </Link>
         <form role="search" onSubmit={handleSearch} className="relative hidden w-80 lg:block">
