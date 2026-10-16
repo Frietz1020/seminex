@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, TriangleAlert, WifiOff } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, TriangleAlert, WifiOff } from 'lucide-react';
 import { api, type ApiErrorCode, type Block, type Program, type YearLevel } from '../../../api/client';
-import { useMediaQuery } from '../../../hooks/useMediaQuery';
 import { useOnlineStatus } from '../../../hooks/useOnlineStatus';
 import { AuthLayout } from '../../../components/auth/AuthLayout';
 import { PasswordRules } from '../../../components/auth/PasswordRules';
 import { StudentIdField } from '../../../components/auth/StudentIdField';
 import { Alert } from '../../../components/ui/Alert';
 import { Button } from '../../../components/ui/Button';
+import { GoogleIcon } from '../../../components/ui/GoogleIcon';
 import { PasswordField } from '../../../components/ui/PasswordField';
 import { SelectField } from '../../../components/ui/SelectField';
 import { BLOCKS, PROGRAMS, YEAR_LEVELS } from '../../../data/academic';
@@ -87,13 +87,13 @@ function Section({
   return (
     <section
       aria-labelledby={id}
-      className="space-y-4 md:space-y-5 md:rounded-2xl md:border md:border-charcoal-200 md:bg-white md:p-6 md:shadow-control"
+      className="space-y-4 rounded-2xl border border-charcoal-200 bg-white p-5 shadow-control md:space-y-5 md:p-6"
     >
       <div className="md:border-b md:border-charcoal-200 md:pb-3">
-        <p className="hidden text-xs font-semibold uppercase tracking-wider text-burnt md:block">{eyebrow}</p>
+        <p className="text-xs font-semibold uppercase tracking-wider text-burnt">{eyebrow}</p>
         <h2
           id={id}
-          className="sr-only font-heading text-lg font-bold text-charcoal-900 md:not-sr-only md:mt-0.5"
+          className="mt-0.5 font-heading text-lg font-bold text-charcoal-900"
         >
           {title}
         </h2>
@@ -106,7 +106,6 @@ function Section({
 export default function SignUpPage() {
   const navigate = useNavigate();
   const online = useOnlineStatus();
-  const isDesktop = useMediaQuery('(min-width: 768px)');
 
   const fieldRefs = useRef<Partial<Record<FieldName, HTMLInputElement | HTMLSelectElement | null>>>({});
   const stepBadgeRef = useRef<HTMLParagraphElement>(null);
@@ -136,8 +135,8 @@ export default function SignUpPage() {
 
   const locked = pending !== null;
   const allValid = ALL_FIELDS.every((field) => !validateField(field, values));
-  const showCredentials = isDesktop || step === 1;
-  const showPersonal = isDesktop || step === 2;
+  const showCredentials = step === 1;
+  const showPersonal = step === 2;
 
   function setField(field: keyof FormValues, value: string) {
     const next = { ...values, [field]: value };
@@ -153,7 +152,7 @@ export default function SignUpPage() {
   }
 
   function requestFocus(field: FieldName) {
-    if (!isDesktop) setStep(STEP_ONE_FIELDS.includes(field) ? 1 : 2);
+    setStep(STEP_ONE_FIELDS.includes(field) ? 1 : 2);
     setFocusTarget(field);
   }
 
@@ -181,7 +180,7 @@ export default function SignUpPage() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (locked) return;
-    if (!isDesktop && step === 1) {
+    if (step === 1) {
       handleContinue();
       return;
     }
@@ -246,11 +245,9 @@ export default function SignUpPage() {
     </div>
   );
 
-  const subtitle = isDesktop
+  const subtitle = step === 1
     ? 'Register with your student ID to access seminars.'
-    : step === 1
-      ? 'Start by securing your student credentials.'
-      : 'Add your details to finish creating your account.';
+    : 'Provide your profile details and enrolled section.';
 
   return (
     <AuthLayout
@@ -267,30 +264,22 @@ export default function SignUpPage() {
         </p>
       }
     >
-      {!isDesktop && (
-        <>
-          <div className="mb-5 border-b border-charcoal-200 pb-3">
-            <Link
-              to="/sign-in"
-              className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-charcoal-700 hover:text-maroon"
-            >
-              <ChevronLeft aria-hidden="true" className="h-4 w-4" />
-              Back to sign in
-            </Link>
-          </div>
-          <p
-            ref={stepBadgeRef}
-            tabIndex={-1}
-            className="mb-3 inline-block rounded-full bg-burnt/10 px-2.5 py-1 text-xs font-bold uppercase tracking-wider text-burnt"
-          >
-            Step {step} of 2: {step === 1 ? 'Login credentials' : 'Personal information'}
-          </p>
-        </>
-      )}
+      <div className="mb-4 flex items-center justify-between md:mb-3">
+        <Link
+          to="/sign-in"
+          className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-charcoal-700 hover:text-maroon"
+        >
+          <ChevronLeft aria-hidden="true" className="h-4 w-4" />
+          Back to sign in
+        </Link>
+        <p ref={stepBadgeRef} tabIndex={-1} className="rounded-full bg-maroon/10 px-2.5 py-1 text-xs font-semibold text-maroon">
+          Step {step} of 2
+        </p>
+      </div>
 
       <div className="mb-5 md:mb-6">
         <h1 className="font-heading text-2xl font-bold tracking-tight text-charcoal-900 md:text-3xl">
-          {isDesktop ? 'Create an account' : 'Create your account'}
+          Create an account
         </h1>
         <p className="mt-1 text-sm text-charcoal-700 md:mt-1.5 md:text-base">{subtitle}</p>
       </div>
@@ -310,7 +299,32 @@ export default function SignUpPage() {
         </div>
       )}
 
-      <form noValidate onSubmit={handleSubmit} aria-busy={locked} className="space-y-6 md:space-y-8">
+      <div aria-label="Registration progress" className="mb-4 grid grid-cols-2 gap-3">
+        {[1, 2].map((item) => {
+          const active = step === item;
+          const complete = step === 2 && item === 1;
+          return (
+            <button
+              key={item}
+              type="button"
+              disabled={locked}
+              onClick={() => item === 1 ? goToStep(1) : handleContinue()}
+              aria-current={active ? 'step' : undefined}
+              className={`flex min-h-[68px] items-center gap-3 rounded-xl border-2 p-3 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${active ? 'border-maroon bg-white' : 'border-charcoal-200 bg-cream-50/70 hover:border-charcoal-300'}`}
+            >
+              <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs font-bold ${active ? 'bg-maroon text-white' : complete ? 'bg-success text-white' : 'bg-charcoal-200 text-charcoal-700'}`}>
+                {complete ? <Check aria-hidden="true" className="h-4 w-4" strokeWidth={3} /> : item}
+              </span>
+              <span className="min-w-0">
+                <span className={`block text-[11px] font-semibold uppercase tracking-wider ${active ? 'text-maroon' : 'text-charcoal-500'}`}>Step {item}</span>
+                <span className="block truncate text-xs font-bold text-charcoal-900">{item === 1 ? 'Credentials' : 'Personal information'}</span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      <form noValidate onSubmit={handleSubmit} aria-busy={locked} className="space-y-5 md:space-y-6">
         {showCredentials && (
           <Section id="credentials-heading" eyebrow="Step 1 of 2" title="Login credentials">
             <StudentIdField
@@ -447,18 +461,33 @@ export default function SignUpPage() {
           </Section>
         )}
 
-        {isDesktop && createAccount}
+        {step === 1 && (
+          <div className="space-y-3">
+            <Button onClick={handleContinue}>
+              <>
+                Continue to step 2
+                <ChevronRight aria-hidden="true" className="ml-2 inline-block h-4 w-4 align-middle" />
+              </>
+            </Button>
 
-        {!isDesktop && step === 1 && (
-          <Button onClick={handleContinue}>
-            <>
-              Continue to step 2
-              <ChevronRight aria-hidden="true" className="ml-2 inline-block h-4 w-4 align-middle" />
-            </>
-          </Button>
+            <div className="relative flex items-center justify-center py-1" aria-hidden="true">
+              <div className="w-full border-t border-charcoal-200" />
+              <span className="absolute bg-cream-50 px-3 text-xs font-medium lowercase text-charcoal-500">
+                or continue with
+              </span>
+            </div>
+
+            <button
+              type="button"
+              className="inline-flex min-h-12 w-full items-center justify-center gap-2.5 rounded-control border border-charcoal-300 bg-white px-4 py-3 text-base font-medium text-charcoal-900 shadow-control transition-colors hover:border-charcoal-500"
+            >
+              <GoogleIcon />
+              <span>Continue with Google</span>
+            </button>
+          </div>
         )}
 
-        {!isDesktop && step === 2 && (
+        {step === 2 && (
           <div className="space-y-2">
             {createAccount}
             <Button

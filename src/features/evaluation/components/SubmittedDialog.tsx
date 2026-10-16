@@ -33,7 +33,7 @@ export function SubmittedDialog({ open, onClose, seminarTitle, certificateSerial
           </div>
         </div>
         <div className="flex flex-col gap-space-sm sm:flex-row sm:justify-end">
-          <Link to="/" className={actionTonal}>
+          <Link to="/home" className={actionTonal}>
             Return to dashboard
           </Link>
           <Link to="/history" className={actionPrimary}>

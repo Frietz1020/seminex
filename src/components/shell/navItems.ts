@@ -12,7 +12,7 @@ export interface NavItem {
 }
 
 export const NAV_ITEMS: readonly NavItem[] = [
-  { to: '/', label: 'Home', icon: 'home', end: true },
+  { to: '/home', label: 'Home', icon: 'home', end: true },
   {
     to: '/seminars',
     label: 'Available seminars',

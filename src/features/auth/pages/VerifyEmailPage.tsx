@@ -11,15 +11,16 @@ import { BrandMark } from '../../../components/shell/BrandMark';
 
 export default function VerifyEmailPage() {
   const location = useLocation();
-  const state = location.state as { email?: unknown } | null;
+  const state = location.state as { email?: unknown; returnTo?: unknown } | null;
   const email = typeof state?.email === 'string' ? state.email : null;
+  const returnTo = state?.returnTo === '/organization/sign-in' ? '/organization/sign-in' : '/sign-in';
 
   // The address only exists in route state. Without it (for example after a reload), start over.
   if (!email) return <Navigate to="/sign-up" replace />;
-  return <VerifyEmailContent email={email} />;
+  return <VerifyEmailContent email={email} returnTo={returnTo} />;
 }
 
-function VerifyEmailContent({ email }: { email: string }) {
+function VerifyEmailContent({ email, returnTo }: { email: string; returnTo: string }) {
   const online = useOnlineStatus();
   const { remaining, start } = useCooldown(RESEND_COOLDOWN_SECONDS);
   const [sending, setSending] = useState(false);
@@ -119,7 +120,7 @@ function VerifyEmailContent({ email }: { email: string }) {
           </Button>
 
           <Link
-            to="/sign-in"
+            to={returnTo}
             className="flex min-h-12 w-full items-center justify-center rounded-control bg-maroon px-6 py-3 text-base font-medium text-white shadow-control transition-colors hover:bg-maroon-dark"
           >
             Back to sign in

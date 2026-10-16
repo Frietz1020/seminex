@@ -102,7 +102,7 @@ export default function AvailableSeminarsPage() {
         icon="event_available"
         title="No seminars are open right now"
         action={
-          <Link to="/" className={actionPrimary}>
+          <Link to="/home" className={actionPrimary}>
             Back to home
           </Link>
         }
