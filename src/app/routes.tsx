@@ -9,6 +9,7 @@ import SeminarPage from '../features/seminars/pages/SeminarPage';
 import SeminarDetailsPage from '../features/seminars/pages/SeminarDetailsPage';
 import EvaluationPage from '../features/evaluation/pages/EvaluationPage';
 import HistoryPage from '../features/history/pages/HistoryPage';
+import HistorySummaryPage from '../features/history/pages/HistorySummaryPage';
 import ProfilePage from '../features/profile/pages/ProfilePage';
 import MySeminarsPage from '../features/seminars/pages/MySeminarsPage';
 import RegistrationGuidelinesPage from '../features/guidelines/RegistrationGuidelinesPage';
@@ -35,7 +36,7 @@ export function AppRoutes() {
           <Route path="/my-seminars" element={<MySeminarsPage />} />
           <Route path="/history" element={<HistoryPage />} />
           <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/history/:id" element={<PlaceholderPage title="History summary" />} />
+          <Route path="/history/:id" element={<HistorySummaryPage />} />
           <Route path="/audit-log" element={<PlaceholderPage title="Audit log" />} />
           <Route path="/my-seminars/:id/evaluation" element={<EvaluationPage />} />
           <Route path="/notifications" element={<PlaceholderPage title="Notifications" />} />

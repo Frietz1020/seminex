@@ -90,7 +90,9 @@ export function RecordCard({ record }: { record: HistoryRecord }) {
           <span className="font-caption text-caption text-text-secondary">{seminar.venue}</span>
         </div>
         <h2 id={titleId} className="font-headline-sm text-headline-sm tracking-tight text-on-surface">
-          {seminar.title}
+          <Link to={`/history/${seminar.id}`} className="rounded-sm underline-offset-2 hover:text-primary hover:underline focus-visible:outline-primary">
+            {seminar.title}
+          </Link>
         </h2>
         <div className="mt-1 flex flex-wrap items-center gap-x-space-md gap-y-1 font-body-sm text-body-sm text-text-secondary">
           <span className="inline-flex items-center gap-1">
@@ -146,16 +148,17 @@ export function RecordCard({ record }: { record: HistoryRecord }) {
               {downloading ? <Spinner /> : <Icon name="download" size={18} />}
               <span>Download certificate</span>
             </button>
-            <Link
-              to={`/history/${seminar.id}`}
-              aria-label={`View summary for ${seminar.title}`}
-              className="inline-flex min-h-11 items-center gap-1 px-space-sm font-body-sm-medium text-body-sm-medium text-primary transition-colors hover:text-maroon-dark"
-            >
-              <span>View summary</span>
-              <Icon name="arrow_forward" size={16} />
-            </Link>
           </>
         )}
+
+        <Link
+          to={`/history/${seminar.id}`}
+          aria-label={`View summary for ${seminar.title}`}
+          className="inline-flex min-h-11 items-center gap-1 px-space-sm font-body-sm-medium text-body-sm-medium text-primary transition-colors hover:text-maroon-dark"
+        >
+          <span>View summary</span>
+          <Icon name="arrow_forward" size={16} />
+        </Link>
 
         {status === 'evaluation_pending' && (
           <>
