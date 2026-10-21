@@ -3,7 +3,7 @@
  * the browser holds no token. This store also lets the route guard and API layer share
  * one source of truth through useSyncExternalStore.
  */
-import type { Session } from '../api/types';
+import type { Session, SessionRole } from '../api/types';
 
 const KEY = 'seminex.session';
 
@@ -22,7 +22,13 @@ function parse(raw: string | null): Session | null {
       typeof value.token === 'string' &&
       typeof value.expiresAt === 'number'
     ) {
-      return { studentId: value.studentId, token: value.token, expiresAt: value.expiresAt };
+      // A session saved before roles existed is a participant session.
+      const role: SessionRole =
+        value.role === 'org_member' || value.role === 'adviser' ? value.role : 'participant';
+      const organizationIds = Array.isArray(value.organizationIds)
+        ? value.organizationIds.filter((id): id is string => typeof id === 'string')
+        : [];
+      return { studentId: value.studentId, token: value.token, expiresAt: value.expiresAt, role, organizationIds };
     }
   } catch {
     // Treated as no session.

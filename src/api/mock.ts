@@ -14,6 +14,7 @@
 import { STUDENT_EMAIL_DOMAIN } from '../config';
 import { getSession, saveSession } from '../session/storage';
 import { buildRegistrations, buildSeminars } from './mockData';
+import { findSeedAccess } from './orgMockData';
 import type {
   ApiErrorCode,
   ApiResult,
@@ -38,6 +39,7 @@ export type MockOutcome = 'success' | ApiErrorCode | 'empty';
 
 const OUTCOMES: readonly MockOutcome[] = [
   'success',
+  'forbidden',
   'invalid_credentials',
   'student_id_taken',
   'session_expired',
@@ -50,7 +52,7 @@ const LATENCY_MS = 800;
 const SESSION_TTL_MS = 8 * 60 * 60 * 1000;
 let selected: MockOutcome = 'success';
 
-function currentOutcome(): MockOutcome {
+export function currentOutcome(): MockOutcome {
   if (import.meta.env.DEV) {
     const param = new URLSearchParams(window.location.search).get('mock');
     const match = OUTCOMES.find((outcome) => outcome === param);
@@ -59,15 +61,15 @@ function currentOutcome(): MockOutcome {
   return selected;
 }
 
-function wait(): Promise<void> {
+export function wait(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, LATENCY_MS));
 }
 
-function fail<T>(code: ApiErrorCode): ApiResult<T> {
+export function fail<T>(code: ApiErrorCode): ApiResult<T> {
   return { ok: false, error: { code } };
 }
 
-function ok<T>(data: T): ApiResult<T> {
+export function ok<T>(data: T): ApiResult<T> {
   return { ok: true, data };
 }
 
@@ -77,8 +79,16 @@ function randomToken(bytes = 24): string {
   return btoa(String.fromCharCode(...values)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
-function startSession(studentId: string): Session {
-  const session: Session = { studentId, token: randomToken(), expiresAt: Date.now() + SESSION_TTL_MS };
+// MOCK: the role comes from the seeded org accounts. A real server returns the role with the session.
+export function startSession(studentId: string): Session {
+  const access = findSeedAccess(studentId);
+  const session: Session = {
+    studentId,
+    token: randomToken(),
+    expiresAt: Date.now() + SESSION_TTL_MS,
+    role: access?.role ?? 'participant',
+    organizationIds: access?.organizationIds ?? [],
+  };
   saveSession(session);
   return session;
 }
@@ -125,7 +135,7 @@ function toItem(seminar: Seminar): SeminarListItem {
 }
 
 /** Waits, applies the shared outcomes, and checks the stored session like a server would. */
-async function withSession<T>(run: (outcome: MockOutcome) => ApiResult<T>): Promise<ApiResult<T>> {
+export async function withSession<T>(run: (outcome: MockOutcome) => ApiResult<T>): Promise<ApiResult<T>> {
   await wait();
   const outcome = currentOutcome();
   if (outcome === 'network' || outcome === 'session_expired') return fail(outcome);

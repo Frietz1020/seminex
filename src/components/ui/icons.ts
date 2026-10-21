@@ -62,6 +62,10 @@ import done_all from '@material-symbols/svg-400/outlined/done_all.svg?raw';
 import event_busy from '@material-symbols/svg-400/outlined/event_busy.svg?raw';
 import explore from '@material-symbols/svg-400/outlined/explore.svg?raw';
 import qr_code_scanner from '@material-symbols/svg-400/outlined/qr_code_scanner.svg?raw';
+import unfold_more from '@material-symbols/svg-400/outlined/unfold_more.svg?raw';
+import cloud_off from '@material-symbols/svg-400/outlined/cloud_off.svg?raw';
+import event_note from '@material-symbols/svg-400/outlined/event_note.svg?raw';
+import corporate_fare from '@material-symbols/svg-400/outlined/corporate_fare.svg?raw';
 
 export const ICONS = {
   home,
@@ -126,6 +130,10 @@ export const ICONS = {
   event_busy,
   explore,
   qr_code_scanner,
+  unfold_more,
+  cloud_off,
+  event_note,
+  corporate_fare,
 } as const;
 
 export type IconName = keyof typeof ICONS;

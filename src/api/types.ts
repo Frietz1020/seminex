@@ -7,7 +7,8 @@ export type ApiErrorCode =
   | 'network'
   | 'not_found'
   | 'seminar_full'
-  | 'not_available';
+  | 'not_available'
+  | 'forbidden';
 
 export interface ApiError {
   code: ApiErrorCode;
@@ -38,11 +39,23 @@ export interface SignUpInput {
   block: Block;
 }
 
-/** expiresAt is epoch milliseconds. */
+/**
+ * What the signed-in account may open. An org member also has participant access, so every org member
+ * can use the student portal. An adviser is faculty and has no student portal.
+ */
+export type SessionRole = 'participant' | 'org_member' | 'adviser';
+
+/**
+ * expiresAt is epoch milliseconds. studentId is the account identifier: the Student ID for students and
+ * org members, and the faculty email for advisers. MOCK contract; a real server decides what it returns.
+ */
 export interface Session {
   studentId: string;
   token: string;
   expiresAt: number;
+  role: SessionRole;
+  /** Organizations the account is an active member of, or advises. Empty for participants. */
+  organizationIds: string[];
 }
 
 export interface SignUpResult {

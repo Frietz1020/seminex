@@ -20,6 +20,9 @@ import { StubPage } from '../components/auth/StubPage';
 import { AppShell } from '../components/shell/AppShell';
 import { PlaceholderPage } from '../components/shell/PlaceholderPage';
 import { RequireSession } from './RequireSession';
+import { RequireRole } from './RequireRole';
+import { OrgShell } from '../components/shell/org/OrgShell';
+import { OrgPlaceholderPage } from '../features/org/pages/OrgPlaceholderPage';
 
 export function AppRoutes() {
   return (
@@ -33,6 +36,7 @@ export function AppRoutes() {
       <Route path="/forgot-password" element={<ForgotPasswordStub />} />
 
       <Route element={<RequireSession />}>
+        <Route element={<RequireRole allow={['participant', 'org_member']} redirectTo="/org/adviser" />}>
         <Route element={<AppShell />}>
           <Route path="/home" element={<HomePage />} />
           <Route path="/seminars" element={<AvailableSeminarsPage />} />
@@ -47,6 +51,21 @@ export function AppRoutes() {
           <Route path="/my-seminars/:id/evaluation" element={<EvaluationPage />} />
           <Route path="/notifications" element={<PlaceholderPage title="Notifications" />} />
           <Route path="/guidelines" element={<RegistrationGuidelinesPage />} />
+        </Route>
+        </Route>
+
+        <Route element={<RequireRole allow={['org_member', 'adviser']} redirectTo="/home" />}>
+          <Route path="/org" element={<OrgShell />}>
+            <Route element={<RequireRole allow={['org_member']} redirectTo="/org/adviser" />}>
+              <Route index element={<OrgPlaceholderPage title="Home" icon="home" />} />
+              <Route path="my-seminars" element={<OrgPlaceholderPage title="My Seminars" icon="event_note" />} />
+              <Route path="history" element={<OrgPlaceholderPage title="History" icon="history" />} />
+              <Route path="profile" element={<OrgPlaceholderPage title="Profile" icon="person" />} />
+            </Route>
+            <Route element={<RequireRole allow={['adviser']} redirectTo="/org" />}>
+              <Route path="adviser" element={<OrgPlaceholderPage title="Approvals" icon="how_to_reg" />} />
+            </Route>
+          </Route>
         </Route>
       </Route>
 

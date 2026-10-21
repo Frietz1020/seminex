@@ -8,7 +8,6 @@ import { PasswordRules } from '../../../components/auth/PasswordRules';
 import { StudentIdField } from '../../../components/auth/StudentIdField';
 import { Alert } from '../../../components/ui/Alert';
 import { Button } from '../../../components/ui/Button';
-import { GoogleIcon } from '../../../components/ui/GoogleIcon';
 import { PasswordField } from '../../../components/ui/PasswordField';
 import { SelectField } from '../../../components/ui/SelectField';
 import { BLOCKS, PROGRAMS, YEAR_LEVELS } from '../../../data/academic';
@@ -462,28 +461,13 @@ export default function SignUpPage() {
         )}
 
         {step === 1 && (
-          <div className="space-y-3">
+          <div>
             <Button onClick={handleContinue}>
               <>
                 Continue to step 2
                 <ChevronRight aria-hidden="true" className="ml-2 inline-block h-4 w-4 align-middle" />
               </>
             </Button>
-
-            <div className="relative flex items-center justify-center py-1" aria-hidden="true">
-              <div className="w-full border-t border-charcoal-200" />
-              <span className="absolute bg-cream-50 px-3 text-xs font-medium lowercase text-charcoal-500">
-                or continue with
-              </span>
-            </div>
-
-            <button
-              type="button"
-              className="inline-flex min-h-12 w-full items-center justify-center gap-2.5 rounded-control border border-charcoal-300 bg-white px-4 py-3 text-base font-medium text-charcoal-900 shadow-control transition-colors hover:border-charcoal-500"
-            >
-              <GoogleIcon />
-              <span>Continue with Google</span>
-            </button>
           </div>
         )}
 

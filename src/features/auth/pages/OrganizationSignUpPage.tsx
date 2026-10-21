@@ -3,6 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, Check, CircleAlert, ShieldCheck, TriangleAlert, WifiOff } from 'lucide-react';
 import { api, type ApiErrorCode, type Block, type Program, type YearLevel } from '../../../api/client';
 import { Alert } from '../../../components/ui/Alert';
+import { InlineError } from '../../../components/ui/StateMessage';
+import { useResource } from '../../../hooks/useResource';
 import { Button } from '../../../components/ui/Button';
 import { BrandMark } from '../../../components/shell/BrandMark';
 import { PasswordField } from '../../../components/ui/PasswordField';
@@ -22,13 +24,6 @@ type Field = keyof Values;
 type Errors = Partial<Record<Field, string>>;
 
 const INITIAL: Values = { studentId: '', firstName: '', lastName: '', middleInitial: '', program: '', yearLevel: '', block: '', password: '', confirmPassword: '', organization: '', role: '' };
-const ORGANIZATIONS = [
-  { value: 'ccs-council', label: 'CCS Student Council' },
-  { value: 'acm', label: 'Association for Computing Machinery (ACM)' },
-  { value: 'jpcs', label: 'Junior Philippine Computer Society (JPCS)' },
-  { value: 'agda', label: 'Association of Game Developers and Artists (AGDA)' },
-  { value: 'csl', label: 'Computer Studies League (CSL)' },
-];
 const ROLES = [
   'President', 'Vice President', 'Secretary / Documentation Officer', 'Treasurer', 'Auditor',
   'Committee Head / Event Director', 'Public Relations Officer',
@@ -54,6 +49,8 @@ export default function OrganizationSignUpPage() {
   const navigate = useNavigate();
   const online = useOnlineStatus();
   const period = getAcademicPeriod(useNow());
+  const { state: orgState, reload: reloadOrgs } = useResource(() => api.listOrganizations(), 'organizations');
+  const organizations = orgState.status === 'success' ? orgState.data.map((item) => ({ value: item.id, label: item.name })) : [];
   const [step, setStep] = useState<Step>(1);
   const [values, setValues] = useState<Values>(INITIAL);
   const [errors, setErrors] = useState<Errors>({});
@@ -89,23 +86,26 @@ export default function OrganizationSignUpPage() {
     if (!online) { offlineRef.current?.focus(); return; }
     setFailure(null);
     setPending(true);
-    const result = await api.signUp({
-      studentId: values.studentId,
-      password: values.password,
-      firstName: values.firstName.trim(),
-      lastName: values.lastName.trim(),
-      middleInitial: values.middleInitial,
-      program: values.program as Program,
-      yearLevel: Number(values.yearLevel) as YearLevel,
-      block: values.block as Block,
-    });
+    const result = await api.orgSignUp(
+      {
+        studentId: values.studentId,
+        password: values.password,
+        firstName: values.firstName.trim(),
+        lastName: values.lastName.trim(),
+        middleInitial: values.middleInitial,
+        program: values.program as Program,
+        yearLevel: Number(values.yearLevel) as YearLevel,
+        block: values.block as Block,
+      },
+      { organizationId: values.organization, position: values.role },
+    );
     setPending(false);
     if (result.ok) navigate('/verify-email', { replace: true, state: { email: result.data.email, returnTo: '/organization/sign-in' } });
     else if (result.error.code === 'student_id_taken') setErrors((current) => ({ ...current, studentId: 'An account already exists for this Student ID. Sign in, or check the number and try again.' }));
     else setFailure(result.error.code);
   }
 
-  const organizationLabel = ORGANIZATIONS.find((item) => item.value === values.organization)?.label;
+  const organizationLabel = organizations.find((item) => item.value === values.organization)?.label;
   const identityName = [values.firstName, values.middleInitial && `${values.middleInitial}.`, values.lastName].filter(Boolean).join(' ');
   const personalFields: Field[] = ['studentId', 'firstName', 'lastName', 'program', 'yearLevel', 'block', 'password', 'confirmPassword'];
 
@@ -140,7 +140,7 @@ export default function OrganizationSignUpPage() {
             {[1, 2].map((item) => <button key={item} type="button" onClick={() => item === 1 ? setStep(1) : validateFields(personalFields) && setStep(2)} aria-current={step === item ? 'step' : undefined} className={`flex min-h-16 items-center gap-3 rounded-xl border-2 p-3 text-left ${step === item ? 'border-maroon bg-white' : 'border-charcoal-200 bg-white/60'}`}><span className={`flex h-7 w-7 items-center justify-center rounded-lg text-xs font-bold ${step === item ? 'bg-maroon text-white' : step > item ? 'bg-success text-white' : 'bg-charcoal-200 text-charcoal-700'}`}>{step > item ? <Check className="h-4 w-4" /> : item}</span><span><span className="block text-[11px] font-semibold uppercase tracking-wider text-charcoal-500">Step {item}</span><span className="block text-xs font-bold text-charcoal-900">{item === 1 ? 'Credentials' : 'Your Organization'}</span></span></button>)}
           </div>
 
-          {!online && <div className="mb-4"><Alert ref={offlineRef} variant="neutral" role="status" icon={WifiOff} title="You are offline">Connect to the internet to create your student account. Your entries are kept.</Alert></div>}
+          {!online && <div className="mb-4"><Alert ref={offlineRef} variant="neutral" role="status" icon={WifiOff} title="You are offline">Connect to the internet to create your account. Your entries are kept.</Alert></div>}
           {failure === 'network' && online && <div className="mb-4"><Alert variant="error" icon={TriangleAlert} title="Connection problem">Seminex could not be reached. Check your connection and try again.</Alert></div>}
 
           {step === 1 ? (
@@ -164,14 +164,15 @@ export default function OrganizationSignUpPage() {
             <form noValidate onSubmit={submitRequest} className="space-y-5 rounded-2xl border border-charcoal-200 bg-white p-5 shadow-control md:p-6">
               <div><p className="text-xs font-semibold uppercase tracking-wider text-burnt">Step 2 of 2</p><h3 className="font-heading text-lg font-bold text-charcoal-900">Your Organization Details</h3><p className="mt-1 text-sm text-charcoal-700">Choose the organization and appointed role you represent.</p></div>
               <div className="rounded-xl bg-cream-50 p-4"><p className="text-xs font-semibold uppercase tracking-wider text-charcoal-500">Account identity</p><p className="mt-1 font-semibold text-charcoal-900">{identityName || 'Your name'} · {values.studentId || 'Student ID'}</p><p className="mt-1 text-sm text-charcoal-600">{programLabel(values.program as Program)} · {yearLevelLabel(Number(values.yearLevel) as YearLevel)} · {blockLabel(values.block as Block)}</p></div>
-              <SelectField id="org-signup-organization" label="Student organization" required placeholder="Select your organization" options={ORGANIZATIONS} value={values.organization} error={errors.organization} onChange={(value) => setField('organization', value)} />
+              {orgState.status === 'error' && <InlineError onRetry={reloadOrgs}>Organizations could not be loaded.</InlineError>}
+              <SelectField id="org-signup-organization" label="Student organization" required placeholder={orgState.status === 'loading' ? 'Loading organizations' : 'Select your organization'} disabled={orgState.status !== 'success'} options={organizations} value={values.organization} error={errors.organization} onChange={(value) => setField('organization', value)} />
               <SelectField id="org-signup-role" label="Constitutional role" required placeholder="Select your official role" options={ROLES} value={values.role} error={errors.role} onChange={(value) => setField('role', value)} />
               <div><label className="mb-2 block text-sm font-semibold text-charcoal-900">Term / Academic Year</label><div className="rounded-control border border-charcoal-200 bg-cream-50 px-3.5 py-3 text-sm text-charcoal-700">Academic Year {period.academicYear}</div></div>
-              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-relaxed text-amber-900"><strong className="block">Adviser review</strong>An adviser review is part of the organization onboarding design. The current project can create and verify student accounts, but does not yet provide an officer-request endpoint. Continuing below creates a student participant account only; your officer request is not sent or saved.</div>
+              <div className="rounded-xl border border-charcoal-300 bg-white p-4 text-sm leading-relaxed text-charcoal-900"><strong className="block">Adviser approval</strong>Your adviser reviews your request. Until it is approved, you can use the participant portal only.</div>
               <div className="rounded-xl bg-cream-100 p-4"><p className="text-xs font-semibold uppercase tracking-wider text-charcoal-500">Request summary</p><div className="mt-2 flex justify-between gap-3 text-sm"><span className="text-charcoal-600">Selected organization</span><strong className="text-right text-charcoal-900">{organizationLabel || 'Not selected'}</strong></div><div className="mt-2 flex justify-between gap-3 text-sm"><span className="text-charcoal-600">Appointed role</span><strong className="text-right text-maroon">{values.role || 'Not selected'}</strong></div></div>
-              <Button type="submit" loading={pending} loadingLabel="Creating student account...">Create student account</Button>
+              <Button type="submit" loading={pending} loadingLabel="Creating account...">Create account and send request</Button>
               <Button variant="secondary" disabled={pending} icon={<ArrowLeft className="h-4 w-4" />} onClick={() => setStep(1)}>Back to step 1</Button>
-              <p className="flex items-start gap-2 text-xs leading-relaxed text-charcoal-600"><CircleAlert className="mt-0.5 h-4 w-4 shrink-0 text-maroon" />By continuing, you confirm that your organization and officer information is accurate. The request details are for review only and are not submitted in this version.</p>
+              <p className="flex items-start gap-2 text-xs leading-relaxed text-charcoal-600"><CircleAlert aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-maroon" />By continuing, you confirm that your organization and role are correct.</p>
             </form>
           )}
           <p className="mt-5 text-center text-sm text-charcoal-700">Already have an account? <Link to="/organization/sign-in" className="font-semibold text-maroon hover:underline">Sign in</Link></p>

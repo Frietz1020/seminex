@@ -1,10 +1,10 @@
 import { Link, useLocation } from 'react-router-dom';
 import { Icon } from '../ui/Icon';
 import { cx } from '../ui/cx';
-import { isNavItemActive, NAV_ITEMS } from './navItems';
+import { isNavItemActive, NAV_ITEMS, type NavItem } from './navItems';
 
 /** Mobile bottom navigation (below lg). Not in the Stitch exports. */
-export function BottomNav() {
+export function BottomNav({ items = NAV_ITEMS }: { items?: readonly NavItem[] }) {
   const { pathname } = useLocation();
 
   return (
@@ -12,7 +12,7 @@ export function BottomNav() {
       aria-label="Main"
       className="fixed inset-x-0 bottom-0 z-40 flex bg-surface-container-low pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] shadow-shell lg:hidden"
     >
-      {NAV_ITEMS.map((item) => {
+      {items.map((item) => {
         const active = isNavItemActive(item, pathname);
         return (
           <Link

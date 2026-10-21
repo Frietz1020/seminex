@@ -4,10 +4,24 @@
  *
  * This module also owns the offline fallback: when a call fails with "network", it returns
  * the cached copy (marked fromCache) if one exists. Only registered seminars, their tickets,
- * and the profile are cached.
+ * and the profile are cached. The org side follows the same rule with its own cache (orgOfflineCache.ts).
  */
 import { clearSession, getSession } from '../session/storage';
 import * as impl from './mock';
+import * as orgImpl from './orgMock';
+import {
+  cacheOrgIdentity,
+  cacheOrgLedger,
+  cacheOrgListing,
+  cacheOrgRoster,
+  clearOrgOfflineCache,
+  readOrgIdentity,
+  readOrgLedger,
+  readOrgListing,
+  readOrgRoster,
+  readQueuedScans,
+  removeQueuedScans,
+} from './orgOfflineCache';
 import {
   cacheItem,
   cacheProfile,
@@ -21,7 +35,23 @@ import {
   readTicket,
 } from './offlineCache';
 import { getLifecycle } from '../features/seminars/status';
-import type { ApiResult, AvatarResult, EditableProfile, Profile, SeminarListItem, Ticket } from './types';
+import type {
+  OrgIdentity,
+  OrgRegistration,
+  OrgSeminarListing,
+  OrgSignUpInput,
+  ScanLedgerEntry,
+} from './orgTypes';
+import type {
+  ApiResult,
+  AvatarResult,
+  EditableProfile,
+  Profile,
+  SeminarListItem,
+  SignUpInput,
+  SignUpResult,
+  Ticket,
+} from './types';
 
 function currentStudent(): string | null {
   return getSession()?.studentId ?? null;
@@ -87,7 +117,10 @@ async function signOut(): Promise<ApiResult<void>> {
   try {
     return await impl.signOut();
   } finally {
-    if (student) clearOfflineCache(student);
+    if (student) {
+      clearOfflineCache(student);
+      clearOrgOfflineCache(student);
+    }
     clearSession();
   }
 }
@@ -168,6 +201,94 @@ async function cancelRegistration(seminarId: string): Promise<ApiResult<void>> {
   return result;
 }
 
+// ---- Org side ---------------------------------------------------------------------
+// Same pattern as above: a network failure returns the saved copy, marked fromCache, when one exists.
+
+/**
+ * Creates the student account, then the organization request. The request cannot be made without the
+ * account, so a real API should take both in one call; the mock needs two.
+ */
+async function orgSignUp(input: SignUpInput, organization: OrgSignUpInput): Promise<ApiResult<SignUpResult>> {
+  const created = await impl.signUp(input);
+  if (!created.ok) return created;
+  const fullName = `${input.firstName} ${input.lastName}`.trim();
+  const request = await orgImpl.createOrgRequest(input.studentId, fullName, organization);
+  if (!request.ok) return request;
+  return created;
+}
+
+async function getOrgIdentity(): Promise<ApiResult<OrgIdentity>> {
+  const result = await orgImpl.getOrgIdentity();
+  const account = currentStudent();
+  if (!account) return result;
+  if (result.ok) {
+    cacheOrgIdentity(account, result.data);
+    return result;
+  }
+  if (result.error.code === 'network') {
+    const identity = readOrgIdentity(account);
+    if (identity) return cached(identity);
+  }
+  return result;
+}
+
+async function listOrgSeminars(): Promise<ApiResult<OrgSeminarListing>> {
+  const result = await orgImpl.listOrgSeminars();
+  const account = currentStudent();
+  if (!account) return result;
+  if (result.ok) {
+    cacheOrgListing(account, result.data);
+    return result;
+  }
+  if (result.error.code === 'network') {
+    const listing = readOrgListing(account);
+    if (listing) return cached(listing);
+  }
+  return result;
+}
+
+async function listOrgRoster(seminarId: string): Promise<ApiResult<OrgRegistration[]>> {
+  const result = await orgImpl.listOrgRoster(seminarId);
+  const account = currentStudent();
+  if (!account) return result;
+  if (result.ok) {
+    cacheOrgRoster(account, seminarId, result.data);
+    return result;
+  }
+  if (result.error.code === 'network') {
+    const roster = readOrgRoster(account, seminarId);
+    if (roster) return cached(roster);
+  }
+  return result;
+}
+
+async function listLedger(seminarId: string): Promise<ApiResult<ScanLedgerEntry[]>> {
+  const result = await orgImpl.listLedger(seminarId);
+  const account = currentStudent();
+  if (!account) return result;
+  if (result.ok) {
+    cacheOrgLedger(account, seminarId, result.data);
+    return result;
+  }
+  if (result.error.code === 'network') {
+    const ledger = readOrgLedger(account, seminarId);
+    if (ledger) return cached(ledger);
+  }
+  return result;
+}
+
+/** Sends the scans queued on this device. Entries the server accepted leave the queue; the rest stay. */
+async function syncQueuedScans(): Promise<ApiResult<{ synced: number }>> {
+  const account = currentStudent();
+  if (!account) return { ok: false, error: { code: 'session_expired' } };
+  const queued = readQueuedScans(account);
+  if (queued.length === 0) return { ok: true, data: { synced: 0 } };
+  const result = await orgImpl.syncScans(queued);
+  if (!result.ok) return result;
+  removeQueuedScans(account, result.data.accepted);
+  return { ok: true, data: { synced: result.data.accepted.length } };
+}
+
 export const api = {
   signIn: impl.signIn,
   signUp: impl.signUp,
@@ -187,6 +308,15 @@ export const api = {
   getCertificate: impl.getCertificate,
   getEvaluationSurvey: impl.getEvaluationSurvey,
   submitEvaluation: impl.submitEvaluation,
+  orgSignIn: orgImpl.orgSignIn,
+  orgSignUp,
+  listOrganizations: orgImpl.listOrganizations,
+  getOrgIdentity,
+  listOrgSeminars,
+  listOrgRoster,
+  listLedger,
+  syncQueuedScans,
 };
 
 export type * from './types';
+export type * from './orgTypes';
