@@ -82,7 +82,7 @@ export function RecordCard({ record }: { record: HistoryRecord }) {
   return (
     <article
       aria-labelledby={titleId}
-      className="flex flex-col justify-between gap-space-lg rounded-xl bg-surface-card p-space-lg shadow-card transition-shadow hover:shadow-card-hover lg:flex-row lg:items-center"
+      className="flex flex-col justify-between gap-space-lg rounded-xl border border-border-subtle bg-surface-card p-space-lg shadow-card transition-shadow hover:shadow-card-hover lg:flex-row lg:items-center"
     >
       <div className="flex min-w-0 flex-1 flex-col lg:max-w-2xl">
         <div className="mb-space-xs flex flex-wrap items-center gap-space-sm">

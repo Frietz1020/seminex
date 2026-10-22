@@ -25,7 +25,7 @@ export function SignOutCard() {
   return (
     <section
       aria-labelledby="sign-out-heading"
-      className="flex flex-col gap-space-md rounded-xl bg-surface-card p-space-lg shadow-card sm:flex-row sm:items-center sm:justify-between"
+      className="flex flex-col gap-space-md rounded-xl border border-border-subtle bg-surface-card p-space-lg shadow-card sm:flex-row sm:items-center sm:justify-between"
     >
       <div className="flex flex-col">
         <h2 id="sign-out-heading" className="font-body-sm-medium text-body-sm-medium text-on-surface">

@@ -117,7 +117,6 @@ export function ProfileForm({ profile, onSaved }: ProfileFormProps) {
     setEditing(false);
   }
 
-  const email = `${profile.studentId}@${STUDENT_EMAIL_DOMAIN}`;
   const Group = editing ? 'div' : 'dl';
   const saved = toFormValues(profile);
 
@@ -160,7 +159,7 @@ export function ProfileForm({ profile, onSaved }: ProfileFormProps) {
       </div>
 
       <form noValidate onSubmit={(event) => void handleSubmit(event)} className="mt-space-lg flex flex-col gap-space-xl">
-        <section aria-labelledby="record-heading" className="flex flex-col gap-space-md">
+        <section aria-labelledby="record-heading" className="flex flex-col gap-space-md rounded-xl border border-border-subtle p-space-lg">
           <div className="flex items-center gap-space-sm">
             <Icon name="badge" size={20} className="text-secondary" />
             <h3 id="record-heading" className="font-title-md text-title-md tracking-tight text-primary">
@@ -171,15 +170,11 @@ export function ProfileForm({ profile, onSaved }: ProfileFormProps) {
             These details come from your enrollment record and cannot be changed here.
           </p>
           <dl className="grid grid-cols-1 gap-space-md md:grid-cols-2">
-            <ReadOnlyField label="Student ID" locked>
-              <span className="font-medium">{profile.studentId}</span>
-              <span className="text-text-secondary">@{STUDENT_EMAIL_DOMAIN}</span>
+            <ReadOnlyField label="Student ID · Institutional email" locked className="md:col-span-2">
+              {profile.studentId}@{STUDENT_EMAIL_DOMAIN}
             </ReadOnlyField>
             <ReadOnlyField label="Enrollment status" locked>
               {ENROLLMENT_TEXT[profile.enrollmentStatus]}
-            </ReadOnlyField>
-            <ReadOnlyField label="Institutional email" locked>
-              {email}
             </ReadOnlyField>
             <ReadOnlyField label="College" locked>
               {profile.college}
@@ -187,7 +182,7 @@ export function ProfileForm({ profile, onSaved }: ProfileFormProps) {
           </dl>
         </section>
 
-        <section aria-labelledby="personal-heading" className="flex flex-col gap-space-md">
+        <section aria-labelledby="personal-heading" className="flex flex-col gap-space-md rounded-xl border border-border-subtle p-space-lg">
           <div className="flex items-center gap-space-sm">
             <Icon name="account_circle" size={20} className="text-secondary" />
             <h3 id="personal-heading" className="font-title-md text-title-md tracking-tight text-primary">

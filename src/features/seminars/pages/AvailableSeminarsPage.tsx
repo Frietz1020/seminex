@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { api } from '../../../api/client';
 import { PageContainer } from '../../../components/shell/PageContainer';
 import { actionPrimary } from '../../../components/ui/actionStyles';
@@ -17,35 +17,13 @@ import { useRegistration } from '../useRegistration';
 
 export default function AvailableSeminarsPage() {
   const now = useNow();
-  const [params, setParams] = useSearchParams();
-  const urlQuery = params.get('q') ?? '';
-
-  // The search text lives in local state so typing never lags, and is mirrored to ?q= so the
-  // top-bar search can send people here with a query.
-  const [query, setQuery] = useState(urlQuery);
+  const [query, setQuery] = useState('');
   const [sort, setSort] = useState<SortKey>('nearest');
   const [department, setDepartment] = useState<string | null>(null);
 
   useEffect(() => {
-    setQuery(urlQuery);
-  }, [urlQuery]);
-
-  useEffect(() => {
     document.title = 'Available seminars - Seminex';
   }, []);
-
-  function changeQuery(next: string) {
-    setQuery(next);
-    setParams(
-      (previous) => {
-        const updated = new URLSearchParams(previous);
-        if (next) updated.set('q', next);
-        else updated.delete('q');
-        return updated;
-      },
-      { replace: true },
-    );
-  }
 
   const seminars = useResource(
     () => api.listSeminars(),
@@ -68,11 +46,6 @@ export default function AvailableSeminarsPage() {
   const metrics = getMetrics(openItems);
   const period = getAcademicPeriod(now);
   const offline = seminars.state.status === 'success' && seminars.state.fromCache;
-
-  function clearSearch() {
-    changeQuery('');
-    document.getElementById('seminar-search')?.focus();
-  }
 
   let content;
   if (seminars.state.status === 'loading') {
@@ -113,12 +86,12 @@ export default function AvailableSeminarsPage() {
   } else if (visible.length === 0) {
     content = (
       <StateMessage
-        icon="search_off"
-        title={query ? 'No seminars match your search' : 'No seminars in this department'}
+        icon="event_busy"
+        title={query.trim() ? 'No seminars match your search' : 'No seminars in this department'}
         action={
           <div className="flex flex-wrap justify-center gap-space-sm">
-            {query && (
-              <button type="button" onClick={clearSearch} className={actionPrimary}>
+            {query.trim() && (
+              <button type="button" onClick={() => setQuery('')} className={actionPrimary}>
                 Clear search
               </button>
             )}
@@ -130,7 +103,9 @@ export default function AvailableSeminarsPage() {
           </div>
         }
       >
-        Try different keywords, or clear the filters to see every open seminar.
+        {query.trim()
+          ? 'Try different keywords, or clear the search to see more seminars.'
+          : 'Clear the department filter to see every open seminar.'}
       </StateMessage>
     );
   } else {
@@ -233,7 +208,7 @@ export default function AvailableSeminarsPage() {
       {seminars.state.status === 'success' && (
         <SeminarToolbar
           query={query}
-          onQueryChange={changeQuery}
+          onQueryChange={setQuery}
           sort={sort}
           onSortChange={setSort}
           departments={departments}

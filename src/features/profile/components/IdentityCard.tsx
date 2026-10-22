@@ -13,7 +13,7 @@ export function IdentityCard({ profile, onAvatarUploaded }: IdentityCardProps) {
   return (
     <section
       aria-labelledby="identity-name"
-      className="relative flex flex-col items-center overflow-hidden rounded-xl bg-surface-card p-space-lg pt-space-xl text-center shadow-card"
+      className="relative flex flex-col items-center overflow-hidden rounded-xl border border-border-subtle bg-surface-card p-space-lg pt-space-xl text-center shadow-card"
     >
       <div aria-hidden="true" className="absolute inset-x-0 top-0 h-2 bg-primary" />
       <AvatarUpload profile={profile} onUploaded={onAvatarUploaded} />

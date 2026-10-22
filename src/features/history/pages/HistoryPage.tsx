@@ -129,17 +129,13 @@ export default function HistoryPage() {
             </ul>
           ) : (
             <StateMessage
-              icon="search_off"
+              icon="event_busy"
               title={query.trim() ? 'No seminars match your search' : 'No seminars in this view'}
               action={
                 query.trim() ? (
-                  <button type="button" onClick={() => setQuery('')} className={actionTonal}>
-                    Clear search
-                  </button>
+                  <button type="button" onClick={() => setQuery('')} className={actionTonal}>Clear search</button>
                 ) : (
-                  <button type="button" onClick={() => setFilter('all')} className={actionTonal}>
-                    Show all completed
-                  </button>
+                  <button type="button" onClick={() => setFilter('all')} className={actionTonal}>Show all completed</button>
                 )
               }
             >

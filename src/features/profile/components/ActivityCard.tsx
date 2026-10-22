@@ -8,22 +8,17 @@ import { useResource } from '../../../hooks/useResource';
 import type { SeminarListItem } from '../../../api/types';
 import { buildHistoryRecords, summarizeHistory } from '../../history/records';
 
-interface ActivityCardProps {
-  academicYear: string;
-}
-
 /** Counts come from the same history records as the History page, so the numbers always match. */
-export function ActivityCard({ academicYear }: ActivityCardProps) {
+export function ActivityCard() {
   const now = useNow();
   const history = useResource(() => api.listHistory(), 'profile-history');
 
   return (
-    <section aria-labelledby="activity-heading" className="flex flex-col gap-space-md rounded-xl bg-surface-card p-space-lg shadow-card">
+    <section aria-labelledby="activity-heading" className="flex flex-col gap-space-md rounded-xl border border-border-subtle bg-surface-card p-space-lg shadow-card">
       <div className="flex items-center justify-between gap-space-sm">
         <h2 id="activity-heading" className="font-title-md text-title-md text-on-surface">
           Academic activity
         </h2>
-        <span className="font-caption text-caption text-text-subtle">AY {academicYear}</span>
       </div>
 
       {history.state.status === 'loading' ? (
