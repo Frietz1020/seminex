@@ -80,8 +80,8 @@ function randomToken(bytes = 24): string {
 }
 
 // MOCK: the role comes from the seeded org accounts. A real server returns the role with the session.
-export function startSession(studentId: string): Session {
-  const access = findSeedAccess(studentId);
+export function startSession(studentId: string, accessOverride?: ReturnType<typeof findSeedAccess>): Session {
+  const access = accessOverride ?? findSeedAccess(studentId);
   const session: Session = {
     studentId,
     token: randomToken(),

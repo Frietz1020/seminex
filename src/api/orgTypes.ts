@@ -47,6 +47,8 @@ export interface OrgRequest {
   fullName: string;
   organizationId: string;
   position: string;
+  /** Applicant's optional appointment/mandate note. */
+  statement?: string;
   requestedAt: string;
   status: OrgRequestStatus;
   decidedAt?: string;
@@ -57,6 +59,17 @@ export interface OrgRequest {
 export interface OrgSignUpInput {
   organizationId: string;
   position: string;
+  statement?: string;
+}
+
+export type OrgAccessStatus = 'pending' | 'approved' | 'rejected' | 'removed' | 'none';
+
+export interface OrgAccessStatusResult {
+  status: OrgAccessStatus;
+  request: OrgRequest | null;
+  organization: Organization | null;
+  membership: Membership | null;
+  adviser: Adviser | null;
 }
 
 export interface OrgSignInInput {

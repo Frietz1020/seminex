@@ -3,6 +3,9 @@ import SignInPage from '../features/auth/pages/SignInPage';
 import SignUpPage from '../features/auth/pages/SignUpPage';
 import OrganizationSignInPage from '../features/auth/pages/OrganizationSignInPage';
 import OrganizationSignUpPage from '../features/auth/pages/OrganizationSignUpPage';
+import AdminSignInPage from '../features/admin/pages/AdminSignInPage';
+import RequestOrganizationAccessPage from '../features/org/pages/RequestOrganizationAccessPage';
+import OrganizationRequestStatusPage from '../features/org/pages/OrganizationRequestStatusPage';
 import VerifyEmailPage from '../features/auth/pages/VerifyEmailPage';
 import ForgotPasswordStub from '../features/auth/pages/ForgotPasswordStub';
 import LandingPage from '../features/home/pages/LandingPage';
@@ -23,6 +26,7 @@ import { RequireSession } from './RequireSession';
 import { RequireRole } from './RequireRole';
 import { OrgShell } from '../components/shell/org/OrgShell';
 import { OrgPlaceholderPage } from '../features/org/pages/OrgPlaceholderPage';
+import OrganizationApprovalsPage from '../features/org/pages/OrganizationApprovalsPage';
 
 export function AppRoutes() {
   return (
@@ -32,10 +36,17 @@ export function AppRoutes() {
       <Route path="/sign-up" element={<SignUpPage />} />
       <Route path="/organization/sign-in" element={<OrganizationSignInPage />} />
       <Route path="/organization/sign-up" element={<OrganizationSignUpPage />} />
+      <Route path="/admin/sign-in" element={<AdminSignInPage />} />
       <Route path="/verify-email" element={<VerifyEmailPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordStub />} />
 
       <Route element={<RequireSession />}>
+        <Route element={<RequireRole allow={['participant']} redirectTo={(role) => role === 'adviser' ? '/org/adviser' : '/org'} />}>
+          <Route path="/organization/request-access" element={<RequestOrganizationAccessPage />} />
+        </Route>
+        <Route element={<RequireRole allow={['participant', 'org_member']} redirectTo={(role) => role === 'adviser' ? '/org/adviser' : '/org'} />}>
+          <Route path="/organization/request-status" element={<OrganizationRequestStatusPage />} />
+        </Route>
         <Route element={<RequireRole allow={['participant', 'org_member']} redirectTo="/org/adviser" />}>
         <Route element={<AppShell />}>
           <Route path="/home" element={<HomePage />} />
@@ -63,7 +74,7 @@ export function AppRoutes() {
               <Route path="profile" element={<OrgPlaceholderPage title="Profile" icon="person" />} />
             </Route>
             <Route element={<RequireRole allow={['adviser']} redirectTo="/org" />}>
-              <Route path="adviser" element={<OrgPlaceholderPage title="Approvals" icon="how_to_reg" />} />
+              <Route path="adviser" element={<OrganizationApprovalsPage />} />
             </Route>
           </Route>
         </Route>

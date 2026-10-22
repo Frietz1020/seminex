@@ -18,7 +18,9 @@ import {
 } from './orgMockData';
 import type {
   Organization,
+  Membership,
   OrgAccess,
+  OrgAccessStatusResult,
   OrgIdentity,
   OrgRegistration,
   OrgRequest,
@@ -35,6 +37,8 @@ const data = buildOrgMockData(Date.now());
 const serverLedger: ScanLedgerEntry[] = [...data.ledger];
 
 const REQUESTS_KEY = 'seminex.mock.orgRequests';
+const WITHDRAWN_REQUESTS_KEY = 'seminex.mock.withdrawnOrgRequestIds';
+let memoryWithdrawnRequestIds = new Set<string>();
 
 function readStoredRequests(): OrgRequest[] {
   try {
@@ -58,7 +62,29 @@ function writeStoredRequests(requests: OrgRequest[]): void {
 let memoryRequests: OrgRequest[] = [];
 
 function allRequests(): OrgRequest[] {
-  return [...data.requests, ...readStoredRequests(), ...memoryRequests];
+  const withdrawn = readWithdrawnIds();
+  const merged = new Map<string, OrgRequest>();
+  [...data.requests, ...readStoredRequests(), ...memoryRequests].forEach((request) => merged.set(request.id, request));
+  return [...merged.values()].filter((request) => !withdrawn.has(request.id));
+}
+
+function readWithdrawnIds(): Set<string> {
+  const ids = new Set(memoryWithdrawnRequestIds);
+  try {
+    const raw = window.localStorage.getItem(WITHDRAWN_REQUESTS_KEY);
+    if (raw) for (const id of JSON.parse(raw) as string[]) ids.add(id);
+  } catch {
+    // Keep in-memory withdrawals available when browser storage is unavailable.
+  }
+  return ids;
+}
+
+function writeWithdrawnIds(ids: Set<string>): void {
+  try {
+    window.localStorage.setItem(WITHDRAWN_REQUESTS_KEY, JSON.stringify([...ids]));
+  } catch {
+    memoryWithdrawnRequestIds = new Set(ids);
+  }
 }
 
 // ---- Auth ------------------------------------------------------------------------
@@ -69,6 +95,7 @@ function accessFor(identifier: string, session: Session): OrgAccess {
   const latest = allRequests()
     .filter((request) => request.studentId === identifier)
     .sort((a, b) => b.requestedAt.localeCompare(a.requestedAt))[0];
+  if (latest?.status === 'approved') return 'organization';
   if (latest?.status === 'pending') return 'pending';
   if (latest?.status === 'rejected') return 'rejected';
   return 'none';
@@ -86,8 +113,53 @@ export async function orgSignIn(input: OrgSignInInput): Promise<ApiResult<OrgSig
   if (identifier.includes('@') && findSeedAccess(identifier)?.role !== 'adviser') {
     return fail('invalid_credentials');
   }
-  const session = startSession(identifier);
+  const approved = allRequests()
+    .filter((request) => request.studentId === identifier && request.status === 'approved')
+    .sort((a, b) => b.requestedAt.localeCompare(a.requestedAt))[0];
+  const seedAccess = findSeedAccess(identifier);
+  const access = seedAccess ?? (approved ? { role: 'org_member' as const, organizationIds: [approved.organizationId] } : undefined);
+  const session = startSession(identifier, access);
   return ok({ access: accessFor(identifier, session) });
+}
+
+/** MOCK: adviser queue and decisions are stored in this browser. */
+export async function listAdviserOrgRequests(): Promise<ApiResult<OrgRequest[]>> {
+  await wait();
+  const outcome = currentOutcome();
+  if (outcome === 'network') return fail('network');
+  const session = getSession();
+  if (!session || session.role !== 'adviser') return fail(session ? 'forbidden' : 'session_expired');
+  return ok(allRequests()
+    .filter((request) => session.organizationIds.includes(request.organizationId))
+    .sort((a, b) => b.requestedAt.localeCompare(a.requestedAt))
+    .map((request) => ({ ...request })));
+}
+
+export async function decideAdviserOrgRequest(
+  requestId: string,
+  decision: 'approved' | 'rejected',
+  decisionNote = '',
+): Promise<ApiResult<OrgRequest>> {
+  await wait();
+  const outcome = currentOutcome();
+  if (outcome === 'network') return fail('network');
+  const session = getSession();
+  if (!session || session.role !== 'adviser') return fail(session ? 'forbidden' : 'session_expired');
+  const adviser = MOCK_ADVISERS.find((entry) => entry.email.toLowerCase() === session.studentId.toLowerCase());
+  if (!adviser) return fail('forbidden');
+  const request = allRequests().find((entry) => entry.id === requestId && session.organizationIds.includes(entry.organizationId));
+  if (!request) return fail('not_found');
+  if (request.status !== 'pending') return fail('forbidden');
+  const decided: OrgRequest = {
+    ...request,
+    status: decision,
+    decidedAt: new Date().toISOString(),
+    decidedByAdviserId: adviser.id,
+    decisionNote: decisionNote.trim() || undefined,
+  };
+  writeStoredRequests([...readStoredRequests().filter((entry) => entry.id !== requestId), decided]);
+  memoryRequests = [...memoryRequests.filter((entry) => entry.id !== requestId), decided];
+  return ok({ ...decided });
 }
 
 // MOCK: lists the seeded organizations. No session is needed, because sign-up happens before sign-in.
@@ -117,11 +189,59 @@ export async function createOrgRequest(
     fullName,
     organizationId: input.organizationId,
     position: input.position,
+    statement: input.statement?.trim() || undefined,
     requestedAt: new Date().toISOString(),
     status: 'pending',
   };
   writeStoredRequests([...readStoredRequests(), request]);
   return ok(request);
+}
+
+/** MOCK: the latest request and membership state for the signed-in student. */
+export async function getMyOrgAccessStatus(): Promise<ApiResult<OrgAccessStatusResult>> {
+  await wait();
+  const outcome = currentOutcome();
+  if (outcome === 'network') return fail('network');
+  if (outcome === 'session_expired') return fail('session_expired');
+  const session = getSession();
+  if (!session) return fail('session_expired');
+  if (session.role === 'adviser') return fail('forbidden');
+  const studentId = session.studentId;
+  const request = allRequests()
+    .filter((entry) => entry.studentId === studentId)
+    .sort((a, b) => b.requestedAt.localeCompare(a.requestedAt))[0] ?? null;
+  const approvedMembership: Membership | null = request?.status === 'approved'
+    ? { id: `mem-${request.id}`, organizationId: request.organizationId, studentId, position: request.position, status: 'active', appointedAt: request.decidedAt ?? request.requestedAt, endorsedByAdviserId: request.decidedByAdviserId ?? MOCK_ADVISERS[0].id }
+    : null;
+  const membership = data.memberships.find((entry) => entry.studentId === studentId) ?? approvedMembership;
+  const organizationId = membership?.organizationId ?? request?.organizationId;
+  const organization = MOCK_ORGANIZATIONS.find((entry) => entry.id === organizationId) ?? null;
+  const adviser = organization ? MOCK_ADVISERS.find((entry) => entry.id === organization.adviserId) ?? null : null;
+  const status = membership?.status === 'removed'
+    ? 'removed'
+    : membership?.status === 'active' || request?.status === 'approved'
+      ? 'approved'
+      : request?.status ?? 'none';
+  return ok({ status, request, organization: organization ? { ...organization } : null, membership: membership ? { ...membership } : null, adviser: adviser ? { ...adviser } : null });
+}
+
+/** MOCK: withdraws the signed-in student's pending request. */
+export async function withdrawMyOrgRequest(): Promise<ApiResult<void>> {
+  await wait();
+  const outcome = currentOutcome();
+  if (outcome === 'network') return fail('network');
+  if (outcome === 'session_expired') return fail('session_expired');
+  const session = getSession();
+  if (!session) return fail('session_expired');
+  if (session.role === 'adviser') return fail('forbidden');
+  const request = allRequests()
+    .filter((entry) => entry.studentId === session.studentId && entry.status === 'pending')
+    .sort((a, b) => b.requestedAt.localeCompare(a.requestedAt))[0];
+  if (!request) return fail('not_found');
+  const withdrawn = readWithdrawnIds();
+  withdrawn.add(request.id);
+  writeWithdrawnIds(withdrawn);
+  return ok(undefined);
 }
 
 // ---- Org data --------------------------------------------------------------------
@@ -159,17 +279,29 @@ export function getOrgIdentity(): Promise<ApiResult<OrgIdentity>> {
     }
 
     const officer = MOCK_OFFICERS.find((entry) => entry.studentId === session.studentId);
+    const approvedRequest = allRequests()
+      .filter((entry) => entry.studentId === session.studentId && entry.status === 'approved' && entry.organizationId === organization.id)
+      .sort((a, b) => b.requestedAt.localeCompare(a.requestedAt))[0];
     const membership = data.memberships.find(
       (entry) => entry.studentId === session.studentId && entry.organizationId === organization.id && entry.status === 'active',
-    );
-    if (!officer || !membership) return fail('forbidden');
+    ) ?? (approvedRequest ? {
+      id: `mem-${approvedRequest.id}`,
+      organizationId: approvedRequest.organizationId,
+      studentId: approvedRequest.studentId,
+      position: approvedRequest.position,
+      status: 'active' as const,
+      appointedAt: approvedRequest.decidedAt ?? approvedRequest.requestedAt,
+      endorsedByAdviserId: approvedRequest.decidedByAdviserId ?? adviser.id,
+    } : null);
+    if ((!officer && !approvedRequest) || !membership) return fail('forbidden');
+    const [firstName, ...lastParts] = (approvedRequest?.fullName ?? `${officer?.firstName ?? ''} ${officer?.lastName ?? ''}`).split(' ');
     return ok({
       role: 'org_member',
-      accountId: officer.studentId,
-      firstName: officer.firstName,
-      lastName: officer.lastName,
-      studentId: officer.studentId,
-      email: `${officer.studentId}@${STUDENT_EMAIL_DOMAIN}`,
+      accountId: session.studentId,
+      firstName,
+      lastName: lastParts.join(' '),
+      studentId: session.studentId,
+      email: `${session.studentId}@${STUDENT_EMAIL_DOMAIN}`,
       position: membership.position,
       organization: { ...organization },
       membership: { ...membership },
