@@ -1,3 +1,4 @@
+import { lazy, Suspense, type ReactNode } from 'react';
 import { Route, Routes } from 'react-router-dom';
 import SignInPage from '../features/auth/pages/SignInPage';
 import SignUpPage from '../features/auth/pages/SignUpPage';
@@ -25,8 +26,19 @@ import { PlaceholderPage } from '../components/shell/PlaceholderPage';
 import { RequireSession } from './RequireSession';
 import { RequireRole } from './RequireRole';
 import { OrgShell } from '../components/shell/org/OrgShell';
-import { OrgPlaceholderPage } from '../features/org/pages/OrgPlaceholderPage';
 import OrganizationApprovalsPage from '../features/org/pages/OrganizationApprovalsPage';
+
+const OrgSeminarsPage = lazy(() => import('../features/org/pages/OrgSeminarsPage'));
+const OrgHistoryPage = lazy(() => import('../features/org/pages/OrgHistoryPage'));
+const OrgProfilePage = lazy(() => import('../features/org/pages/OrgProfilePage'));
+const OrgSeminarDetailsPage = lazy(() => import('../features/org/pages/OrgSeminarDetailsPage'));
+const OrgScannerPage = lazy(() => import('../features/org/pages/OrgScannerPage'));
+const SeminarEditorPage = lazy(() => import('../features/org/pages/SeminarEditorPage'));
+const OrgHomePage = lazy(() => import('../features/org/pages/OrgHomePage'));
+
+function OrgPage({ children }: { children: ReactNode }) {
+  return <Suspense fallback={<div role="status" className="mx-auto w-full max-w-7xl px-gutter py-space-xl md:px-margin">Loading organization page…</div>}>{children}</Suspense>;
+}
 
 export function AppRoutes() {
   return (
@@ -68,10 +80,13 @@ export function AppRoutes() {
         <Route element={<RequireRole allow={['org_member', 'adviser']} redirectTo="/home" />}>
           <Route path="/org" element={<OrgShell />}>
             <Route element={<RequireRole allow={['org_member']} redirectTo="/org/adviser" />}>
-              <Route index element={<OrgPlaceholderPage title="Home" icon="home" />} />
-              <Route path="my-seminars" element={<OrgPlaceholderPage title="My Seminars" icon="event_note" />} />
-              <Route path="history" element={<OrgPlaceholderPage title="History" icon="history" />} />
-              <Route path="profile" element={<OrgPlaceholderPage title="Profile" icon="person" />} />
+              <Route index element={<OrgPage><OrgHomePage /></OrgPage>} />
+              <Route path="my-seminars" element={<OrgPage><OrgSeminarsPage /></OrgPage>} />
+              <Route path="my-seminars/:id/scanner" element={<OrgPage><OrgScannerPage /></OrgPage>} />
+              <Route path="my-seminars/:id" element={<OrgPage><OrgSeminarDetailsPage /></OrgPage>} />
+              <Route path="seminars/:draftId/edit" element={<OrgPage><SeminarEditorPage /></OrgPage>} />
+              <Route path="history" element={<OrgPage><OrgHistoryPage /></OrgPage>} />
+              <Route path="profile" element={<OrgPage><OrgProfilePage /></OrgPage>} />
             </Route>
             <Route element={<RequireRole allow={['adviser']} redirectTo="/org" />}>
               <Route path="adviser" element={<OrganizationApprovalsPage />} />

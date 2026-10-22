@@ -128,6 +128,10 @@ export function readQueuedScans(accountId: string): ScanLedgerEntry[] {
   return read(accountId).queue;
 }
 
+export function queueOrgScan(accountId: string, entry: ScanLedgerEntry): void {
+  queueScan(accountId, entry);
+}
+
 /** A number, so it can be a stable snapshot for useSyncExternalStore. */
 export function countQueuedScans(accountId: string): number {
   return read(accountId).queue.length;

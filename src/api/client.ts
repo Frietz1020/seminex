@@ -296,6 +296,37 @@ async function syncQueuedScans(): Promise<ApiResult<{ synced: number }>> {
   return { ok: true, data: { synced: result.data.accepted.length } };
 }
 
+async function createOrgDraft() {
+  const result = await orgImpl.createOrgDraft();
+  if (result.ok) await listOrgSeminars();
+  return result;
+}
+
+async function createOrgEditDraft(seminarId: string) {
+  const result = await orgImpl.createOrgEditDraft(seminarId);
+  if (result.ok) await listOrgSeminars();
+  return result;
+}
+
+async function saveOrgDraft(draft: import('./orgTypes').SeminarDraft) {
+  const result = await orgImpl.saveOrgDraft(draft);
+  if (result.ok) await listOrgSeminars();
+  return result;
+}
+
+async function publishOrgDraft(draftId: string) {
+  const result = await orgImpl.publishOrgDraft(draftId);
+  if (result.ok) await listOrgSeminars();
+  return result;
+}
+
+async function recordOrgScan(entry: ScanLedgerEntry) {
+  const result = await orgImpl.recordOrgScan(entry);
+  if (!result.ok) return result;
+  if (typeof navigator !== 'undefined' && navigator.onLine) await syncQueuedScans();
+  return result;
+}
+
 export const api = {
   signIn: impl.signIn,
   signUp: impl.signUp,
@@ -328,6 +359,11 @@ export const api = {
   listOrgRoster,
   listLedger,
   syncQueuedScans,
+  createOrgDraft,
+  createOrgEditDraft,
+  saveOrgDraft,
+  publishOrgDraft,
+  recordOrgScan,
 };
 
 export type * from './types';

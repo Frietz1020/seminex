@@ -214,7 +214,7 @@ function buildTemplateBackground(): string {
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
 
-function buildTemplate(base: number): CertificateTemplate {
+export function buildDefaultCertificateTemplate(base = Date.now()): CertificateTemplate {
   return {
     backgroundUrl: buildTemplateBackground(),
     updatedAt: iso(base, -2 * DAY),
@@ -414,6 +414,7 @@ interface OrgMockData {
   surveys: AuthoredSurvey[];
   responses: SurveyResponse[];
   certificates: CertificateRecord[];
+  certificateTemplates: Record<string, CertificateTemplate>;
   overrides: OverrideRequest[];
   requests: OrgRequest[];
 }
@@ -445,7 +446,8 @@ export function buildOrgMockData(base: number): OrgMockData {
   const responses: SurveyResponse[] = [];
   const surveys: AuthoredSurvey[] = [];
   const certificates: CertificateRecord[] = [];
-  const template = buildTemplate(base);
+  const template = buildDefaultCertificateTemplate(base);
+  const certificateTemplates: Record<string, CertificateTemplate> = {};
 
   const ledgerEntry = (
     seminarId: string,
@@ -537,6 +539,7 @@ export function buildOrgMockData(base: number): OrgMockData {
         : null,
     };
     seminars.push(seminar);
+    certificateTemplates[seminar.id] = template;
 
     if (cancelled || startsOffset > 0) return;
 
@@ -752,6 +755,7 @@ export function buildOrgMockData(base: number): OrgMockData {
     surveys,
     responses,
     certificates,
+    certificateTemplates,
     overrides,
     requests,
   };

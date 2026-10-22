@@ -9,12 +9,15 @@
 import { STUDENT_EMAIL_DOMAIN } from '../config';
 import { getSession } from '../session/storage';
 import { currentOutcome, fail, ok, startSession, wait, withSession } from './mock';
+import { queueOrgScan, readQueuedScans } from './orgOfflineCache';
 import {
   buildOrgMockData,
   findSeedAccess,
   MOCK_ADVISERS,
   MOCK_OFFICERS,
   MOCK_ORGANIZATIONS,
+  buildDefaultCertificateTemplate,
+  buildDefaultSurvey,
 } from './orgMockData';
 import type {
   Organization,
@@ -22,9 +25,11 @@ import type {
   OrgAccess,
   OrgAccessStatusResult,
   OrgIdentity,
+  OrgSeminar,
   OrgRegistration,
   OrgRequest,
   OrgSeminarListing,
+  SeminarDraft,
   OrgSignInInput,
   OrgSignInResult,
   OrgSignUpInput,
@@ -337,6 +342,137 @@ export function listLedger(seminarId: string): Promise<ApiResult<ScanLedgerEntry
     const seminar = data.seminars.find((entry) => entry.id === seminarId);
     if (!seminar || !session.organizationIds.includes(seminar.organizationId)) return fail('not_found');
     return ok(serverLedger.filter((entry) => entry.seminarId === seminarId).map((entry) => ({ ...entry })));
+  });
+}
+
+/** MOCK: creates an empty editor draft for the signed-in organization's workspace. */
+export function createOrgDraft(): Promise<ApiResult<SeminarDraft>> {
+  return withOrgSession((session) => {
+    const organizationId = session.organizationIds[0];
+    if (!organizationId) return fail('forbidden');
+    const id = `draft-${crypto.randomUUID()}`;
+    const now = new Date().toISOString();
+    const draft: SeminarDraft = {
+      id,
+      organizationId,
+      createdByOfficerId: session.studentId,
+      createdAt: now,
+      updatedAt: now,
+      details: {},
+      certificate: null,
+      survey: buildDefaultSurvey(id),
+    };
+    data.drafts.unshift(draft);
+    return ok(draft);
+  });
+}
+
+/** MOCK: creates an editing draft from an existing organization seminar. */
+export function createOrgEditDraft(seminarId: string): Promise<ApiResult<SeminarDraft>> {
+  return withOrgSession((session) => {
+    const seminar = data.seminars.find((item) => item.id === seminarId && session.organizationIds.includes(item.organizationId));
+    if (!seminar) return fail('not_found');
+    const id = `draft-${crypto.randomUUID()}`;
+    const now = new Date().toISOString();
+    const survey = data.surveys.find((item) => item.seminarId === seminar.id);
+    const draft: SeminarDraft = {
+      id,
+      organizationId: seminar.organizationId,
+      createdByOfficerId: session.studentId,
+      createdAt: now,
+      updatedAt: now,
+      editingSeminarId: seminar.id,
+      details: {
+        title: seminar.title,
+        description: seminar.description,
+        speakerName: seminar.speaker.name,
+        speakerRole: seminar.speaker.role,
+        venue: seminar.venue,
+        department: seminar.department,
+        startsAt: seminar.startsAt,
+        endsAt: seminar.endsAt,
+        capacity: seminar.capacity,
+        requiredAttendancePercent: seminar.requiredAttendancePercent,
+        coverImageUrl: seminar.imageUrl,
+      },
+      certificate: data.certificateTemplates[seminar.id] ?? buildDefaultCertificateTemplate(),
+      survey: survey ? { ...survey, seminarId: id } : buildDefaultSurvey(id),
+    };
+    data.drafts.unshift(draft);
+    return ok(draft);
+  });
+}
+
+/** MOCK: saves the seminar wizard draft. */
+export function saveOrgDraft(draft: SeminarDraft): Promise<ApiResult<SeminarDraft>> {
+  return withOrgSession((session) => {
+    const existing = data.drafts.find((entry) => entry.id === draft.id && session.organizationIds.includes(entry.organizationId));
+    if (!existing) return fail('not_found');
+    const saved = { ...draft, updatedAt: new Date().toISOString() };
+    data.drafts[data.drafts.indexOf(existing)] = saved;
+    return ok(saved);
+  });
+}
+
+/** MOCK: publishes a completed draft into the organization seminar list. */
+export function publishOrgDraft(draftId: string): Promise<ApiResult<OrgSeminar>> {
+  return withOrgSession((session) => {
+    const draft = data.drafts.find((entry) => entry.id === draftId && session.organizationIds.includes(entry.organizationId));
+    if (!draft) return fail('not_found');
+    const details = draft.details;
+    if (!details.title?.trim() || !details.description?.trim() || !details.speakerName?.trim() || !details.speakerRole?.trim() || !details.venue?.trim() || !details.department?.trim() || !details.startsAt || !details.endsAt || !details.capacity || !draft.certificate || !draft.survey) {
+      return fail('not_available');
+    }
+    const year = new Date().getFullYear();
+    const existing = draft.editingSeminarId ? data.seminars.find((item) => item.id === draft.editingSeminarId) : undefined;
+    const seminar: OrgSeminar = {
+      id: existing?.id ?? `org-sem-${crypto.randomUUID()}`,
+      reference: existing?.reference ?? `SEM-${year}-${String(data.seminars.length + 200).padStart(4, '0')}`,
+      title: details.title.trim(),
+      description: details.description.trim(),
+      speaker: { name: details.speakerName.trim(), role: details.speakerRole.trim() },
+      venue: details.venue.trim(),
+      department: details.department.trim(),
+      topics: [],
+      startsAt: details.startsAt,
+      endsAt: details.endsAt,
+      capacity: details.capacity,
+      registeredCount: existing?.registeredCount ?? 0,
+      imageUrl: details.coverImageUrl,
+      requiredAttendancePercent: details.requiredAttendancePercent ?? 60,
+      organizationId: draft.organizationId,
+      registrationClosed: existing?.registrationClosed ?? false,
+      endedEarlyAt: existing?.endedEarlyAt ?? null,
+      cancellation: existing?.cancellation ?? null,
+    };
+    if (existing) data.seminars[data.seminars.indexOf(existing)] = seminar;
+    else data.seminars.unshift(seminar);
+    data.certificateTemplates[seminar.id] = draft.certificate;
+    data.surveys = data.surveys.filter((item) => item.seminarId !== seminar.id);
+    data.surveys.push({ ...draft.survey, seminarId: seminar.id });
+    data.drafts = data.drafts.filter((entry) => entry.id !== draft.id);
+    return ok(seminar);
+  });
+}
+
+/** MOCK: writes a check-in/out locally and syncs immediately when online. */
+export function recordOrgScan(entry: ScanLedgerEntry): Promise<ApiResult<{ queued: boolean }>> {
+  return withOrgSession((session) => {
+    const seminar = data.seminars.find((item) => item.id === entry.seminarId && session.organizationIds.includes(item.organizationId));
+    const registered = data.registrations.some((item) => item.seminarId === entry.seminarId && item.studentId === entry.studentId && !item.removal);
+    if (!seminar || !registered) return fail('not_found');
+    if (seminar.cancellation) return fail('not_available');
+    const stamp = Date.parse(entry.at);
+    const start = Date.parse(seminar.startsAt);
+    const end = seminar.endedEarlyAt ? Math.min(Date.parse(seminar.endsAt), Date.parse(seminar.endedEarlyAt)) : Date.parse(seminar.endsAt);
+    if (stamp < start || (entry.kind === 'time_in' && stamp >= end) || (entry.kind === 'time_out' && stamp > end + 60 * 60_000)) return fail('not_available');
+    if (entry.method === 'manual' && !entry.reason?.trim()) return fail('not_available');
+    const previous = [...serverLedger, ...readQueuedScans(session.studentId)]
+      .filter((item) => item.seminarId === entry.seminarId && item.studentId === entry.studentId && (item.kind === 'time_in' || item.kind === 'time_out'))
+      .sort((a, b) => b.at.localeCompare(a.at))[0];
+    if ((entry.kind === 'time_in' && previous?.kind === 'time_in') || (entry.kind === 'time_out' && previous?.kind !== 'time_in')) return fail('not_available');
+    queueOrgScan(session.studentId, { ...entry, synced: false });
+    return ok({ queued: true });
   });
 }
 

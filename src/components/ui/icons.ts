@@ -66,6 +66,23 @@ import unfold_more from '@material-symbols/svg-400/outlined/unfold_more.svg?raw'
 import cloud_off from '@material-symbols/svg-400/outlined/cloud_off.svg?raw';
 import event_note from '@material-symbols/svg-400/outlined/event_note.svg?raw';
 import corporate_fare from '@material-symbols/svg-400/outlined/corporate_fare.svg?raw';
+import visibility from '@material-symbols/svg-400/outlined/visibility.svg?raw';
+import sync_problem from '@material-symbols/svg-400/outlined/sync_problem.svg?raw';
+import folder_off from '@material-symbols/svg-400/outlined/folder_off.svg?raw';
+import verified_user from '@material-symbols/svg-400/outlined/verified_user.svg?raw';
+import assignment_ind from '@material-symbols/svg-400/outlined/assignment_ind.svg?raw';
+import description from '@material-symbols/svg-400/outlined/description.svg?raw';
+import swap_horiz from '@material-symbols/svg-400/outlined/swap_horiz.svg?raw';
+import offline_pin from '@material-symbols/svg-400/outlined/offline_pin.svg?raw';
+import group_off from '@material-symbols/svg-400/outlined/group_off.svg?raw';
+import fact_check from '@material-symbols/svg-400/outlined/fact_check.svg?raw';
+import add from '@material-symbols/svg-400/outlined/add.svg?raw';
+import delete_icon from '@material-symbols/svg-400/outlined/delete.svg?raw';
+import draft from '@material-symbols/svg-400/outlined/draft.svg?raw';
+import cloud_done from '@material-symbols/svg-400/outlined/cloud_done.svg?raw';
+import upload_file from '@material-symbols/svg-400/outlined/upload_file.svg?raw';
+import error_icon from '@material-symbols/svg-400/outlined/error.svg?raw';
+import publish from '@material-symbols/svg-400/outlined/publish.svg?raw';
 
 export const ICONS = {
   home,
@@ -134,6 +151,23 @@ export const ICONS = {
   cloud_off,
   event_note,
   corporate_fare,
+  visibility,
+  sync_problem,
+  folder_off,
+  verified_user,
+  assignment_ind,
+  description,
+  swap_horiz,
+  offline_pin,
+  group_off,
+  fact_check,
+  add,
+  delete: delete_icon,
+  draft,
+  cloud_done,
+  upload_file,
+  error: error_icon,
+  publish,
 } as const;
 
 export type IconName = keyof typeof ICONS;
