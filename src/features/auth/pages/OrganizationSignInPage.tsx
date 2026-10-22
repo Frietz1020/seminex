@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, Building2, Info, TriangleAlert, WifiOff } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Info, TriangleAlert, WifiOff } from 'lucide-react';
 import { api, type ApiErrorCode, type OrgAccess } from '../../../api/client';
 import { AuthLayout } from '../../../components/auth/AuthLayout';
 import { Alert } from '../../../components/ui/Alert';
@@ -99,10 +99,6 @@ export default function OrganizationSignInPage() {
           <ArrowLeft aria-hidden="true" className="h-4 w-4" />
           Back to portal selection
         </Link>
-      </div>
-      <div className="mb-6 inline-flex items-center gap-2 rounded-md bg-cream-100 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-maroon">
-        <Building2 aria-hidden="true" className="h-4 w-4" />
-        Organization portal
       </div>
       <h1 className="font-heading text-2xl font-bold tracking-tight text-charcoal-900 md:text-3xl">Organization sign in</h1>
       <p className="mt-2 text-sm leading-relaxed text-charcoal-700">

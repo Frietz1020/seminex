@@ -1,7 +1,16 @@
+import type { ReactNode } from 'react';
 import { BrandMark } from '../shell/BrandMark';
 
 /** Desktop left panel (md and up). */
-export function BrandPanel() {
+export function BrandPanel({
+  message = 'Join seminars, scan in, and get your certificate.',
+  supportingText,
+  footer = 'College of Computer Studies Student Council',
+}: {
+  message?: ReactNode;
+  supportingText?: ReactNode;
+  footer?: ReactNode;
+} = {}) {
   return (
     <aside
       aria-label="About Seminex"
@@ -19,15 +28,15 @@ export function BrandPanel() {
 
       <div className="my-auto max-w-sm py-12">
         <p className="font-heading text-3xl font-bold leading-tight lg:text-4xl">
-          Join seminars, scan in, and get your certificate.
+          {message}
         </p>
+        {supportingText && <p className="mt-4 leading-relaxed text-cream-100/85">{supportingText}</p>}
       </div>
 
-      <p className="text-xs font-medium text-cream-200/80">College of Computer Studies Student Council</p>
+      <p className="text-xs font-medium text-cream-200/80">{footer}</p>
     </aside>
   );
 }
-
 /** Mobile brand header (below md). */
 export function MobileBrandHeader() {
   return (
@@ -42,17 +51,5 @@ export function MobileBrandHeader() {
         </span>
       </div>
     </header>
-  );
-}
-
-/** Brand line above the form on desktop, as shown in the desktop export. */
-export function InlineBrandLine() {
-  return (
-    <div className="mb-8 hidden items-center gap-2.5 md:flex">
-      <BrandMark size={28} />
-      <span className="text-xs font-semibold uppercase tracking-wider text-charcoal-700">
-        Seminex &bull; CCS Gordon College
-      </span>
-    </div>
   );
 }

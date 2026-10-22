@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, Check, CircleAlert, ShieldCheck, TriangleAlert, WifiOff } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, CircleAlert, TriangleAlert, WifiOff } from 'lucide-react';
 import { api, type ApiErrorCode, type Block, type Program, type YearLevel } from '../../../api/client';
 import { Alert } from '../../../components/ui/Alert';
 import { InlineError } from '../../../components/ui/StateMessage';
 import { useResource } from '../../../hooks/useResource';
 import { Button } from '../../../components/ui/Button';
+import { BrandPanel } from '../../../components/auth/BrandPanel';
 import { BrandMark } from '../../../components/shell/BrandMark';
 import { PasswordField } from '../../../components/ui/PasswordField';
 import { PasswordRules } from '../../../components/auth/PasswordRules';
@@ -114,19 +115,11 @@ export default function OrganizationSignUpPage() {
 
   return (
     <div className="min-h-dvh bg-cream-50 md:flex">
-      <aside className="relative hidden min-h-dvh w-[42%] flex-col justify-between overflow-hidden bg-maroon p-10 text-white md:flex lg:w-[40%] lg:p-16">
-        <div aria-hidden className="pointer-events-none absolute -left-16 -top-16 h-80 w-80 rounded-full bg-white/10 blur-3xl" />
-        <div className="relative z-10 flex items-center gap-3"><BrandMark size={48} variant="onDark" /><span><strong className="block font-heading text-2xl">Seminex</strong><small className="uppercase tracking-widest text-cream-200">CCS Gordon College</small></span></div>
-        <div className="relative z-10 my-auto max-w-md py-12">
-          <span className="inline-flex rounded-full bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-cream-200">Organization onboarding</span>
-          <h1 className="mt-5 font-heading text-3xl font-bold leading-tight lg:text-4xl">Empower your student organization with Seminex.</h1>
-          <p className="mt-4 leading-relaxed text-cream-100/85">Register your institutional identity, then provide the organization and official role you represent.</p>
-          <div className="mt-8 space-y-3">
-            {[['1', 'Create officer account'], ['2', 'Your organization']].map(([number, title], index) => <div key={number} className={`flex items-center gap-3 rounded-xl border p-4 ${step === index + 1 ? 'border-white bg-white text-maroon' : 'border-white/20 bg-white/10 text-white'}`}><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-maroon/10 font-bold">{step > index + 1 ? <Check className="h-4 w-4" /> : number}</span><span className="text-sm font-semibold">Step {number} · {title}</span></div>)}
-          </div>
-        </div>
-        <p className="relative z-10 text-xs text-cream-200/80">College of Computer Studies Student Council</p>
-      </aside>
+      <BrandPanel
+        message="Empower your student organization with Seminex."
+        supportingText="Register your institutional identity, then provide the organization and official role you represent."
+        footer={`Organization onboarding · Step ${step} of 2`}
+      />
 
       <main className="flex min-h-dvh flex-1 items-center justify-center px-5 py-8 sm:px-10 md:py-12">
         <div className="w-full max-w-[560px]">
@@ -135,7 +128,6 @@ export default function OrganizationSignUpPage() {
             <span className="rounded-full bg-maroon/10 px-3 py-1 text-xs font-semibold text-maroon">Step {step} of 2</span>
           </header>
           <div className="mb-6 flex items-center gap-3 md:hidden"><BrandMark size={40} /><span><p className="font-heading text-xl font-bold text-charcoal-900">Seminex</p><p className="text-xs uppercase tracking-wide text-burnt">CCS Gordon College</p></span></div>
-          <div className="mb-5 flex items-center gap-2 rounded-md bg-cream-100 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-maroon"><ShieldCheck className="h-4 w-4" />Seminex · CCS Gordon College</div>
           <h2 className="font-heading text-2xl font-bold tracking-tight text-charcoal-900 md:text-3xl">{step === 1 ? 'Create Officer Account' : 'Your Organization Details'}</h2>
           <p className="mt-2 text-sm leading-relaxed text-charcoal-700">{step === 1 ? 'Step 1 of 2: Enter your institutional credentials and academic record.' : 'Step 2 of 2: Select your student organization and official council role.'}</p>
 

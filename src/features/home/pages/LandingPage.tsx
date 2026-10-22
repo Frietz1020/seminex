@@ -1,16 +1,8 @@
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Award, BadgeCheck, CircleHelp, Info, ShieldCheck, UsersRound } from 'lucide-react';
-import { Icon } from '../../../components/ui/Icon';
-import { BrandMark } from '../../../components/shell/BrandMark';
-import { useNow } from '../../../hooks/useNow';
+import { ArrowRight, BadgeCheck, Info, ShieldCheck, UsersRound, X } from 'lucide-react';
+import { BrandPanel, MobileBrandHeader } from '../../../components/auth/BrandPanel';
 import { useSession } from '../../../session/useSession';
-import { getAcademicPeriod } from '../../seminars/academicPeriod';
-
-function SeminexMark({ size = 'small' }: { size?: 'small' | 'large' }) {
-  const large = size === 'large';
-  return <BrandMark size={large ? 48 : 36} variant={large ? 'onDark' : 'default'} />;
-}
 
 function PortalCard({
   title,
@@ -53,95 +45,36 @@ function PortalCard({
 }
 
 export default function LandingPage() {
-  const now = useNow();
-  const period = getAcademicPeriod(now);
   const session = useSession();
+  const [openPolicy, setOpenPolicy] = useState<'terms' | 'security' | null>(null);
+  const policyDialogRef = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
     document.title = 'Welcome to Seminex - CCS Gordon College';
   }, []);
 
+  useEffect(() => {
+    const dialog = policyDialogRef.current;
+    if (!dialog) return;
+    if (openPolicy && !dialog.open) dialog.showModal();
+    else if (!openPolicy && dialog.open) dialog.close();
+  }, [openPolicy]);
+
   const participantPath = session ? '/home' : '/sign-in';
 
   return (
     <div className="min-h-dvh bg-background font-body-base text-on-surface antialiased">
-      <header className="fixed inset-x-0 top-0 z-50 h-16 bg-surface/90 shadow-shell backdrop-blur-xl">
-        <div className="mx-auto flex h-full w-full items-center justify-between px-gutter-mobile sm:px-gutter lg:px-margin">
-          <Link to="/" aria-label="Seminex landing page" className="flex min-h-11 items-center gap-space-sm rounded-lg">
-            <SeminexMark />
-            <span className="flex flex-col">
-              <span className="font-title-md text-title-md font-semibold leading-none tracking-tight text-on-surface">Seminex CCS</span>
-              <span className="mt-0.5 font-caption text-caption leading-none text-on-surface-variant">Gordon College Identity Gateway</span>
-            </span>
-          </Link>
-          <div className="flex items-center gap-3">
-            <Link to="/admin/sign-in" className="inline-flex min-h-11 items-center gap-2 rounded-full border border-outline-variant bg-surface-card px-4 font-label-sm text-label-sm font-semibold text-primary transition-colors hover:bg-primary-container hover:text-on-primary">
-              <ShieldCheck aria-hidden="true" className="h-4 w-4" />
-              Admin sign in
-            </Link>
-            <span className="hidden items-center gap-1.5 rounded-full bg-surface-container-low px-space-sm py-1 font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant sm:inline-flex">
-            <ShieldCheck aria-hidden="true" className="h-4 w-4 text-outline" />
-              <span>Institutional access</span>
-            </span>
-          </div>
-        </div>
-      </header>
+      <main className="w-full bg-surface">
+        <div className="flex min-h-dvh w-full flex-col md:flex-row">
+          <BrandPanel
+            message="Join seminars, show your ticket, and earn your certificate."
+            supportingText="One place for Gordon College students to discover CCS seminars, track attendance, and complete evaluations."
+          />
 
-      <main className="w-full bg-surface pt-16">
-        <div className="flex min-h-[calc(100dvh-4rem)] w-full flex-col lg:flex-row">
-          <section className="relative flex flex-col justify-between overflow-hidden bg-primary-container p-7 text-on-primary shadow-overlay sm:p-10 lg:w-5/12 lg:p-12 xl:w-1/2 xl:p-16">
-            <div aria-hidden="true" className="pointer-events-none absolute -left-32 -top-32 h-96 w-96 rounded-full bg-primary opacity-50 mix-blend-multiply blur-3xl" />
-            <div aria-hidden="true" className="pointer-events-none absolute -bottom-24 -right-24 h-80 w-80 rounded-full bg-on-primary-container opacity-10 mix-blend-screen blur-2xl" />
-            <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-linear-to-b from-primary/30 via-transparent to-primary/80" />
-
-            <div className="relative z-10 flex items-center gap-3">
-              <SeminexMark size="large" />
-              <span className="flex flex-col">
-                <span className="font-headline-md text-headline-md font-bold leading-none tracking-tight text-on-primary">Seminex</span>
-                <span className="mt-1 font-label-sm text-label-sm font-semibold tracking-widest text-on-primary-container">CCS GORDON COLLEGE</span>
-              </span>
-            </div>
-
-            <div className="relative z-10 my-10 max-w-lg lg:my-12">
-              <h1 className="font-headline-xl text-headline-xl-mobile font-bold leading-tight tracking-tight text-on-primary md:text-headline-xl">
-                Join seminars, show your ticket, and earn your certificate.
-              </h1>
-              <p className="mt-6 font-body-lg text-body-lg leading-relaxed text-on-primary/80">
-                One place for Gordon College students to discover CCS seminars, track attendance, and complete evaluations.
-              </p>
-
-              <div className="mt-8 flex items-center justify-between gap-4 rounded-xl bg-primary/40 p-4 backdrop-blur-md sm:mt-10 sm:p-5">
-                <div className="flex min-w-0 items-center gap-3 sm:gap-4">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-on-primary/10 text-on-primary">
-                    <Award aria-hidden="true" className="h-6 w-6" />
-                  </span>
-                  <span className="flex min-w-0 flex-col">
-                    <span className="font-title-md text-title-md font-semibold leading-none text-on-primary">Verified attendance</span>
-                    <span className="mt-1 font-caption text-caption text-on-primary/70">Certificates unlock when requirements are met</span>
-                  </span>
-                </div>
-                <svg aria-hidden="true" className="hidden h-8 w-24 shrink-0 text-on-primary-container sm:block" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 100 30">
-                  <path d="M0 24 Q 25 28, 45 15 T 85 8 T 100 4" />
-                </svg>
-              </div>
-            </div>
-
-            <footer className="relative z-10 flex items-center justify-between gap-4 border-t border-on-primary/15 pt-5 text-on-primary/75">
-              <span className="flex flex-col">
-                <span className="font-title-md text-title-md font-medium tracking-wide text-on-primary">College of Computer Studies Student Council</span>
-                <span className="mt-0.5 font-caption text-caption text-on-primary/60">Olongapo City, Philippines · Academic Year {period.academicYear}</span>
-              </span>
-              <Icon name="workspace_premium" size={26} className="shrink-0 text-on-primary/40" />
-            </footer>
-          </section>
-
-          <section className="flex flex-col items-center justify-center bg-background px-5 py-10 sm:px-10 sm:py-12 lg:w-7/12 lg:px-12 lg:py-12 xl:w-1/2 xl:px-16">
+          <section className="flex flex-1 flex-col items-center justify-center bg-background px-5 py-10 sm:px-10 sm:py-12 lg:px-12 lg:py-12 xl:px-16">
             <div className="flex w-full max-w-[560px] flex-col">
               <div>
-                <span className="mb-6 inline-flex items-center gap-2 rounded-full bg-surface-container-high px-3 py-1.5 text-primary shadow-card">
-                  <Icon name="school" size={16} />
-                  <span className="font-label-sm text-label-sm font-semibold tracking-wider">SEMINEX · CCS GORDON COLLEGE</span>
-                </span>
+                <MobileBrandHeader />
                 <h2 className="font-headline-lg text-headline-lg font-bold tracking-tight text-on-surface">Welcome to Seminex</h2>
                 <p className="mt-2 font-body-lg text-body-lg text-on-surface-variant">Select your portal to continue.</p>
               </div>
@@ -180,21 +113,70 @@ export default function LandingPage() {
                 </p>
               </div>
 
-              <div className="mt-8 flex flex-col items-center justify-between gap-4 pt-2 font-body-sm text-body-sm text-on-surface-variant sm:flex-row">
-                <Link to="/guidelines" className="group inline-flex min-h-11 items-center gap-1.5 font-semibold transition-colors hover:text-primary">
-                  <CircleHelp aria-hidden="true" className="h-[18px] w-[18px] text-outline transition-colors group-hover:text-primary" />
-                  Registration guidelines
-                </Link>
-                <span className="flex items-center gap-3 font-caption text-caption text-outline">
-                  <span>Terms of Use</span>
-                  <span aria-hidden="true" className="h-1 w-1 rounded-full bg-outline" />
-                  <span>Security Policy</span>
-                </span>
+              <div className="mt-8 border-t border-outline-variant pt-4">
+                <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 font-caption text-caption text-on-surface-variant sm:justify-end">
+                  <button
+                    type="button"
+                    aria-haspopup="dialog"
+                    aria-controls="landing-policy-dialog"
+                    onClick={() => setOpenPolicy('terms')}
+                    className="inline-flex min-h-11 items-center rounded-lg px-2 font-medium transition-colors hover:bg-surface-container-low hover:text-primary focus-visible:outline-2 focus-visible:outline-primary"
+                  >
+                    Terms of Use
+                  </button>
+                  <button
+                    type="button"
+                    aria-haspopup="dialog"
+                    aria-controls="landing-policy-dialog"
+                    onClick={() => setOpenPolicy('security')}
+                    className="inline-flex min-h-11 items-center rounded-lg px-2 font-medium transition-colors hover:bg-surface-container-low hover:text-primary focus-visible:outline-2 focus-visible:outline-primary"
+                  >
+                    Security Policy
+                  </button>
+                </div>
               </div>
             </div>
           </section>
         </div>
       </main>
+
+      <dialog
+        ref={policyDialogRef}
+        id="landing-policy-dialog"
+        aria-labelledby="landing-policy-title"
+        onCancel={(event) => { event.preventDefault(); setOpenPolicy(null); }}
+        onClose={() => setOpenPolicy(null)}
+        onClick={(event) => { if (event.target === policyDialogRef.current) setOpenPolicy(null); }}
+        className="fixed inset-0 m-auto max-h-[85dvh] w-[calc(100%-2rem)] max-w-lg overflow-y-auto rounded-2xl border border-outline-variant bg-surface-card p-0 text-on-surface shadow-overlay backdrop:bg-black/50"
+      >
+        <div className="flex items-start justify-between gap-4 border-b border-outline-variant px-6 py-5">
+          <div>
+            <p className="font-label-sm text-label-sm font-semibold uppercase tracking-wider text-primary">Seminex · CCS Gordon College</p>
+            <h2 id="landing-policy-title" className="mt-1 font-headline-md text-headline-md font-bold">
+              {openPolicy === 'terms' ? 'Terms of Use' : 'Security Policy'}
+            </h2>
+          </div>
+          <button type="button" autoFocus onClick={() => setOpenPolicy(null)} aria-label="Close policy dialog" className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-container-low text-on-surface-variant transition-colors hover:bg-surface-container hover:text-primary focus-visible:outline-2 focus-visible:outline-primary">
+            <X aria-hidden="true" className="h-5 w-5" />
+          </button>
+        </div>
+        <div className="space-y-4 px-6 py-5 text-sm leading-relaxed text-on-surface-variant">
+          {openPolicy === 'terms' ? (
+            <>
+              <p>Use Seminex to access Gordon College CCS seminar information, registrations, attendance records, and evaluations.</p>
+              <p>Keep your account details accurate, use your own seminar ticket, and submit respectful, honest evaluations. Use only the portal features allowed by your assigned account and role.</p>
+            </>
+          ) : (
+            <>
+              <p>Keep your password private and do not share your sign-in or seminar ticket with others. Sign out when using a shared device.</p>
+              <p>Only view or manage information allowed by your portal role. Report suspected account or data misuse to the College of Computer Studies.</p>
+            </>
+          )}
+        </div>
+        <div className="flex justify-end border-t border-outline-variant bg-surface-container-low px-6 py-4">
+          <button type="button" onClick={() => setOpenPolicy(null)} className="inline-flex min-h-11 items-center justify-center rounded-lg bg-primary px-5 font-label-sm text-label-sm font-semibold text-on-primary transition-colors hover:bg-primary-container focus-visible:outline-2 focus-visible:outline-primary">Close</button>
+        </div>
+      </dialog>
     </div>
   );
 }
