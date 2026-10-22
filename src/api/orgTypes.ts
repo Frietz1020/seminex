@@ -38,6 +38,19 @@ export interface Membership {
   appointmentLetterUrl?: string;
 }
 
+/** Adviser directory entry. Faculty advisers are listed with officers but cannot be removed here. */
+export interface AdviserDirectoryMember {
+  id: string;
+  organizationId: string;
+  fullName: string;
+  email: string;
+  studentId?: string;
+  position: string;
+  status: MembershipStatus;
+  appointedAt: string;
+  category: 'member' | 'adviser';
+}
+
 export type OrgRequestStatus = 'pending' | 'approved' | 'rejected';
 
 /** Created by organization sign-up. The account has no org access until an adviser approves it. */

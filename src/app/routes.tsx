@@ -1,5 +1,5 @@
 import { lazy, Suspense, type ReactNode } from 'react';
-import { Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes } from 'react-router-dom';
 import SignInPage from '../features/auth/pages/SignInPage';
 import SignUpPage from '../features/auth/pages/SignUpPage';
 import OrganizationSignInPage from '../features/auth/pages/OrganizationSignInPage';
@@ -35,6 +35,7 @@ const OrgSeminarDetailsPage = lazy(() => import('../features/org/pages/OrgSemina
 const OrgScannerPage = lazy(() => import('../features/org/pages/OrgScannerPage'));
 const SeminarEditorPage = lazy(() => import('../features/org/pages/SeminarEditorPage'));
 const OrgHomePage = lazy(() => import('../features/org/pages/OrgHomePage'));
+const AdminMembersPage = lazy(() => import('../features/admin/pages/AdminMembersPage'));
 
 function OrgPage({ children }: { children: ReactNode }) {
   return <Suspense fallback={<div role="status" className="mx-auto w-full max-w-7xl px-gutter py-space-xl md:px-margin">Loading organization page…</div>}>{children}</Suspense>;
@@ -89,7 +90,9 @@ export function AppRoutes() {
               <Route path="profile" element={<OrgPage><OrgProfilePage /></OrgPage>} />
             </Route>
             <Route element={<RequireRole allow={['adviser']} redirectTo="/org" />}>
-              <Route path="adviser" element={<OrganizationApprovalsPage />} />
+              <Route path="adviser" element={<Navigate to="/org/adviser/requests" replace />} />
+              <Route path="adviser/members" element={<OrgPage><AdminMembersPage /></OrgPage>} />
+              <Route path="adviser/requests" element={<OrgPage><OrganizationApprovalsPage /></OrgPage>} />
             </Route>
           </Route>
         </Route>
