@@ -8,7 +8,7 @@ import { ProgressBar } from '../../../components/ui/ProgressBar';
 import { Spinner } from '../../../components/ui/Spinner';
 import { StatusBadge } from '../../../components/ui/StatusBadge';
 import { formatDate, formatDayLabel, formatSlots, formatTimeRange } from '../format';
-import { getLifecycle, getPrimaryStatus, isFull, isRegistered } from '../status';
+import { getLifecycle, getPrimaryStatus, isFull, isRegistered, slotsLeft } from '../status';
 
 interface SeminarCardProps {
   item: SeminarListItem;
@@ -47,6 +47,7 @@ export function SeminarCard({
   const reasonId = `reason-${seminar.id}`;
   const descriptionId = `description-${seminar.id}`;
   const slotsText = formatSlots(seminar, detailed);
+  const remainingSeats = slotsLeft(seminar);
 
   const closedReason = finished
     ? 'This seminar has finished.'
@@ -98,21 +99,27 @@ export function SeminarCard({
       <div className={cx('flex flex-1 flex-col', detailed ? 'gap-space-md p-space-lg' : 'gap-space-sm p-space-md')}>
         {detailed ? (
           <div className="flex flex-col gap-space-xs">
-            <p
-              className={cx(
-                'flex items-center gap-1.5 font-caption text-caption',
-                lifecycle === 'ongoing' ? 'font-medium text-secondary-accent' : 'text-text-secondary',
-              )}
-            >
-              <Icon
-                name={lifecycle === 'ongoing' ? 'timelapse' : 'schedule'}
-                size={16}
-                className={lifecycle === 'ongoing' ? 'text-secondary-accent' : 'text-text-subtle'}
-              />
-              <span>
-                {formatDayLabel(seminar.startsAt, now)}, {formatTimeRange(seminar.startsAt, seminar.endsAt)}
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p
+                className={cx(
+                  'flex items-center gap-1.5 font-caption text-caption',
+                  lifecycle === 'ongoing' ? 'font-medium text-secondary-accent' : 'text-text-secondary',
+                )}
+              >
+                <Icon
+                  name={lifecycle === 'ongoing' ? 'timelapse' : 'schedule'}
+                  size={16}
+                  className={lifecycle === 'ongoing' ? 'text-secondary-accent' : 'text-text-subtle'}
+                />
+                <span>
+                  {formatDayLabel(seminar.startsAt, now)}, {formatTimeRange(seminar.startsAt, seminar.endsAt)}
+                </span>
+              </p>
+              <span className="inline-flex items-center gap-1 rounded-full border border-border-subtle bg-surface-container-low px-2 py-1 font-caption text-caption text-text-secondary">
+                <Icon name="school" size={14} />
+                {seminar.department}
               </span>
-            </p>
+            </div>
             <p className="flex items-center gap-1.5 font-caption text-caption text-text-secondary">
               <Icon name="location_on" size={16} className="text-text-subtle" />
               <span className="truncate">{seminar.venue}</span>
@@ -171,12 +178,20 @@ export function SeminarCard({
 
         <div className="mt-auto flex flex-col gap-space-sm pt-space-xs">
           {detailed && (
-            <ProgressBar
-              value={seminar.registeredCount}
-              max={seminar.capacity}
-              tone={CAPACITY_TONE[primary]}
-              label={`Capacity: ${seminar.registeredCount} of ${seminar.capacity} registered`}
-            />
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center justify-between gap-2 font-caption text-caption">
+                <span className="text-text-secondary">Seat availability</span>
+                <span className={cx('font-medium', remainingSeats > 0 ? 'text-status-available' : 'text-status-full')}>
+                  {remainingSeats > 0 ? `${remainingSeats} ${remainingSeats === 1 ? 'seat' : 'seats'} left` : 'Fully booked'}
+                </span>
+              </div>
+              <ProgressBar
+                value={seminar.registeredCount}
+                max={seminar.capacity}
+                tone={CAPACITY_TONE[primary]}
+                label={`Capacity: ${seminar.registeredCount} of ${seminar.capacity} registered`}
+              />
+            </div>
           )}
 
           {registered ? (

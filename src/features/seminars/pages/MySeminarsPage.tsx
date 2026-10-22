@@ -6,12 +6,16 @@ import { actionPrimary } from '../../../components/ui/actionStyles';
 import { AcademicYearPill } from '../../../components/ui/AcademicYearPill';
 import { errorText } from '../../../components/ui/errorText';
 import { Icon } from '../../../components/ui/Icon';
+import { ProgressBar } from '../../../components/ui/ProgressBar';
 import { SegmentedControl, type SegmentOption } from '../../../components/ui/SegmentedControl';
 import { LoadingRegion, RetryButton, Skeleton, StateMessage } from '../../../components/ui/StateMessage';
 import { useToast } from '../../../components/ui/Toast';
 import { useNow } from '../../../hooks/useNow';
 import { useResource } from '../../../hooks/useResource';
 import { getAcademicPeriod } from '../academicPeriod';
+import { formatDayLabel, formatTimeRange } from '../format';
+import { QrCode } from '../QrCode';
+import { getLifecycle } from '../status';
 import {
   buildMySeminarView,
   type MySeminarFilter,
@@ -61,6 +65,31 @@ export default function MySeminarsPage() {
           now,
         )
       : null;
+
+  const registeredItems =
+    seminars.state.status === 'success'
+      ? seminars.state.data.filter((item) => item.registration && !cancelledIds.includes(item.seminar.id))
+      : [];
+  const metricView = seminars.state.status === 'success'
+    ? buildMySeminarView(registeredItems, { query: '', filter: 'all', sort: 'nearest' }, now)
+    : null;
+  const activeTicketItem = [...registeredItems]
+    .filter((item) => getLifecycle(item.seminar, now) !== 'finished')
+    .sort((a, b) => {
+      const aOngoing = getLifecycle(a.seminar, now) === 'ongoing' ? 0 : 1;
+      const bOngoing = getLifecycle(b.seminar, now) === 'ongoing' ? 0 : 1;
+      return aOngoing - bOngoing || Math.abs(Date.parse(a.seminar.startsAt) - now) - Math.abs(Date.parse(b.seminar.startsAt) - now);
+    })[0] ?? null;
+  const featuredTicket = useResource<import('../../../api/types').Ticket | null>(
+    () => activeTicketItem
+      ? api.getTicket(activeTicketItem.seminar.id)
+      : Promise.resolve({ ok: true as const, data: null }),
+    `my-seminars-featured-ticket-${activeTicketItem?.seminar.id ?? 'none'}`,
+    (ticket) => ticket === null,
+  );
+
+  const groupCount = (group: MySeminarFilter | 'evaluation') =>
+    metricView?.groups.find((entry) => entry.group === group)?.items.length ?? 0;
 
   function renderBody() {
     if (seminars.state.status === 'loading') {
@@ -191,11 +220,28 @@ export default function MySeminarsPage() {
         </p>
       </header>
 
+      {view && (
+        <dl className="grid grid-cols-1 gap-space-sm sm:grid-cols-3">
+          <div className="flex items-center justify-between gap-space-sm rounded-xl border border-border-subtle bg-surface-card px-space-md py-space-sm shadow-card">
+            <dt className="font-body-sm text-body-sm text-text-secondary">Registered seminars</dt>
+            <dd className="font-headline-sm text-headline-sm text-primary">{view.registeredCount}</dd>
+          </div>
+          <div className="flex items-center justify-between gap-space-sm rounded-xl border border-border-subtle bg-surface-card px-space-md py-space-sm shadow-card">
+            <dt className="font-body-sm text-body-sm text-text-secondary">Upcoming</dt>
+            <dd className="font-headline-sm text-headline-sm text-on-surface">{groupCount('upcoming')}</dd>
+          </div>
+          <div className="flex items-center justify-between gap-space-sm rounded-xl border border-border-subtle bg-surface-card px-space-md py-space-sm shadow-card">
+            <dt className="font-body-sm text-body-sm text-text-secondary">Evaluation due</dt>
+            <dd className="font-headline-sm text-headline-sm text-secondary">{groupCount('evaluation')}</dd>
+          </div>
+        </dl>
+      )}
+
       {showControls && (
         <div className="flex flex-col items-stretch justify-between gap-space-md rounded-xl bg-surface-card p-space-md shadow-card md:flex-row md:items-center">
           <form role="search" onSubmit={(event) => event.preventDefault()} className="relative flex-1 md:max-w-md">
             <label htmlFor="my-seminars-search" className="sr-only">
-              Search your seminars by title, speaker, or topic
+              Search your seminars by title, speaker, topic, department, or venue
             </label>
             <Icon name="search" size={20} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-subtle" />
             <input
@@ -204,7 +250,7 @@ export default function MySeminarsPage() {
               type="search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search by title, speaker, or topic"
+              placeholder="Search title, speaker, topic, department, or venue"
               className={`${CONTROL} pl-10 pr-11 placeholder:text-text-subtle`}
             />
             {query && (
@@ -239,7 +285,111 @@ export default function MySeminarsPage() {
         </div>
       )}
 
-      <div className="flex flex-col gap-space-xl">{renderBody()}</div>
+      {activeTicketItem && activeTicketItem.registration ? (
+        <div className="grid grid-cols-1 items-start gap-space-lg lg:grid-cols-12">
+          <div className="flex min-w-0 flex-col gap-space-xl lg:col-span-8">{renderBody()}</div>
+
+          <aside className="flex flex-col gap-space-md lg:sticky lg:top-24 lg:col-span-4">
+            <section aria-labelledby="active-ticket-heading" className="flex flex-col gap-space-md rounded-xl border border-border-subtle bg-surface-card p-space-lg shadow-card">
+              <div className="flex items-center justify-between gap-2 border-b border-border-subtle pb-space-sm">
+                <div>
+                  <h2 id="active-ticket-heading" className="font-title-md text-title-md text-on-surface">Active ticket</h2>
+                  <p className="mt-1 font-caption text-caption text-text-secondary">
+                    {getLifecycle(activeTicketItem.seminar, now) === 'ongoing' ? 'Session in progress' : 'Ready for your next session'}
+                  </p>
+                </div>
+                <Icon name="confirmation_number" size={22} className="text-primary" />
+              </div>
+
+              {featuredTicket.state.status === 'success' && featuredTicket.state.data ? (
+                <div className="mx-auto rounded-xl border border-border-subtle bg-white p-space-sm shadow-card">
+                  <QrCode
+                    value={featuredTicket.state.data.token}
+                    size={176}
+                    label={`QR ticket for ${activeTicketItem.seminar.title}`}
+                  />
+                </div>
+              ) : featuredTicket.state.status === 'loading' ? (
+                <Skeleton className="mx-auto h-48 w-48 rounded-xl" />
+              ) : featuredTicket.state.status === 'error' ? (
+                <div role="alert" className="rounded-lg border border-border-subtle bg-surface-container-low p-space-md">
+                  <p className="font-body-sm text-body-sm text-text-secondary">
+                    The ticket preview could not be loaded. {errorText(featuredTicket.state.code)}
+                  </p>
+                  <RetryButton onClick={featuredTicket.reload} />
+                </div>
+              ) : null}
+
+              <div className="min-w-0 text-center">
+                <h3 className="font-body-sm-medium text-body-sm-medium text-on-surface">{activeTicketItem.seminar.title}</h3>
+                <p className="mt-1 font-caption text-caption text-text-secondary">
+                  {formatDayLabel(activeTicketItem.seminar.startsAt, now)} · {formatTimeRange(activeTicketItem.seminar.startsAt, activeTicketItem.seminar.endsAt)}
+                </p>
+                <p className="mt-1 truncate font-caption text-caption text-text-secondary">{activeTicketItem.seminar.venue}</p>
+                <p className="mt-2 font-mono text-caption text-text-subtle">Seat reference: {activeTicketItem.registration.reference}</p>
+              </div>
+
+              <Link to={`/my-seminars/${activeTicketItem.seminar.id}?tab=ticket`} className={`${actionPrimary} w-full`}>
+                <Icon name="qr_code_2" size={18} />
+                <span>Open attendance ticket</span>
+              </Link>
+              <p className="text-center font-caption text-caption text-text-secondary">
+                Show your QR ticket to a marshal for entry and exit scans.
+              </p>
+            </section>
+
+            <section aria-labelledby="attendance-directives-heading" className="flex flex-col gap-space-sm rounded-xl border border-border-subtle bg-surface-card p-space-lg shadow-card">
+              <div className="flex items-center gap-2">
+                <Icon name="fact_check" size={20} className="text-primary" />
+                <h2 id="attendance-directives-heading" className="font-title-md text-title-md text-on-surface">Attendance directives</h2>
+              </div>
+              <ul className="flex flex-col gap-space-sm font-body-sm text-body-sm text-text-secondary">
+                <li className="flex items-start gap-2"><Icon name="check_circle" size={18} className="mt-0.5 shrink-0 text-status-available" /><span>Keep your QR ticket ready for the marshal at the venue.</span></li>
+                <li className="flex items-start gap-2"><Icon name="check_circle" size={18} className="mt-0.5 shrink-0 text-status-available" /><span>Both Time-In and Time-Out scans are used to validate attendance.</span></li>
+                <li className="flex items-start gap-2"><Icon name="check_circle" size={18} className="mt-0.5 shrink-0 text-status-available" /><span>Meet the seminar’s minimum attendance and submit its evaluation to qualify for a certificate.</span></li>
+              </ul>
+              <Link to="/guidelines" className="mt-1 inline-flex min-h-10 items-center gap-1 font-body-sm-medium text-body-sm-medium text-primary hover:underline">
+                Registration guidelines <Icon name="arrow_forward" size={16} />
+              </Link>
+            </section>
+
+            <section aria-labelledby="seminar-progress-heading" className="flex flex-col gap-space-md rounded-xl border border-border-subtle bg-surface-card p-space-lg shadow-card">
+              <div className="flex items-center justify-between gap-2">
+                <h2 id="seminar-progress-heading" className="font-title-md text-title-md text-on-surface">Seminar progress</h2>
+                <Icon name="school" size={20} className="text-text-subtle" />
+              </div>
+              <div className="grid grid-cols-3 gap-space-sm text-center">
+                <div className="rounded-lg border border-border-subtle bg-surface-container-low p-space-sm">
+                  <p className="font-headline-md text-headline-md text-primary">{registeredItems.length}</p>
+                  <p className="font-caption text-caption text-text-secondary">Registered</p>
+                </div>
+                <div className="rounded-lg border border-border-subtle bg-surface-container-low p-space-sm">
+                  <p className="font-headline-md text-headline-md text-status-available">{registeredItems.filter((item) => item.registration?.timeOut?.validated).length}</p>
+                  <p className="font-caption text-caption text-text-secondary">Attendance verified</p>
+                </div>
+                <div className="rounded-lg border border-border-subtle bg-surface-container-low p-space-sm">
+                  <p className="font-headline-md text-headline-md text-secondary">{registeredItems.filter((item) => item.registration?.certificateIssuedAt).length}</p>
+                  <p className="font-caption text-caption text-text-secondary">Certificates</p>
+                </div>
+              </div>
+              <div>
+                <div className="mb-1 flex justify-between gap-2 font-caption text-caption text-text-secondary">
+                  <span>Verified attendance</span>
+                  <span>{registeredItems.filter((item) => item.registration?.timeOut?.validated).length} of {registeredItems.length}</span>
+                </div>
+                <ProgressBar
+                  value={registeredItems.filter((item) => item.registration?.timeOut?.validated).length}
+                  max={registeredItems.length}
+                  label="Verified attendance across registered seminars"
+                  tone="available"
+                />
+              </div>
+            </section>
+          </aside>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-space-xl">{renderBody()}</div>
+      )}
 
       <CancelRegistrationDialog seminar={cancelling} onClose={() => setCancelling(null)} onCancelled={handleCancelled} />
     </PageContainer>

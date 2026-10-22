@@ -28,7 +28,7 @@ export function SeminarToolbar({
     <div className="flex flex-col items-stretch justify-between gap-space-md rounded-xl bg-surface-card p-space-md shadow-card md:flex-row md:items-center">
       <form role="search" onSubmit={(event) => event.preventDefault()} className="relative flex-1">
         <label htmlFor="seminar-search" className="sr-only">
-          Search seminars by title, speaker, or topic
+          Search seminars by title, speaker, topic, department, or venue
         </label>
         <Icon name="search" size={20} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-subtle" />
         <input
@@ -37,7 +37,7 @@ export function SeminarToolbar({
           type="search"
           value={query}
           onChange={(event) => onQueryChange(event.target.value)}
-          placeholder="Search by title, speaker, or topic"
+          placeholder="Search title, speaker, topic, department, or venue"
           className="h-11 w-full rounded-lg border border-charcoal-300 bg-surface-light pl-10 pr-11 font-body-sm text-body-sm text-on-surface outline-none transition-all placeholder:text-text-subtle focus:border-primary-container focus:bg-surface-card focus:ring-2 focus:ring-primary-container/30"
         />
         {query && (

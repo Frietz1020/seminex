@@ -31,7 +31,10 @@ export function filterAndSort(openItems: SeminarListItem[], options: FilterOptio
   const matches = openItems.filter(({ seminar }) => {
     if (options.department && seminar.department !== options.department) return false;
     if (!query) return true;
-    return [seminar.title, seminar.speaker.name, ...seminar.topics].join(' ').toLowerCase().includes(query);
+    return [seminar.title, seminar.speaker.name, seminar.venue, seminar.department, ...seminar.topics]
+      .join(' ')
+      .toLowerCase()
+      .includes(query);
   });
 
   const byDate = (a: SeminarListItem, b: SeminarListItem) =>
