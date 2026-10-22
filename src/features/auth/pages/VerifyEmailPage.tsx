@@ -13,7 +13,11 @@ export default function VerifyEmailPage() {
   const location = useLocation();
   const state = location.state as { email?: unknown; returnTo?: unknown } | null;
   const email = typeof state?.email === 'string' ? state.email : null;
-  const returnTo = state?.returnTo === '/organization/sign-in' ? '/organization/sign-in' : '/sign-in';
+  let savedReturnTo: string | null = null;
+  try { savedReturnTo = window.sessionStorage.getItem('seminex.auth.returnTo'); } catch { /* Route state remains available in this tab. */ }
+  const returnTo = state?.returnTo === '/organization/sign-in' || savedReturnTo === '/organization/sign-in'
+    ? '/organization/sign-in'
+    : '/sign-in';
 
   // The address only exists in route state. Without it (for example after a reload), start over.
   if (!email) return <Navigate to="/sign-up" replace />;
@@ -121,9 +125,10 @@ function VerifyEmailContent({ email, returnTo }: { email: string; returnTo: stri
 
           <Link
             to={returnTo}
+            onClick={() => { try { window.sessionStorage.removeItem('seminex.auth.returnTo'); } catch { /* Ignore unavailable storage. */ } }}
             className="flex min-h-12 w-full items-center justify-center rounded-control bg-maroon px-6 py-3 text-base font-medium text-white shadow-control transition-colors hover:bg-maroon-dark"
           >
-            Back to sign in
+            {returnTo === '/organization/sign-in' ? 'Back to organization sign in' : 'Back to sign in'}
           </Link>
         </div>
       </div>

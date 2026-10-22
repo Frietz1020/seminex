@@ -217,6 +217,13 @@ async function orgSignUp(input: SignUpInput, organization: OrgSignUpInput): Prom
   return created;
 }
 
+async function submitOrgAccessRequest(input: OrgSignUpInput & { fullName: string }): Promise<ApiResult<import('./orgTypes').OrgRequest>> {
+  const session = getSession();
+  if (!session) return { ok: false, error: { code: 'session_expired' } };
+  if (session.role === 'adviser') return { ok: false, error: { code: 'forbidden' } };
+  return orgImpl.createOrgRequest(session.studentId, input.fullName, input);
+}
+
 async function getOrgIdentity(): Promise<ApiResult<OrgIdentity>> {
   const result = await orgImpl.getOrgIdentity();
   const account = currentStudent();
@@ -310,7 +317,12 @@ export const api = {
   submitEvaluation: impl.submitEvaluation,
   orgSignIn: orgImpl.orgSignIn,
   orgSignUp,
+  listAdviserOrgRequests: orgImpl.listAdviserOrgRequests,
+  decideAdviserOrgRequest: orgImpl.decideAdviserOrgRequest,
   listOrganizations: orgImpl.listOrganizations,
+  submitOrgAccessRequest,
+  getMyOrgAccessStatus: orgImpl.getMyOrgAccessStatus,
+  withdrawMyOrgRequest: orgImpl.withdrawMyOrgRequest,
   getOrgIdentity,
   listOrgSeminars,
   listOrgRoster,

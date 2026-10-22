@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Award, BadgeCheck, CircleHelp, Info, ShieldCheck, UsersRound } from 'lucide-react';
 import { Icon } from '../../../components/ui/Icon';
@@ -6,8 +6,6 @@ import { BrandMark } from '../../../components/shell/BrandMark';
 import { useNow } from '../../../hooks/useNow';
 import { useSession } from '../../../session/useSession';
 import { getAcademicPeriod } from '../../seminars/academicPeriod';
-
-type Portal = 'organization' | 'admin';
 
 function SeminexMark({ size = 'small' }: { size?: 'small' | 'large' }) {
   const large = size === 'large';
@@ -58,7 +56,6 @@ export default function LandingPage() {
   const now = useNow();
   const period = getAcademicPeriod(now);
   const session = useSession();
-  const [unavailablePortal, setUnavailablePortal] = useState<Portal | null>(null);
 
   useEffect(() => {
     document.title = 'Welcome to Seminex - CCS Gordon College';
@@ -77,11 +74,16 @@ export default function LandingPage() {
               <span className="mt-0.5 font-caption text-caption leading-none text-on-surface-variant">Gordon College Identity Gateway</span>
             </span>
           </Link>
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-container-low px-space-sm py-1 font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant">
+          <div className="flex items-center gap-3">
+            <Link to="/admin/sign-in" className="inline-flex min-h-11 items-center gap-2 rounded-full border border-outline-variant bg-surface-card px-4 font-label-sm text-label-sm font-semibold text-primary transition-colors hover:bg-primary-container hover:text-on-primary">
+              <ShieldCheck aria-hidden="true" className="h-4 w-4" />
+              Admin sign in
+            </Link>
+            <span className="hidden items-center gap-1.5 rounded-full bg-surface-container-low px-space-sm py-1 font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant sm:inline-flex">
             <ShieldCheck aria-hidden="true" className="h-4 w-4 text-outline" />
-            <span className="hidden sm:inline">Institutional access</span>
-            <span className="sm:hidden">Secure access</span>
-          </span>
+              <span>Institutional access</span>
+            </span>
+          </div>
         </div>
       </header>
 
@@ -165,17 +167,11 @@ export default function LandingPage() {
                   title="Admin"
                   audience="Faculty & Advisers"
                   description="Manage who belongs to your organization. For advisers and faculty."
-                  onUnavailable={() => setUnavailablePortal('admin')}
+                  to="/admin/sign-in"
                 >
                   <ShieldCheck aria-hidden="true" className="h-7 w-7" />
                 </PortalCard>
               </div>
-
-              {unavailablePortal && (
-                <p role="status" className="-mt-3 mb-4 rounded-lg border border-outline-variant bg-surface-container-low px-4 py-3 font-body-sm text-body-sm text-on-surface-variant">
-                  {unavailablePortal === 'organization' ? 'Organization' : 'Admin'} access is not available in the student portal yet.
-                </p>
-              )}
 
               <div className="flex items-start gap-3 rounded-xl bg-surface-container-low p-4">
                 <Info aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0 text-outline" />

@@ -100,7 +100,10 @@ export default function OrganizationSignUpPage() {
       { organizationId: values.organization, position: values.role },
     );
     setPending(false);
-    if (result.ok) navigate('/verify-email', { replace: true, state: { email: result.data.email, returnTo: '/organization/sign-in' } });
+    if (result.ok) {
+      try { window.sessionStorage.setItem('seminex.auth.returnTo', '/organization/sign-in'); } catch { /* Route state remains available in this tab. */ }
+      navigate('/verify-email', { replace: true, state: { email: result.data.email, returnTo: '/organization/sign-in' } });
+    }
     else if (result.error.code === 'student_id_taken') setErrors((current) => ({ ...current, studentId: 'An account already exists for this Student ID. Sign in, or check the number and try again.' }));
     else setFailure(result.error.code);
   }

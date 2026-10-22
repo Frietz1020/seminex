@@ -136,6 +136,8 @@ export default function OrganizationSignInPage() {
               {NO_ACCESS_COPY[noAccess].body}
             </Alert>
             <Button onClick={() => navigate('/home', { replace: true })}>Open participant portal</Button>
+            {noAccess === 'pending' && <Button variant="secondary" onClick={() => navigate('/organization/request-status')}>View request status</Button>}
+            {(noAccess === 'none' || noAccess === 'rejected') && <Button variant="secondary" onClick={() => navigate('/organization/request-access')}>{noAccess === 'rejected' ? 'Submit a new access request' : 'Request organization access'}</Button>}
           </>
         )}
       </div>
