@@ -1,4 +1,3 @@
-import { useId } from 'react';
 import { cx } from '../../../components/ui/cx';
 import { Icon } from '../../../components/ui/Icon';
 import {
@@ -30,19 +29,13 @@ export function HistoryToolbar({
   onSortChange,
 }: HistoryToolbarProps) {
   const searchId = useId();
-  const sortId = useId();
+  const sortId = 'history-sort';
 
   return (
     <div className="flex flex-col justify-between gap-space-md lg:flex-row lg:items-center">
       <form role="search" onSubmit={(event) => event.preventDefault()} className="relative w-full lg:w-96">
-        <label htmlFor={searchId} className="sr-only">
-          Search history by title, speaker, or venue
-        </label>
-        <Icon
-          name="search"
-          size={20}
-          className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-subtle"
-        />
+        <label htmlFor={searchId} className="sr-only">Search history by title, speaker, or venue</label>
+        <Icon name="search" size={20} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-subtle" />
         <input
           id={searchId}
           type="search"
@@ -52,7 +45,6 @@ export function HistoryToolbar({
           className="h-11 w-full rounded-lg border border-charcoal-300 bg-surface-card pl-10 pr-4 font-body-sm text-body-sm text-on-surface shadow-card placeholder:text-text-subtle focus:border-primary-container focus:outline-none focus:ring-2 focus:ring-primary-container/30"
         />
       </form>
-
       <div className="flex flex-wrap items-center gap-space-md">
         <div role="group" aria-label="Filter seminars" className="flex flex-wrap items-center gap-1 rounded-lg bg-surface-container p-1">
           {FILTERS.map((value) => (
@@ -101,3 +93,4 @@ export function HistoryToolbar({
     </div>
   );
 }
+import { useId } from 'react';

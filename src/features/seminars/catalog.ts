@@ -26,10 +26,8 @@ interface FilterOptions {
   sort: SortKey;
 }
 
-/** Search matches the title, the speaker name, or a topic. */
 export function filterAndSort(openItems: SeminarListItem[], options: FilterOptions): SeminarListItem[] {
   const query = options.query.trim().toLowerCase();
-
   const matches = openItems.filter(({ seminar }) => {
     if (options.department && seminar.department !== options.department) return false;
     if (!query) return true;

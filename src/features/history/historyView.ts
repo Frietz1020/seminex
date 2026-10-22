@@ -20,17 +20,17 @@ export function countByFilter(records: readonly HistoryRecord[]): Record<History
   return { all: records.length, ready, pending: records.length - ready };
 }
 
+export function matchesFilter(record: HistoryRecord, filter: HistoryFilter): boolean {
+  if (filter === 'all') return true;
+  return filter === 'ready' ? record.status === 'ready' : record.status !== 'ready';
+}
+
 /** Searches the title, speaker, and venue only, not the rest of the card text. */
 export function matchesQuery(record: HistoryRecord, query: string): boolean {
   const needle = query.trim().toLowerCase();
   if (!needle) return true;
   const { title, speaker, venue } = record.seminar;
   return [title, speaker.name, venue].some((field) => field.toLowerCase().includes(needle));
-}
-
-export function matchesFilter(record: HistoryRecord, filter: HistoryFilter): boolean {
-  if (filter === 'all') return true;
-  return filter === 'ready' ? record.status === 'ready' : record.status !== 'ready';
 }
 
 const byRecent = (a: HistoryRecord, b: HistoryRecord) =>
@@ -59,8 +59,5 @@ export function viewRecords(
   query: string,
   sort: HistorySort,
 ): HistoryRecord[] {
-  return sortRecords(
-    records.filter((record) => matchesFilter(record, filter) && matchesQuery(record, query)),
-    sort,
-  );
+  return sortRecords(records.filter((record) => matchesFilter(record, filter) && matchesQuery(record, query)), sort);
 }

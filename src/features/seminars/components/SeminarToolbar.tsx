@@ -30,32 +30,18 @@ export function SeminarToolbar({
         <label htmlFor="seminar-search" className="sr-only">
           Search seminars by title, speaker, or topic
         </label>
-        <Icon
-          name="search"
-          size={20}
-          className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-subtle"
-        />
+        <Icon name="search" size={20} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-subtle" />
         <input
           ref={inputRef}
           id="seminar-search"
-          type="text"
-          enterKeyHint="search"
-          autoComplete="off"
+          type="search"
           value={query}
           onChange={(event) => onQueryChange(event.target.value)}
           placeholder="Search by title, speaker, or topic"
           className="h-11 w-full rounded-lg border border-charcoal-300 bg-surface-light pl-10 pr-11 font-body-sm text-body-sm text-on-surface outline-none transition-all placeholder:text-text-subtle focus:border-primary-container focus:bg-surface-card focus:ring-2 focus:ring-primary-container/30"
         />
         {query && (
-          <button
-            type="button"
-            aria-label="Clear search"
-            onClick={() => {
-              onQueryChange('');
-              inputRef.current?.focus();
-            }}
-            className="absolute right-0 top-0 flex h-11 w-11 items-center justify-center rounded-lg text-text-subtle transition-colors hover:text-on-surface"
-          >
+          <button type="button" aria-label="Clear search" onClick={() => { onQueryChange(''); inputRef.current?.focus(); }} className="absolute right-0 top-0 flex h-11 w-11 items-center justify-center rounded-lg text-text-subtle transition-colors hover:text-on-surface">
             <Icon name="close" size={18} />
           </button>
         )}

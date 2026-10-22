@@ -35,7 +35,6 @@ export default function MySeminarsPage() {
   const { showToast } = useToast();
   const seminars = useResource(() => api.listSeminars(), 'my-seminars');
   const searchRef = useRef<HTMLInputElement>(null);
-
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<MySeminarFilter>('all');
   const [sort, setSort] = useState<MySeminarSort>('nearest');
@@ -126,8 +125,8 @@ export default function MySeminarsPage() {
       const searching = query.trim() !== '';
       return (
         <StateMessage
-          icon="search_off"
-          title="No matching seminars found"
+          icon="event_busy"
+          title={searching ? 'No matching seminars found' : 'No seminars in this view'}
           action={
             <button
               type="button"
@@ -174,7 +173,7 @@ export default function MySeminarsPage() {
     );
   }
 
-  // Search and filters appear only when there is something to search.
+  // Search and filters appear only when there are active seminars.
   const showControls = view !== null && view.activeCount > 0;
 
   return (
@@ -198,32 +197,18 @@ export default function MySeminarsPage() {
             <label htmlFor="my-seminars-search" className="sr-only">
               Search your seminars by title, speaker, or topic
             </label>
-            <Icon
-              name="search"
-              size={20}
-              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-subtle"
-            />
+            <Icon name="search" size={20} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-subtle" />
             <input
               ref={searchRef}
               id="my-seminars-search"
-              type="text"
-              enterKeyHint="search"
-              autoComplete="off"
+              type="search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search by title, speaker, or topic"
               className={`${CONTROL} pl-10 pr-11 placeholder:text-text-subtle`}
             />
             {query && (
-              <button
-                type="button"
-                aria-label="Clear search"
-                onClick={() => {
-                  setQuery('');
-                  searchRef.current?.focus();
-                }}
-                className="absolute right-0 top-0 flex h-11 w-11 items-center justify-center rounded-lg text-text-subtle transition-colors hover:text-on-surface"
-              >
+              <button type="button" aria-label="Clear search" onClick={() => { setQuery(''); searchRef.current?.focus(); }} className="absolute right-0 top-0 flex h-11 w-11 items-center justify-center rounded-lg text-text-subtle transition-colors hover:text-on-surface">
                 <Icon name="close" size={18} />
               </button>
             )}
