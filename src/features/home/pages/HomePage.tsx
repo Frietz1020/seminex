@@ -8,7 +8,6 @@ import { EvaluationBanner } from '../components/EvaluationBanner';
 import { GreetingHeader } from '../components/GreetingHeader';
 import { HistoryLinkCard } from '../components/HistoryLinkCard';
 import { OngoingSection } from '../components/OngoingSection';
-import { UpcomingSeminars } from '../components/UpcomingSeminars';
 
 export default function HomePage() {
   const now = useNow();
@@ -34,14 +33,6 @@ export default function HomePage() {
         state={seminars.state}
         items={registration.items}
         now={now}
-        onRetry={seminars.reload}
-      />
-      <UpcomingSeminars
-        state={seminars.state}
-        items={registration.items}
-        now={now}
-        pendingId={registration.pendingId}
-        onRegister={registration.register}
         onRetry={seminars.reload}
       />
       <HistoryLinkCard

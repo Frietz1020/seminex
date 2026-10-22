@@ -2,7 +2,6 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, BadgeCheck, Info, ShieldCheck, UsersRound, X } from 'lucide-react';
 import { BrandPanel, MobileBrandHeader } from '../../../components/auth/BrandPanel';
-import { useSession } from '../../../session/useSession';
 
 function PortalCard({
   title,
@@ -45,7 +44,6 @@ function PortalCard({
 }
 
 export default function LandingPage() {
-  const session = useSession();
   const [openPolicy, setOpenPolicy] = useState<'terms' | 'security' | null>(null);
   const policyDialogRef = useRef<HTMLDialogElement>(null);
 
@@ -59,8 +57,6 @@ export default function LandingPage() {
     if (openPolicy && !dialog.open) dialog.showModal();
     else if (!openPolicy && dialog.open) dialog.close();
   }, [openPolicy]);
-
-  const participantPath = session ? '/home' : '/sign-in';
 
   return (
     <div className="min-h-dvh bg-background font-body-base text-on-surface antialiased">
@@ -84,7 +80,7 @@ export default function LandingPage() {
                   title="Participant"
                   audience="Students"
                   description="Join seminars, show your ticket, and get your certificate."
-                  to={participantPath}
+                  to="/sign-in"
                 >
                   <BadgeCheck aria-hidden="true" className="h-7 w-7" />
                 </PortalCard>

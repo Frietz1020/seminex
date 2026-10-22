@@ -24,7 +24,7 @@ export function OngoingSeminarCard({ seminar, registration, now }: OngoingSemina
   return (
     <section
       aria-labelledby={`ongoing-${seminar.id}`}
-      className="flex w-full flex-col justify-between gap-space-xl rounded-xl bg-surface-card p-space-lg shadow-card lg:flex-row"
+      className="flex w-full flex-col justify-between gap-space-xl rounded-xl border border-border-subtle bg-surface-card p-space-lg shadow-card lg:flex-row"
     >
       <div className="flex flex-1 flex-col justify-between gap-space-lg">
         <div className="flex flex-col gap-space-sm">
