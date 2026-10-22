@@ -154,6 +154,8 @@ export interface SeminarDraft {
   details: SeminarDetailsDraft;
   certificate: CertificateTemplate | null;
   survey: AuthoredSurvey | null;
+  /** When present, publishing updates this seminar instead of creating a new listing. */
+  editingSeminarId?: string;
 }
 
 export type ReadinessItemId = 'details' | 'certificate' | 'survey';

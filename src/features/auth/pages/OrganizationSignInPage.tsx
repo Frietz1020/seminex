@@ -53,6 +53,13 @@ export default function OrganizationSignInPage() {
   const offlineRef = useRef<HTMLDivElement>(null);
   const noAccessRef = useRef<HTMLDivElement>(null);
 
+  function useSampleAccount() {
+    setValues({ identifier: '202110482', password: 'seminex-demo' });
+    setErrors({});
+    setFailure(null);
+    setNoAccess(null);
+  }
+
   useEffect(() => {
     document.title = 'Organization sign in - Seminex';
   }, []);
@@ -104,6 +111,17 @@ export default function OrganizationSignInPage() {
       <p className="mt-2 text-sm leading-relaxed text-charcoal-700">
         Officers sign in with their Student ID. Advisers sign in with their faculty email.
       </p>
+
+      <aside className="mt-5 rounded-xl border border-border-subtle bg-surface-light p-4" aria-label="Sample organization account">
+        <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+          <div>
+            <p className="font-body-sm-medium text-body-sm-medium text-on-surface">Sample organization account</p>
+            <p className="mt-1 font-caption text-caption text-text-secondary">Student ID: 202110482 · Password: seminex-demo</p>
+            <p className="mt-1 font-caption text-caption text-text-subtle">Demo credentials for the local mock portal.</p>
+          </div>
+          <Button type="button" variant="secondary" onClick={useSampleAccount}>Use sample account</Button>
+        </div>
+      </aside>
 
       <div className="my-6 space-y-3">
         {!online && (
