@@ -137,7 +137,7 @@ const SEEDS: SeminarSeed[] = [
     id: 'ml-cv',
     title: 'Applied Machine Learning & Computer Vision in Industry',
     description:
-      'Hands-on model training techniques, dataset curation, and real-time inference on edge devices.',
+      'Hands-on model training techniques, dataset curation, and real-time inference on edge devices. Participants will work through the machine-learning workflow from preparing and labeling a dataset to selecting a model, tuning its parameters, and evaluating its performance. The session also explores computer-vision applications such as image classification and object detection, with examples of how latency, memory, and power limits affect deployment on edge hardware. Attendees will review common sources of bias, compare ways to measure model quality, and see how a trained model can be optimized and integrated into a practical industry workflow.',
     speaker: { name: 'Dr. Marcus Reyes', role: 'Senior AI Researcher' },
     venue: 'Gordon College Gymnasium',
     department: CS,
