@@ -22,6 +22,7 @@ import {
 import type {
   Organization,
   Membership,
+  AdviserDirectoryMember,
   OrgAccess,
   OrgAccessStatusResult,
   OrgIdentity,
@@ -43,7 +44,9 @@ const serverLedger: ScanLedgerEntry[] = [...data.ledger];
 
 const REQUESTS_KEY = 'seminex.mock.orgRequests';
 const WITHDRAWN_REQUESTS_KEY = 'seminex.mock.withdrawnOrgRequestIds';
+const MEMBERSHIP_OVERRIDES_KEY = 'seminex.mock.membershipOverrides';
 let memoryWithdrawnRequestIds = new Set<string>();
+let memoryMembershipOverrides: Record<string, Partial<Membership>> = {};
 
 function readStoredRequests(): OrgRequest[] {
   try {
@@ -92,15 +95,57 @@ function writeWithdrawnIds(ids: Set<string>): void {
   }
 }
 
+function readMembershipOverrides(): Record<string, Partial<Membership>> {
+  try {
+    const raw = window.localStorage.getItem(MEMBERSHIP_OVERRIDES_KEY);
+    return raw ? { ...memoryMembershipOverrides, ...(JSON.parse(raw) as Record<string, Partial<Membership>>) } : memoryMembershipOverrides;
+  } catch {
+    return memoryMembershipOverrides;
+  }
+}
+
+function writeMembershipOverride(membership: Membership): void {
+  const overrides = { ...readMembershipOverrides(), [membership.id]: { position: membership.position, status: membership.status } };
+  memoryMembershipOverrides = overrides;
+  try {
+    window.localStorage.setItem(MEMBERSHIP_OVERRIDES_KEY, JSON.stringify(overrides));
+  } catch {
+    // Keep mock changes in memory until this page reloads if browser storage is unavailable.
+  }
+}
+
+/** Seeded and adviser-approved memberships, with local mock changes applied. */
+function allMemberships(): Membership[] {
+  const memberships = new Map(data.memberships.map((membership) => [membership.id, { ...membership }]));
+  allRequests().filter((request) => request.status === 'approved').forEach((request) => {
+    const id = `mem-${request.id}`;
+    if (!memberships.has(id) && ![...memberships.values()].some((entry) => entry.studentId === request.studentId && entry.organizationId === request.organizationId)) {
+      memberships.set(id, {
+        id,
+        organizationId: request.organizationId,
+        studentId: request.studentId,
+        position: request.position,
+        status: 'active',
+        appointedAt: request.decidedAt ?? request.requestedAt,
+        endorsedByAdviserId: request.decidedByAdviserId ?? MOCK_ADVISERS[0].id,
+      });
+    }
+  });
+  const overrides = readMembershipOverrides();
+  return [...memberships.values()].map((membership) => ({ ...membership, ...overrides[membership.id] }));
+}
+
 // ---- Auth ------------------------------------------------------------------------
 
 function accessFor(identifier: string, session: Session): OrgAccess {
   if (session.role === 'adviser') return 'adviser';
-  if (session.role === 'org_member') return 'organization';
+  if (session.role === 'org_member') {
+    return allMemberships().some((membership) => membership.studentId === identifier && membership.status === 'active') ? 'organization' : 'none';
+  }
   const latest = allRequests()
     .filter((request) => request.studentId === identifier)
     .sort((a, b) => b.requestedAt.localeCompare(a.requestedAt))[0];
-  if (latest?.status === 'approved') return 'organization';
+  if (latest?.status === 'approved' && allMemberships().some((membership) => membership.studentId === identifier && membership.status === 'active')) return 'organization';
   if (latest?.status === 'pending') return 'pending';
   if (latest?.status === 'rejected') return 'rejected';
   return 'none';
@@ -118,12 +163,13 @@ export async function orgSignIn(input: OrgSignInInput): Promise<ApiResult<OrgSig
   if (identifier.includes('@') && findSeedAccess(identifier)?.role !== 'adviser') {
     return fail('invalid_credentials');
   }
-  const approved = allRequests()
-    .filter((request) => request.studentId === identifier && request.status === 'approved')
-    .sort((a, b) => b.requestedAt.localeCompare(a.requestedAt))[0];
   const seedAccess = findSeedAccess(identifier);
-  const access = seedAccess ?? (approved ? { role: 'org_member' as const, organizationIds: [approved.organizationId] } : undefined);
-  const session = startSession(identifier, access);
+  const activeMembership = allMemberships().find((membership) => membership.studentId === identifier && membership.status === 'active');
+  const access = seedAccess?.role === 'adviser'
+    ? seedAccess
+    : activeMembership ? { role: 'org_member' as const, organizationIds: [activeMembership.organizationId] } : undefined;
+  // Passing null explicitly prevents a removed seeded officer from regaining access via the seed lookup.
+  const session = startSession(identifier, access ?? null);
   return ok({ access: accessFor(identifier, session) });
 }
 
@@ -138,6 +184,74 @@ export async function listAdviserOrgRequests(): Promise<ApiResult<OrgRequest[]>>
     .filter((request) => session.organizationIds.includes(request.organizationId))
     .sort((a, b) => b.requestedAt.localeCompare(a.requestedAt))
     .map((request) => ({ ...request })));
+}
+
+function directoryMember(membership: Membership): AdviserDirectoryMember {
+  const officer = MOCK_OFFICERS.find((entry) => entry.studentId === membership.studentId);
+  const request = allRequests().find((entry) => entry.studentId === membership.studentId && entry.organizationId === membership.organizationId && entry.status === 'approved');
+  return {
+    id: membership.id,
+    organizationId: membership.organizationId,
+    fullName: request?.fullName ?? (officer ? `${officer.firstName} ${officer.lastName}` : membership.studentId),
+    email: `${membership.studentId}@${STUDENT_EMAIL_DOMAIN}`,
+    studentId: membership.studentId,
+    position: membership.position,
+    status: membership.status,
+    appointedAt: membership.appointedAt,
+    category: 'member',
+  };
+}
+
+/** MOCK: adviser directory from active, removed, and approved officer memberships. */
+export async function listAdviserOrgMembers(): Promise<ApiResult<AdviserDirectoryMember[]>> {
+  await wait();
+  const outcome = currentOutcome();
+  if (outcome === 'network') return fail('network');
+  const session = getSession();
+  if (!session || session.role !== 'adviser') return fail(session ? 'forbidden' : 'session_expired');
+  const memberships = allMemberships()
+    .filter((membership) => session.organizationIds.includes(membership.organizationId))
+    .map(directoryMember);
+  const advisers = MOCK_ADVISERS.filter((adviser) => adviser.organizationIds.some((id) => session.organizationIds.includes(id))).map((adviser) => ({
+    id: adviser.id,
+    organizationId: adviser.organizationIds.find((id) => session.organizationIds.includes(id)) ?? '',
+    fullName: `${adviser.firstName} ${adviser.lastName}`,
+    email: adviser.email,
+    position: adviser.title,
+    status: 'active' as const,
+    appointedAt: '',
+    category: 'adviser' as const,
+  }));
+  return ok([...memberships, ...advisers].sort((a, b) => a.fullName.localeCompare(b.fullName)));
+}
+
+export async function updateAdviserMemberPosition(memberId: string, position: string): Promise<ApiResult<AdviserDirectoryMember>> {
+  await wait();
+  const outcome = currentOutcome();
+  if (outcome === 'network') return fail('network');
+  const session = getSession();
+  if (!session || session.role !== 'adviser') return fail(session ? 'forbidden' : 'session_expired');
+  const membership = allMemberships().find((entry) => entry.id === memberId && session.organizationIds.includes(entry.organizationId));
+  const trimmed = position.trim();
+  if (!membership) return fail('not_found');
+  if (membership.status !== 'active' || !trimmed || trimmed.length > 100) return fail('forbidden');
+  const updated = { ...membership, position: trimmed };
+  writeMembershipOverride(updated);
+  return ok(directoryMember(updated));
+}
+
+export async function removeAdviserMember(memberId: string): Promise<ApiResult<AdviserDirectoryMember>> {
+  await wait();
+  const outcome = currentOutcome();
+  if (outcome === 'network') return fail('network');
+  const session = getSession();
+  if (!session || session.role !== 'adviser') return fail(session ? 'forbidden' : 'session_expired');
+  const membership = allMemberships().find((entry) => entry.id === memberId && session.organizationIds.includes(entry.organizationId));
+  if (!membership) return fail('not_found');
+  if (membership.status !== 'active') return fail('forbidden');
+  const updated = { ...membership, status: 'removed' as const };
+  writeMembershipOverride(updated);
+  return ok(directoryMember(updated));
 }
 
 export async function decideAdviserOrgRequest(
@@ -215,10 +329,7 @@ export async function getMyOrgAccessStatus(): Promise<ApiResult<OrgAccessStatusR
   const request = allRequests()
     .filter((entry) => entry.studentId === studentId)
     .sort((a, b) => b.requestedAt.localeCompare(a.requestedAt))[0] ?? null;
-  const approvedMembership: Membership | null = request?.status === 'approved'
-    ? { id: `mem-${request.id}`, organizationId: request.organizationId, studentId, position: request.position, status: 'active', appointedAt: request.decidedAt ?? request.requestedAt, endorsedByAdviserId: request.decidedByAdviserId ?? MOCK_ADVISERS[0].id }
-    : null;
-  const membership = data.memberships.find((entry) => entry.studentId === studentId) ?? approvedMembership;
+  const membership = allMemberships().find((entry) => entry.studentId === studentId) ?? null;
   const organizationId = membership?.organizationId ?? request?.organizationId;
   const organization = MOCK_ORGANIZATIONS.find((entry) => entry.id === organizationId) ?? null;
   const adviser = organization ? MOCK_ADVISERS.find((entry) => entry.id === organization.adviserId) ?? null : null;
@@ -257,6 +368,7 @@ function withOrgSession<T>(run: (session: Session, outcome: ReturnType<typeof cu
     const session = getSession();
     if (!session) return fail('session_expired');
     if (session.role === 'participant' || outcome === 'forbidden') return fail('forbidden');
+    if (session.role === 'org_member' && !allMemberships().some((membership) => membership.studentId === session.studentId && session.organizationIds.includes(membership.organizationId) && membership.status === 'active')) return fail('forbidden');
     return run(session, outcome);
   });
 }
@@ -287,17 +399,9 @@ export function getOrgIdentity(): Promise<ApiResult<OrgIdentity>> {
     const approvedRequest = allRequests()
       .filter((entry) => entry.studentId === session.studentId && entry.status === 'approved' && entry.organizationId === organization.id)
       .sort((a, b) => b.requestedAt.localeCompare(a.requestedAt))[0];
-    const membership = data.memberships.find(
+    const membership = allMemberships().find(
       (entry) => entry.studentId === session.studentId && entry.organizationId === organization.id && entry.status === 'active',
-    ) ?? (approvedRequest ? {
-      id: `mem-${approvedRequest.id}`,
-      organizationId: approvedRequest.organizationId,
-      studentId: approvedRequest.studentId,
-      position: approvedRequest.position,
-      status: 'active' as const,
-      appointedAt: approvedRequest.decidedAt ?? approvedRequest.requestedAt,
-      endorsedByAdviserId: approvedRequest.decidedByAdviserId ?? adviser.id,
-    } : null);
+    ) ?? null;
     if ((!officer && !approvedRequest) || !membership) return fail('forbidden');
     const [firstName, ...lastParts] = (approvedRequest?.fullName ?? `${officer?.firstName ?? ''} ${officer?.lastName ?? ''}`).split(' ');
     return ok({

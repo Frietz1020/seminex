@@ -24,6 +24,12 @@ export default function AdminSignInPage() {
   const [pending, setPending] = useState(false);
   const offlineRef = useRef<HTMLDivElement>(null);
 
+  function useSampleAccount() {
+    setValues({ email: 'elena.rivera@gordoncollege.edu.ph', password: 'seminex-demo' });
+    setErrors({});
+    setFailure(null);
+  }
+
   useEffect(() => { document.title = 'Admin sign in - Seminex'; }, []);
 
   if (session?.role === 'adviser') return <Navigate to="/org/adviser" replace />;
@@ -64,6 +70,13 @@ export default function AdminSignInPage() {
           <div className="mb-5 flex items-center gap-3 md:hidden"><BrandMark size={40} /><span><strong className="block font-heading text-xl text-charcoal-900">Seminex CCS</strong><small className="text-xs uppercase tracking-wide text-burnt">Gordon College Identity Gateway</small></span></div>
           <h2 className="font-heading text-3xl font-bold tracking-tight text-charcoal-900">Admin Sign in</h2>
           <p className="mt-2 text-sm leading-relaxed text-charcoal-700">Enter your faculty credentials to manage organization memberships.</p>
+
+          <aside className="mt-5 rounded-xl border border-charcoal-200 bg-white p-4" aria-label="Sample faculty adviser account">
+            <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+              <div><p className="text-sm font-semibold text-charcoal-900">Sample faculty adviser</p><p className="mt-1 text-xs text-charcoal-700">elena.rivera@gordoncollege.edu.ph · seminex-demo</p><p className="mt-1 text-xs text-charcoal-500">Demo credentials for the local mock portal.</p></div>
+              <Button type="button" variant="secondary" onClick={useSampleAccount}>Use sample account</Button>
+            </div>
+          </aside>
 
           <div className="my-5 space-y-3">
             {!online && <Alert ref={offlineRef} variant="neutral" role="status" icon={WifiOff} title="You are offline">Connect to the internet to verify faculty credentials.</Alert>}

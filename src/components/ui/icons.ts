@@ -83,6 +83,8 @@ import cloud_done from '@material-symbols/svg-400/outlined/cloud_done.svg?raw';
 import upload_file from '@material-symbols/svg-400/outlined/upload_file.svg?raw';
 import error_icon from '@material-symbols/svg-400/outlined/error.svg?raw';
 import publish from '@material-symbols/svg-400/outlined/publish.svg?raw';
+import person_add from '@material-symbols/svg-400/outlined/person_add.svg?raw';
+import manage_accounts from '@material-symbols/svg-400/outlined/manage_accounts.svg?raw';
 
 export const ICONS = {
   home,
@@ -168,6 +170,8 @@ export const ICONS = {
   upload_file,
   error: error_icon,
   publish,
+  person_add,
+  manage_accounts,
 } as const;
 
 export type IconName = keyof typeof ICONS;
