@@ -1,3 +1,4 @@
+import { OrgMySeminarsPage } from '../features/org/pages/OrgMySeminarsPage';
 import { Route, Routes } from 'react-router-dom';
 import SignInPage from '../features/auth/pages/SignInPage';
 import SignUpPage from '../features/auth/pages/SignUpPage';
@@ -48,28 +49,31 @@ export function AppRoutes() {
           <Route path="/organization/request-status" element={<OrganizationRequestStatusPage />} />
         </Route>
         <Route element={<RequireRole allow={['participant', 'org_member']} redirectTo="/org/adviser" />}>
-        <Route element={<AppShell />}>
-          <Route path="/home" element={<HomePage />} />
-          <Route path="/seminars" element={<AvailableSeminarsPage />} />
-          <Route path="/my-seminars/:id" element={<SeminarPage />} />
+          <Route element={<AppShell />}>
+            <Route path="/home" element={<HomePage />} />
+            <Route path="/seminars" element={<AvailableSeminarsPage />} />
+            <Route path="/my-seminars/:id" element={<SeminarPage />} />
 
-          <Route path="/seminars/:id" element={<SeminarDetailsPage />} />
-          <Route path="/my-seminars" element={<MySeminarsPage />} />
-          <Route path="/history" element={<HistoryPage />} />
-          <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/history/:id" element={<HistorySummaryPage />} />
-          <Route path="/audit-log" element={<PlaceholderPage title="Audit log" />} />
-          <Route path="/my-seminars/:id/evaluation" element={<EvaluationPage />} />
-          <Route path="/notifications" element={<PlaceholderPage title="Notifications" />} />
-          <Route path="/guidelines" element={<RegistrationGuidelinesPage />} />
-        </Route>
+            <Route path="/seminars/:id" element={<SeminarDetailsPage />} />
+            <Route path="/my-seminars" element={<MySeminarsPage />} />
+            <Route path="/history" element={<HistoryPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/history/:id" element={<HistorySummaryPage />} />
+            <Route path="/audit-log" element={<PlaceholderPage title="Audit log" />} />
+            <Route path="/my-seminars/:id/evaluation" element={<EvaluationPage />} />
+            <Route path="/notifications" element={<PlaceholderPage title="Notifications" />} />
+            <Route path="/guidelines" element={<RegistrationGuidelinesPage />} />
+          </Route>
         </Route>
 
         <Route element={<RequireRole allow={['org_member', 'adviser']} redirectTo="/home" />}>
           <Route path="/org" element={<OrgShell />}>
             <Route element={<RequireRole allow={['org_member']} redirectTo="/org/adviser" />}>
               <Route index element={<OrgPlaceholderPage title="Home" icon="home" />} />
-              <Route path="my-seminars" element={<OrgPlaceholderPage title="My Seminars" icon="event_note" />} />
+              
+              {/* Updated: Points to your actual OrgMySeminarsPage now! */}
+              <Route path="my-seminars" element={<OrgMySeminarsPage />} />
+              
               <Route path="history" element={<OrgPlaceholderPage title="History" icon="history" />} />
               <Route path="profile" element={<OrgPlaceholderPage title="Profile" icon="person" />} />
             </Route>
