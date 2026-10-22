@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, Building2, CircleAlert, ShieldCheck, TriangleAlert, WifiOff } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CircleAlert, TriangleAlert, WifiOff } from 'lucide-react';
 import { api, type ApiErrorCode } from '../../../api/client';
+import { BrandPanel } from '../../../components/auth/BrandPanel';
 import { BrandMark } from '../../../components/shell/BrandMark';
 import { Alert } from '../../../components/ui/Alert';
 import { Button } from '../../../components/ui/Button';
@@ -49,30 +50,18 @@ export default function AdminSignInPage() {
 
   return (
     <div className="min-h-dvh bg-cream-50 md:flex">
-      <aside className="relative hidden min-h-dvh w-[42%] flex-col justify-between overflow-hidden bg-maroon p-10 text-white md:flex lg:w-1/2 lg:p-16">
-        <div aria-hidden="true" className="pointer-events-none absolute -right-24 -bottom-24 h-96 w-96 rounded-full bg-white/10 blur-3xl" />
-        <div className="relative z-10 flex items-center gap-3"><BrandMark size={48} variant="onDark" /><span><strong className="block font-heading text-2xl">Seminex</strong><small className="uppercase tracking-widest text-cream-200">CCS Gordon College</small></span></div>
-        <div className="relative z-10 my-auto max-w-lg py-12">
-          <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-cream-200"><ShieldCheck className="h-4 w-4" />Faculty identity authority</span>
-          <h1 className="mt-6 font-heading text-4xl font-bold leading-tight">Governance &amp; Administration</h1>
-          <p className="mt-4 text-lg leading-relaxed text-cream-100">Academic oversight, faculty advisorship, and organization governance.</p>
-          <p className="mt-4 leading-relaxed text-cream-100/80">Centralized administrative access for recognized student organizations and faculty review.</p>
-          <div className="mt-8 grid grid-cols-2 gap-4">
-            <div className="rounded-xl bg-white/10 p-4"><span className="block text-xs font-semibold uppercase tracking-wider text-cream-200">Affiliated student orgs</span><strong className="mt-2 block font-heading text-3xl">14</strong></div>
-            <div className="rounded-xl bg-white/10 p-4"><span className="block text-xs font-semibold uppercase tracking-wider text-cream-200">Accredited review system</span><strong className="mt-2 block font-heading text-3xl">100%</strong></div>
-          </div>
-        </div>
-        <p className="relative z-10 border-t border-white/15 pt-5 text-sm text-cream-200/80">College of Computer Studies · Gordon College Administrative Gateway · Olongapo City</p>
-      </aside>
+      <BrandPanel
+        message="Governance and administration for student organizations."
+        supportingText="Faculty advisers review officer appointments and help guide recognized CCS organizations."
+        footer="Gordon College · College of Computer Studies"
+      />
 
       <main className="flex min-h-dvh flex-1 items-center justify-center px-5 py-8 sm:px-10 md:py-12">
         <div className="w-full max-w-[480px]">
           <div className="mb-6 flex items-center justify-between">
             <Link to="/" className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-charcoal-700 hover:text-maroon"><ArrowLeft className="h-4 w-4" />Back to portal selection</Link>
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-cream-100 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-maroon"><ShieldCheck className="h-4 w-4" />Institutional access</span>
           </div>
           <div className="mb-5 flex items-center gap-3 md:hidden"><BrandMark size={40} /><span><strong className="block font-heading text-xl text-charcoal-900">Seminex CCS</strong><small className="text-xs uppercase tracking-wide text-burnt">Gordon College Identity Gateway</small></span></div>
-          <div className="mb-5 inline-flex items-center gap-2 rounded-md bg-cream-100 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-maroon"><Building2 className="h-4 w-4" />Admin portal · CCS Gordon College</div>
           <h2 className="font-heading text-3xl font-bold tracking-tight text-charcoal-900">Admin Sign in</h2>
           <p className="mt-2 text-sm leading-relaxed text-charcoal-700">Enter your faculty credentials to manage organization memberships.</p>
 

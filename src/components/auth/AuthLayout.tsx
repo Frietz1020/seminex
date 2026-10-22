@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { cx } from '../ui/cx';
-import { BrandPanel, InlineBrandLine, MobileBrandHeader } from './BrandPanel';
+import { BrandPanel, MobileBrandHeader } from './BrandPanel';
 
 interface AuthLayoutProps {
   children: ReactNode;
@@ -31,7 +31,6 @@ export function AuthLayout({ children, footer, width = 'narrow', fixed = false }
         )}>
           <div>
             <MobileBrandHeader />
-            <InlineBrandLine />
             {children}
           </div>
           {footer && (

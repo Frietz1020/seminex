@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Clock, TriangleAlert, WifiOff } from 'lucide-react';
+import { ArrowLeft, Clock, TriangleAlert, WifiOff } from 'lucide-react';
 import { api, type ApiErrorCode } from '../../../api/client';
 import { useOnlineStatus } from '../../../hooks/useOnlineStatus';
 import { AuthLayout } from '../../../components/auth/AuthLayout';
@@ -107,6 +107,10 @@ export default function SignInPage() {
         </p>
       }
     >
+      <Link to="/" className="mb-5 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-charcoal-700 hover:text-maroon">
+        <ArrowLeft aria-hidden="true" className="h-4 w-4" />
+        Back to portal selection
+      </Link>
       <div className="mb-6 md:mb-8">
         <h1 className="font-heading text-2xl font-bold tracking-tight text-charcoal-900 md:text-3xl">Sign in</h1>
         <p className="mt-1.5 text-base text-charcoal-700 md:mt-2">Use your student ID to continue.</p>

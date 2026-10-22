@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Check, ChevronLeft, ChevronRight, TriangleAlert, WifiOff } from 'lucide-react';
+import { ArrowLeft, Check, ChevronLeft, ChevronRight, TriangleAlert, WifiOff } from 'lucide-react';
 import { api, type ApiErrorCode, type Block, type Program, type YearLevel } from '../../../api/client';
 import { useOnlineStatus } from '../../../hooks/useOnlineStatus';
 import { AuthLayout } from '../../../components/auth/AuthLayout';
@@ -265,11 +265,11 @@ export default function SignUpPage() {
     >
       <div className="mb-4 flex items-center justify-between md:mb-3">
         <Link
-          to="/sign-in"
+          to="/"
           className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-charcoal-700 hover:text-maroon"
         >
-          <ChevronLeft aria-hidden="true" className="h-4 w-4" />
-          Back to sign in
+          <ArrowLeft aria-hidden="true" className="h-4 w-4" />
+          Back to portal selection
         </Link>
         <p ref={stepBadgeRef} tabIndex={-1} className="rounded-full bg-maroon/10 px-2.5 py-1 text-xs font-semibold text-maroon">
           Step {step} of 2
