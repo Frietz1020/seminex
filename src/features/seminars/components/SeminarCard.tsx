@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { SeminarListItem } from '../../../api/types';
 import { actionDisabled, actionPrimary, actionTonal } from '../../../components/ui/actionStyles';
@@ -34,6 +35,7 @@ export function SeminarCard({
   locked = false,
   onRegister,
 }: SeminarCardProps) {
+  const [descriptionExpanded, setDescriptionExpanded] = useState(false);
   const { seminar } = item;
   const detailed = variant === 'detailed';
   const Title = titleAs;
@@ -43,6 +45,7 @@ export function SeminarCard({
   const full = isFull(seminar);
   const finished = lifecycle === 'finished';
   const reasonId = `reason-${seminar.id}`;
+  const descriptionId = `description-${seminar.id}`;
   const slotsText = formatSlots(seminar, detailed);
 
   const closedReason = finished
@@ -52,7 +55,7 @@ export function SeminarCard({
       : null;
 
   return (
-    <article className="group flex flex-col overflow-hidden rounded-xl bg-surface-card shadow-card transition-shadow hover:shadow-card-hover">
+    <article className="group flex flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface-card shadow-card transition-shadow hover:shadow-card-hover">
       <div className={cx('relative w-full overflow-hidden bg-maroon-container', detailed ? 'h-48' : 'h-44')}>
         {seminar.imageUrl ? (
           <>
@@ -127,9 +130,20 @@ export function SeminarCard({
               <span className="sr-only">, </span>
               <span className="font-caption text-caption text-text-subtle">{seminar.speaker.role}</span>
             </p>
-            <p className="mt-2 line-clamp-3 font-body-sm text-body-sm leading-relaxed text-text-secondary">
+            <p id={descriptionId} className={cx('mt-2 font-body-sm text-body-sm leading-relaxed text-text-secondary', !descriptionExpanded && 'line-clamp-3')}>
               {seminar.description}
             </p>
+            {seminar.description.length > 140 && (
+              <button
+                type="button"
+                aria-expanded={descriptionExpanded}
+                aria-controls={descriptionId}
+                onClick={() => setDescriptionExpanded((expanded) => !expanded)}
+                className="mt-1 min-h-10 self-start rounded-md font-body-sm-medium text-body-sm-medium text-primary underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-primary"
+              >
+                {descriptionExpanded ? 'See less' : 'See more'}
+              </button>
+            )}
           </div>
         ) : (
           <>

@@ -200,26 +200,6 @@ export default function AvailableSeminarsPage() {
         )}
       </header>
 
-      {seminars.state.status === 'success' && (
-        <SeminarToolbar
-          query={query}
-          onQueryChange={changeQuery}
-          sort={sort}
-          onSortChange={setSort}
-          departments={departments}
-          department={activeDepartment}
-          onDepartmentChange={setDepartment}
-        />
-      )}
-
-      {seminars.state.status === 'success' && (
-        <p role="status" className="sr-only">
-          {visible.length} {visible.length === 1 ? 'seminar' : 'seminars'} shown
-        </p>
-      )}
-
-      {content}
-
       <aside
         aria-labelledby="notice-heading"
         className="flex flex-col items-start justify-between gap-space-md rounded-xl bg-surface-container-low p-space-lg md:flex-row md:items-center"
@@ -249,6 +229,26 @@ export default function AvailableSeminarsPage() {
           <Icon name="arrow_forward" size={16} />
         </Link>
       </aside>
+
+      {seminars.state.status === 'success' && (
+        <SeminarToolbar
+          query={query}
+          onQueryChange={changeQuery}
+          sort={sort}
+          onSortChange={setSort}
+          departments={departments}
+          department={activeDepartment}
+          onDepartmentChange={setDepartment}
+        />
+      )}
+
+      {seminars.state.status === 'success' && (
+        <p role="status" className="sr-only">
+          {visible.length} {visible.length === 1 ? 'seminar' : 'seminars'} shown
+        </p>
+      )}
+
+      {content}
     </PageContainer>
   );
 }
