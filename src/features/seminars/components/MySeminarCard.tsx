@@ -63,7 +63,7 @@ export function MySeminarCard({ item, group, now, onCancel }: MySeminarCardProps
   return (
     <article
       aria-labelledby={titleId}
-      className="flex flex-col gap-space-lg rounded-xl bg-surface-card p-space-lg shadow-card transition-shadow hover:shadow-card-hover md:flex-row"
+      className="flex flex-col gap-space-lg rounded-xl border border-border-subtle bg-surface-card p-space-lg shadow-card transition-shadow hover:shadow-card-hover md:flex-row"
     >
       <Cover seminar={seminar} />
 

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { api, type Seminar } from '../../../api/client';
 import { PageContainer } from '../../../components/shell/PageContainer';
 import { actionPrimary } from '../../../components/ui/actionStyles';
+import { AcademicYearPill } from '../../../components/ui/AcademicYearPill';
 import { errorText } from '../../../components/ui/errorText';
 import { Icon } from '../../../components/ui/Icon';
 import { SegmentedControl, type SegmentOption } from '../../../components/ui/SegmentedControl';
@@ -10,6 +11,7 @@ import { LoadingRegion, RetryButton, Skeleton, StateMessage } from '../../../com
 import { useToast } from '../../../components/ui/Toast';
 import { useNow } from '../../../hooks/useNow';
 import { useResource } from '../../../hooks/useResource';
+import { getAcademicPeriod } from '../academicPeriod';
 import {
   buildMySeminarView,
   type MySeminarFilter,
@@ -29,6 +31,7 @@ const CONTROL =
 
 export default function MySeminarsPage() {
   const now = useNow();
+  const period = getAcademicPeriod(now);
   const { showToast } = useToast();
   const seminars = useResource(() => api.listSeminars(), 'my-seminars');
   const searchRef = useRef<HTMLInputElement>(null);
@@ -175,8 +178,19 @@ export default function MySeminarsPage() {
   const showControls = view !== null && view.activeCount > 0;
 
   return (
-    <PageContainer width="narrow">
-      <h1 className="font-headline-lg text-headline-lg text-on-surface">My seminars</h1>
+    <PageContainer>
+      <header className="flex flex-col gap-space-xs">
+        <div className="flex flex-wrap items-center gap-space-sm">
+          <p className="font-label-sm text-label-sm uppercase tracking-widest text-secondary">Student portal</p>
+          <AcademicYearPill academicYear={period.academicYear} />
+        </div>
+        <h1 className="font-headline-xl text-headline-xl-mobile tracking-tight text-primary md:text-headline-xl">
+          My seminars
+        </h1>
+        <p className="font-body-base text-body-base text-text-secondary">
+          View your registered seminars, manage your seats, and access your attendance details.
+        </p>
+      </header>
 
       {showControls && (
         <div className="flex flex-col items-stretch justify-between gap-space-md rounded-xl bg-surface-card p-space-md shadow-card md:flex-row md:items-center">
