@@ -115,7 +115,7 @@ export default function SeminarPage() {
   const locked = access.state === 'locked';
   const tabs: TabItem[] = [
     { id: 'details', label: 'Details', icon: 'info' },
-    { id: 'ticket', label: 'QR ticket', icon: 'qr_code_2' },
+    { id: 'ticket', label: 'Attendance & ticket', icon: 'how_to_reg' },
     {
       id: 'evaluation',
       label: 'Evaluation',

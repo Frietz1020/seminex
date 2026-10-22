@@ -61,7 +61,10 @@ export interface MySeminarView {
 
 function matchesQuery(seminar: Seminar, query: string): boolean {
   if (!query) return true;
-  return [seminar.title, seminar.speaker.name, ...seminar.topics].join(' ').toLowerCase().includes(query);
+  return [seminar.title, seminar.speaker.name, seminar.venue, seminar.department, ...seminar.topics]
+    .join(' ')
+    .toLowerCase()
+    .includes(query);
 }
 
 /** Search, filter, group, and sort. "Nearest date" means closest to now, whether past or future. */

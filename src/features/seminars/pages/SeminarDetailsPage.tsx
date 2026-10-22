@@ -8,6 +8,7 @@ import { Icon } from '../../../components/ui/Icon';
 import { LoadingRegion, RetryButton, Skeleton, StateMessage } from '../../../components/ui/StateMessage';
 import { ProgressBar } from '../../../components/ui/ProgressBar';
 import { StatusBadge } from '../../../components/ui/StatusBadge';
+import { cx } from '../../../components/ui/cx';
 import type { IconName } from '../../../components/ui/icons';
 import { useNow } from '../../../hooks/useNow';
 import { useResource } from '../../../hooks/useResource';
@@ -106,37 +107,31 @@ export default function SeminarDetailsPage() {
         </Link>
       </div>
 
-      <div className="mb-6 h-48 overflow-hidden rounded-xl border border-border-subtle bg-surface-container-high shadow-card sm:h-64 lg:h-80">
+      <header className="relative mb-6 flex min-h-64 items-end overflow-hidden rounded-xl border border-border-subtle bg-inverse-surface shadow-card sm:min-h-72 lg:min-h-80">
         {seminar.imageUrl ? (
-          <img src={seminar.imageUrl} alt="" className="h-full w-full object-cover" />
+          <img src={seminar.imageUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
         ) : (
-          <div className="relative flex h-full w-full items-center justify-center overflow-hidden bg-linear-to-br from-primary-container via-maroon-dark to-inverse-surface">
-            <div aria-hidden="true" className="absolute inset-0 opacity-20 [background-image:radial-gradient(circle_at_20%_20%,white_0,transparent_35%),radial-gradient(circle_at_80%_80%,#ffb3ad_0,transparent_42%)]" />
-            <div className="relative flex flex-col items-center gap-3 text-white/90">
-              <Icon name="school" size={32} />
-              <span className="font-label-sm text-label-sm uppercase tracking-[0.2em]">CCS Seminar</span>
-            </div>
-          </div>
+          <div aria-hidden="true" className="absolute inset-0 bg-linear-to-br from-primary-container via-maroon-dark to-inverse-surface" />
         )}
-      </div>
-
-      <header className="mb-7">
-        <div className="mb-3 flex flex-wrap items-center gap-3">
-          <StatusBadge status={status} />
-          <span className="inline-flex items-center gap-1.5 rounded-md border border-border-subtle bg-surface-card px-2.5 py-1 font-caption text-caption text-text-secondary">
-            <Icon name="badge" size={14} className="text-text-subtle" />
-            {seminar.reference}
-          </span>
-        </div>
-        <h1 className="mb-4 font-headline-lg text-headline-lg-mobile leading-tight tracking-tight text-on-surface md:text-headline-lg">
-          {seminar.title}
-        </h1>
-        <div className="flex flex-wrap gap-2">
-          {tags.map((tag) => (
-            <span key={tag} className="rounded-full bg-surface-container px-3 py-1 font-caption text-caption font-medium text-text-secondary">
-              {tag}
+        <div aria-hidden="true" className="absolute inset-0 bg-linear-to-t from-inverse-surface/95 via-inverse-surface/35 to-transparent" />
+        <div className="relative z-10 flex w-full flex-col gap-space-md p-space-lg sm:p-space-xl lg:p-8">
+          <div className="flex flex-wrap items-center gap-2">
+            <StatusBadge status={status} elevated />
+            <span className="inline-flex items-center gap-1.5 rounded-md border border-white/20 bg-black/20 px-2.5 py-1 font-caption text-caption text-white backdrop-blur-sm">
+              <Icon name="badge" size={14} />
+              {seminar.reference}
             </span>
-          ))}
+          </div>
+          <h1 className="max-w-4xl font-headline-lg text-headline-lg-mobile leading-tight tracking-tight text-white md:text-headline-lg">
+            {seminar.title}
+          </h1>
+          <div className="flex flex-wrap gap-2">
+            {tags.map((tag) => (
+              <span key={tag} className="rounded-full border border-white/20 bg-black/20 px-3 py-1 font-caption text-caption font-medium text-white backdrop-blur-sm">
+                {tag}
+              </span>
+            ))}
+          </div>
         </div>
       </header>
 
@@ -152,7 +147,9 @@ export default function SeminarDetailsPage() {
         <FactCard icon="group" label="Seats">
           <div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-2 gap-y-1">
             <span className="font-body-sm-medium text-body-sm-medium text-on-surface">{seminar.registeredCount} of {seminar.capacity} seats taken</span>
-            <span className="font-caption text-caption font-semibold text-secondary-accent">{left} {left === 1 ? 'seat' : 'seats'} left</span>
+            <span className={cx('font-caption text-caption font-semibold', left > 0 ? 'text-status-available' : 'text-status-full')}>
+              {left > 0 ? `${left} ${left === 1 ? 'seat' : 'seats'} left` : 'Fully booked'}
+            </span>
           </div>
           <ProgressBar value={seminar.registeredCount} max={seminar.capacity} label={`Capacity: ${seminar.registeredCount} of ${seminar.capacity} seats taken`} />
         </FactCard>

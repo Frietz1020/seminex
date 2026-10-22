@@ -116,7 +116,7 @@ export function TicketTab({ seminar, registration, now }: TicketTabProps) {
     <div className="grid grid-cols-1 items-start gap-space-lg lg:grid-cols-12">
       <section
         aria-labelledby="ticket-heading"
-        className="flex flex-col items-center rounded-xl bg-surface-card p-space-xl shadow-card-hover lg:col-span-7"
+        className="flex flex-col items-center rounded-xl border border-border-subtle bg-surface-card p-space-xl shadow-card-hover lg:col-span-5"
       >
         <div className="mb-space-lg flex w-full items-center gap-space-xs border-b border-border-subtle pb-space-md">
           <Icon name="badge" size={20} className="text-primary-container" />
@@ -125,7 +125,7 @@ export function TicketTab({ seminar, registration, now }: TicketTabProps) {
           </h2>
         </div>
 
-        <div className="mb-space-lg flex w-full flex-col items-start justify-between gap-space-md rounded-lg bg-surface-container-low p-space-md sm:flex-row sm:items-center">
+        <div className="mb-space-lg flex w-full flex-col items-start justify-between gap-space-md rounded-lg border border-border-subtle bg-surface-container-low p-space-md sm:flex-row sm:items-center">
           {profile ? (
             <>
               <div className="flex min-w-0 flex-col">
@@ -199,10 +199,10 @@ export function TicketTab({ seminar, registration, now }: TicketTabProps) {
         )}
       </section>
 
-      <div className="flex flex-col gap-space-lg lg:col-span-5">
+      <div className="flex flex-col gap-space-lg lg:col-span-7">
         <section
           aria-labelledby="attendance-heading"
-          className="flex flex-col gap-space-md rounded-xl bg-surface-card p-space-xl shadow-card"
+          className="flex flex-col gap-space-md rounded-xl border border-border-subtle bg-surface-card p-space-xl shadow-card"
         >
           <div className="flex items-center justify-between gap-space-sm border-b border-border-subtle pb-space-sm">
             <h2
@@ -262,7 +262,7 @@ export function TicketTab({ seminar, registration, now }: TicketTabProps) {
             </CheckpointCard>
           </div>
 
-          <div className="mt-space-xs flex flex-col gap-space-xs rounded-lg bg-surface-container p-space-md">
+          <div className="mt-space-xs flex flex-col gap-space-xs rounded-lg border border-border-subtle bg-surface-container p-space-md">
             <div className="flex items-center justify-between gap-space-sm font-body-sm text-body-sm">
               <span className="text-text-secondary">Required attendance</span>
               <span className="font-body-sm-medium text-body-sm-medium text-on-surface">
@@ -295,7 +295,7 @@ export function TicketTab({ seminar, registration, now }: TicketTabProps) {
 
         <section
           aria-labelledby="help-heading"
-          className="flex flex-col gap-space-xs rounded-xl bg-surface-card p-space-lg shadow-card"
+          className="flex flex-col gap-space-xs rounded-xl border border-border-subtle bg-surface-card p-space-lg shadow-card"
         >
           <h2 id="help-heading" className="font-label-sm text-label-sm text-text-subtle">
             Need assistance?
