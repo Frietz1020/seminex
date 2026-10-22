@@ -30,7 +30,7 @@ export function EvaluationBanner({ state, onRetry }: EvaluationBannerProps) {
       {state.data.map((due) => (
         <div
           key={due.seminarId}
-          className="flex w-full flex-col items-start justify-between gap-space-md rounded-lg bg-status-finished-container p-space-md shadow-card sm:flex-row sm:items-center"
+          className="flex w-full flex-col items-start justify-between gap-space-md rounded-lg border border-border-subtle bg-status-finished-container p-space-md shadow-card sm:flex-row sm:items-center"
         >
           <div className="flex items-start gap-3">
             <Icon name="assignment_turned_in" size={24} className="mt-0.5 text-status-finished" />

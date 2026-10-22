@@ -42,7 +42,7 @@ export function HistoryLinkCard({ state, items, now, onRetry }: HistoryLinkCardP
   return (
     <Link
       to="/history"
-      className="group flex w-full flex-col justify-between gap-space-md rounded-xl bg-surface-card p-space-lg shadow-card transition-colors hover:bg-surface-container-low sm:flex-row sm:items-center"
+      className="group flex w-full flex-col justify-between gap-space-md rounded-xl border border-border-subtle bg-surface-card p-space-lg shadow-card transition-colors hover:bg-surface-container-low sm:flex-row sm:items-center"
     >
       <div className="flex items-center gap-space-md">
         <div

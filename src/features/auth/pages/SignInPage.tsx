@@ -14,8 +14,7 @@ type FieldName = 'studentId' | 'password';
 type FieldErrors = Partial<Record<FieldName, string>>;
 type Pending = 'credentials' | null;
 
-// Temporary post-login target until post-login screens exist.
-const AFTER_SIGN_IN_PATH = '/seminars';
+const AFTER_SIGN_IN_PATH = '/home';
 
 function validate(field: FieldName, value: string): string | undefined {
   return field === 'studentId' ? validateStudentId(value) : validateSignInPassword(value);
