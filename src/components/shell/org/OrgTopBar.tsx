@@ -1,27 +1,16 @@
-import { useState, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import type { OrgIdentity } from '../../../api/client';
 import type { ResourceState } from '../../../hooks/useResource';
 import { Avatar } from '../../ui/Avatar';
-import { Icon } from '../../ui/Icon';
 import { BrandMark } from '../BrandMark';
 import { WorkspaceSwitcher } from './WorkspaceSwitcher';
 
 /**
- * Desktop: search, then name with Student ID and position, then avatar. Below lg there is no sidebar, so
+ * Desktop: name with Student ID and position, then avatar. Below lg there is no sidebar, so
  * the logo and the workspace button sit on the left. There is no notification bell: notifications are on hold.
  */
 export function OrgTopBar({ state }: { state: ResourceState<OrgIdentity> }) {
-  const navigate = useNavigate();
-  const [query, setQuery] = useState('');
   const identity = state.status === 'success' ? state.data : null;
-  const isOfficer = identity?.role === 'org_member';
-
-  function handleSearch(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const trimmed = query.trim();
-    navigate(trimmed ? `/org/my-seminars?q=${encodeURIComponent(trimmed)}` : '/org/my-seminars');
-  }
 
   const detail = identity
     ? [identity.studentId, identity.position].filter(Boolean).join(' \u00b7 ')
@@ -33,19 +22,6 @@ export function OrgTopBar({ state }: { state: ResourceState<OrgIdentity> }) {
         <Link to="/org" aria-label="Seminex organization home" className="flex min-h-11 items-center rounded-lg lg:hidden">
           <BrandMark />
         </Link>
-        {isOfficer && (
-          <form role="search" onSubmit={handleSearch} className="relative hidden w-80 lg:block">
-            <Icon name="search" size={20} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-subtle" />
-            <input
-              type="search"
-              aria-label="Search seminars"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search seminars"
-              className="h-11 w-full rounded-lg border border-charcoal-300 bg-surface-card pl-10 pr-4 font-body-sm text-body-sm text-on-surface outline-none transition-all placeholder:text-text-subtle focus:border-primary-container focus:ring-2 focus:ring-primary-container/30"
-            />
-          </form>
-        )}
         <div className="min-w-0 lg:hidden">
           <WorkspaceSwitcher identity={identity} variant="sheet" />
         </div>

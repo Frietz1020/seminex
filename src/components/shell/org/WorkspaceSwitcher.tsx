@@ -30,7 +30,7 @@ function Options({ current, onChoose, orgName }: { current: Workspace; onChoose:
           aria-checked={current === item.id}
           onClick={() => onChoose(item.id)}
           className={cx(
-            'flex min-h-11 w-full items-center justify-between gap-space-sm rounded-lg px-space-sm py-2 text-left hover:bg-surface-container focus:bg-surface-container',
+            'flex min-h-12 w-full items-center justify-between gap-space-sm rounded-xl px-space-sm py-2 text-left hover:bg-surface-container focus:bg-surface-container',
             current === item.id && 'bg-surface-container-low',
           )}
         >
@@ -105,12 +105,12 @@ export function WorkspaceSwitcher({ identity, variant }: WorkspaceSwitcherProps)
 
   if (!canSwitch) {
     return (
-      <div className="flex min-h-11 items-center rounded-xl bg-surface-card/80 p-space-sm shadow-card">{label}</div>
+    <div className="flex min-h-12 items-center rounded-xl bg-surface-card/80 p-space-sm shadow-card">{label}</div>
     );
   }
 
   const triggerClass =
-    'flex min-h-11 w-full items-center justify-between gap-space-xs rounded-xl bg-surface-card/80 p-space-sm text-left shadow-card transition-colors hover:bg-surface-card';
+    'flex min-h-12 w-full items-center justify-between gap-space-xs rounded-xl border border-outline-variant/60 bg-surface-container-lowest p-space-sm text-left shadow-sm transition-colors hover:bg-surface-card focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 
   return (
     <div ref={rootRef} className="relative">

@@ -386,6 +386,19 @@ export interface SurveyAggregate {
   questions: QuestionAggregate[];
 }
 
+/** Read model used by the seminar details dashboard. */
+export interface OrgSeminarEvaluationData {
+  survey: AuthoredSurvey | null;
+  responses: SurveyResponse[];
+}
+
+/** Read model used by the seminar certificate dashboard. */
+export interface OrgSeminarCertificateData {
+  template: CertificateTemplate | null;
+  records: CertificateRecord[];
+  overrideRequests: OverrideRequest[];
+}
+
 // ---- Listings and sync -----------------------------------------------------------
 
 /** Everything the org lists show: published seminars and unpublished drafts of the officer's organization. */

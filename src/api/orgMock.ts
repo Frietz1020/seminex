@@ -36,6 +36,8 @@ import type {
   OrgSignUpInput,
   ScanLedgerEntry,
   SyncScansResult,
+  OrgSeminarEvaluationData,
+  OrgSeminarCertificateData,
 } from './orgTypes';
 import type { ApiResult, Session } from './types';
 
@@ -446,6 +448,30 @@ export function listLedger(seminarId: string): Promise<ApiResult<ScanLedgerEntry
     const seminar = data.seminars.find((entry) => entry.id === seminarId);
     if (!seminar || !session.organizationIds.includes(seminar.organizationId)) return fail('not_found');
     return ok(serverLedger.filter((entry) => entry.seminarId === seminarId).map((entry) => ({ ...entry })));
+  });
+}
+
+/** MOCK: evaluation configuration and anonymous responses for an organization's seminar. */
+export function getOrgSeminarEvaluation(seminarId: string): Promise<ApiResult<OrgSeminarEvaluationData>> {
+  return withOrgSession((session) => {
+    const seminar = data.seminars.find((entry) => entry.id === seminarId);
+    if (!seminar || !session.organizationIds.includes(seminar.organizationId)) return fail('not_found');
+    const survey = data.surveys.find((entry) => entry.seminarId === seminarId) ?? null;
+    const responses = data.responses.filter((entry) => entry.seminarId === seminarId).map((entry) => ({ ...entry }));
+    return ok({ survey: survey ? structuredClone(survey) : null, responses });
+  });
+}
+
+/** MOCK: certificate template, eligibility records, and adviser override requests for a seminar. */
+export function getOrgSeminarCertificates(seminarId: string): Promise<ApiResult<OrgSeminarCertificateData>> {
+  return withOrgSession((session) => {
+    const seminar = data.seminars.find((entry) => entry.id === seminarId);
+    if (!seminar || !session.organizationIds.includes(seminar.organizationId)) return fail('not_found');
+    return ok({
+      template: data.certificateTemplates[seminarId] ? structuredClone(data.certificateTemplates[seminarId]) : null,
+      records: data.certificates.filter((entry) => entry.seminarId === seminarId).map((entry) => ({ ...entry })),
+      overrideRequests: data.overrides.filter((entry) => entry.seminarId === seminarId).map((entry) => ({ ...entry })),
+    });
   });
 }
 

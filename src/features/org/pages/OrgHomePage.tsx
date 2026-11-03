@@ -2,12 +2,17 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api, type OrgSeminar, type SeminarDraft } from '../../../api/client';
 import { PageContainer } from '../../../components/shell/PageContainer';
-import { actionPrimary, actionTonal } from '../../../components/ui/actionStyles';
+import { orgActionPrimary as actionPrimary, orgActionTonal as actionTonal } from '../orgActionStyles';
 import { Icon } from '../../../components/ui/Icon';
+import { ProgressBar } from '../../../components/ui/ProgressBar';
+import { AcademicYearPill } from '../../../components/ui/AcademicYearPill';
 import { LoadingRegion, RetryButton, Skeleton, StateMessage } from '../../../components/ui/StateMessage';
 import { useNow } from '../../../hooks/useNow';
+import { useOnlineStatus } from '../../../hooks/useOnlineStatus';
 import { useResource } from '../../../hooks/useResource';
+import { useUnsyncedScanCount } from '../../../hooks/useUnsyncedScanCount';
 import { useOrgIdentity } from '../../../session/OrgIdentityProvider';
+import { OrgStatusBadge } from '../components/OrgStatusBadge';
 import { getDraftReadiness } from '../readiness';
 import { getOrgLifecycle, isOrgRecentlyFinished } from '../seminarStatus';
 
@@ -17,12 +22,12 @@ function dateTime(value: string) {
 
 function SeminarCard({ seminar, now }: { seminar: OrgSeminar; now: number }) {
   const status = getOrgLifecycle(seminar, now);
-  const percent = seminar.capacity > 0 ? Math.min(100, Math.round(seminar.registeredCount / seminar.capacity * 100)) : 0;
+  const remaining = Math.max(0, seminar.capacity - seminar.registeredCount);
   return (
     <article className="group flex min-w-0 flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface-card shadow-card transition hover:shadow-overlay">
       <div className="relative flex h-36 items-center justify-center overflow-hidden bg-gradient-to-br from-surface-container-low via-surface-container to-primary-fixed/60">
         {seminar.imageUrl ? <img src={seminar.imageUrl} alt="" className="h-full w-full object-cover" /> : <Icon name="school" size={32} className="text-primary/70" />}
-        <span className="absolute left-3 top-3 rounded-md bg-surface-card/95 px-2.5 py-1 font-label-sm text-label-sm capitalize text-primary shadow-card">{status}</span>
+        <span className="absolute left-3 top-3"><OrgStatusBadge status={status} /></span>
       </div>
       <div className="flex flex-1 flex-col gap-space-md p-space-lg">
         <div className="flex-1">
@@ -34,8 +39,9 @@ function SeminarCard({ seminar, now }: { seminar: OrgSeminar; now: number }) {
           </div>
         </div>
         <div>
-          <div className="mb-1.5 flex items-center justify-between gap-2 font-caption text-caption"><span className="text-text-secondary">Slots reserved</span><span className="font-semibold text-on-surface">{seminar.registeredCount} / {seminar.capacity}</span></div>
-          <div className="h-2 overflow-hidden rounded-full bg-surface-container-high"><div className="h-full rounded-full bg-primary-container" style={{ width: `${percent}%` }} /></div>
+          <div className="mb-1.5 flex items-center justify-between gap-2 font-caption text-caption"><span className="text-text-secondary">Slots reserved</span><span className="font-semibold text-primary">{seminar.registeredCount} of {seminar.capacity}</span></div>
+          <ProgressBar value={seminar.registeredCount} max={seminar.capacity} label={`${seminar.title}: ${seminar.registeredCount} of ${seminar.capacity} seats reserved`} />
+          <div className="mt-1.5 flex items-center justify-between gap-2 font-caption text-caption text-text-secondary"><span>{remaining} {remaining === 1 ? 'slot' : 'slots'} remaining</span><span>Limit: {seminar.capacity}</span></div>
         </div>
         <div className="flex gap-space-sm">
           <Link to={`/org/my-seminars/${seminar.id}`} className={`${actionTonal} flex-1 justify-center`}>Open seminar<Icon name="arrow_forward" size={16} /></Link>
@@ -63,7 +69,11 @@ export default function OrgHomePage() {
   const navigate = useNavigate();
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [syncError, setSyncError] = useState(false);
   const now = useNow();
+  const online = useOnlineStatus();
+  const pendingScans = useUnsyncedScanCount();
   const { state: identity } = useOrgIdentity();
   const listing = useResource(() => api.listOrgSeminars(), 'org-home');
   const seminars = listing.state.status === 'success' ? listing.state.data.seminars : [];
@@ -73,6 +83,8 @@ export default function OrgHomePage() {
   const recentlyFinished = seminars.filter((item) => isOrgRecentlyFinished(item, now)).sort((a, b) => b.endsAt.localeCompare(a.endsAt));
   const registered = active.reduce((total, item) => total + item.registeredCount, 0);
   const organizationName = identity.status === 'success' ? identity.data.organization.name : 'Organization workspace';
+  const academicYearStart = new Date(now).getMonth() >= 7 ? new Date(now).getFullYear() : new Date(now).getFullYear() - 1;
+  const academicYear = `${academicYearStart}–${academicYearStart + 1}`;
   const metrics = [
     { label: 'Active seminars', value: active.length, detail: `${ongoing.length} ongoing now`, icon: 'event_note', to: '/org/my-seminars' },
     { label: 'Registered', value: registered, detail: 'Across active seminars', icon: 'group', to: '/org/my-seminars' },
@@ -90,13 +102,26 @@ export default function OrgHomePage() {
     else setCreateError(true);
   }
 
+  async function syncScans() {
+    if (syncing || !online || pendingScans === 0) return;
+    setSyncing(true);
+    setSyncError(false);
+    const result = await api.syncQueuedScans();
+    setSyncing(false);
+    if (!result.ok) setSyncError(true);
+  }
+
   return (
     <PageContainer>
+      {pendingScans > 0 && <section role={syncError ? 'alert' : 'status'} aria-live="polite" className={`flex flex-col gap-space-sm rounded-xl border p-space-md shadow-card sm:flex-row sm:items-center sm:justify-between ${syncError ? 'border-danger-soft bg-danger-surface text-danger-ink' : 'border-outline-variant/50 bg-surface-container-highest text-on-surface-variant'}`}>
+        <div className="flex min-w-0 items-start gap-space-sm"><Icon name={online ? 'sync' : 'cloud_off'} size={20} className={`mt-0.5 shrink-0 ${online ? 'text-secondary' : 'text-status-ongoing'}`} /><div><p className="font-body-sm-medium text-body-sm-medium text-on-surface">{syncError ? 'Some attendance scans could not sync.' : `${pendingScans} ${pendingScans === 1 ? 'scan' : 'scans'} waiting to sync.`}</p><p className="mt-0.5 font-caption text-caption text-text-secondary">{online ? 'Scans recorded on this device will sync when the connection is ready.' : 'You are offline. Scans are saved on this device and will sync when you reconnect.'}</p></div></div>
+        <button type="button" onClick={() => void syncScans()} disabled={!online || syncing} className={`${actionTonal} shrink-0`}><Icon name="sync" size={16} />{syncing ? 'Syncing…' : online ? 'Sync now' : 'Offline'}</button>
+      </section>}
       <header className="flex flex-col justify-between gap-space-lg md:flex-row md:items-end">
         <div>
-          <p className="flex items-center gap-2 font-label-sm text-label-sm uppercase tracking-widest text-primary"><span className="h-2 w-2 rounded-full bg-primary" />Workspace overview</p>
+          <div className="flex flex-wrap items-center gap-space-sm"><AcademicYearPill academicYear={academicYear} /><span className="font-caption text-caption text-text-secondary">{organizationName}</span></div>
           <h1 className="mt-space-xs font-headline-xl text-headline-xl-mobile tracking-tight text-on-surface md:text-headline-xl">Welcome back{identity.status === 'success' ? `, ${identity.data.firstName}` : ''}</h1>
-          <p className="mt-space-xs font-body-base text-body-base text-text-secondary">{organizationName} · {new Date(now).getFullYear()}–{new Date(now).getFullYear() + 1}</p>
+          <p className="mt-space-xs font-body-base text-body-base text-text-secondary">{organizationName} · Academic Year {academicYear}</p>
         </div>
         <button type="button" onClick={() => void createSeminar()} disabled={creating} className={actionPrimary}><Icon name="add" size={20} />{creating ? 'Creating draft…' : 'Create seminar'}</button>
       </header>
