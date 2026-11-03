@@ -2,13 +2,17 @@ import { useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { api, type OrgSeminar, type SeminarDraft } from '../../../api/client';
 import { PageContainer } from '../../../components/shell/PageContainer';
-import { actionPrimary, actionTonal } from '../../../components/ui/actionStyles';
+import { orgActionPrimary as actionPrimary, orgActionTonal as actionTonal } from '../orgActionStyles';
 import { Icon } from '../../../components/ui/Icon';
 import { LoadingRegion, RetryButton, Skeleton, StateMessage } from '../../../components/ui/StateMessage';
 import { useNow } from '../../../hooks/useNow';
 import { useResource } from '../../../hooks/useResource';
 import { getDraftReadiness } from '../readiness';
 import { getOrgLifecycle, isOrgRecentlyFinished } from '../seminarStatus';
+import { OrgStatusBadge } from '../components/OrgStatusBadge';
+import { ProgressBar } from '../../../components/ui/ProgressBar';
+import { useOnlineStatus } from '../../../hooks/useOnlineStatus';
+import { useUnsyncedScanCount } from '../../../hooks/useUnsyncedScanCount';
 
 type View = 'all' | 'ongoing' | 'upcoming' | 'drafts' | 'recent';
 type Sort = 'nearest' | 'az' | 'registrants';
@@ -28,17 +32,36 @@ function matchesQuery(seminar: OrgSeminar, query: string) {
   return `${seminar.title} ${seminar.speaker.name} ${seminar.venue} ${seminar.reference} ${seminar.department}`.toLowerCase().includes(query.trim().toLowerCase());
 }
 
+function LiveAttendanceWidget({ seminar }: { seminar: OrgSeminar }) {
+  const ledger = useResource(() => api.listLedger(seminar.id), `org-seminar-live-${seminar.id}`, (items) => items.length === 0);
+  const entries = ledger.state.status === 'success' ? ledger.state.data : [];
+  const ledgerAvailable = ledger.state.status === 'success' || ledger.state.status === 'empty';
+  const timeIn = new Set(entries.filter((entry) => entry.kind === 'time_in').map((entry) => entry.studentId)).size;
+  const timeOut = new Set(entries.filter((entry) => entry.kind === 'time_out').map((entry) => entry.studentId)).size;
+  const percentage = seminar.registeredCount > 0 ? Math.min(100, Math.round(timeIn / seminar.registeredCount * 100)) : 0;
+  const circumference = 2 * Math.PI * 19;
+
+  return <aside aria-label="Live attendance summary" className="flex shrink-0 items-center gap-space-md rounded-xl bg-surface-container-low p-space-md lg:w-56 lg:flex-col lg:items-center lg:justify-center">
+    <div className="relative h-16 w-16 shrink-0" role="img" aria-label={ledgerAvailable ? `${percentage}% of registered students have checked in` : 'Attendance summary unavailable'}>
+      <svg viewBox="0 0 48 48" className="h-full w-full -rotate-90" aria-hidden="true"><circle cx="24" cy="24" r="19" fill="none" stroke="currentColor" strokeWidth="5" className="text-surface-container-highest" /><circle cx="24" cy="24" r="19" fill="none" stroke="currentColor" strokeWidth="5" strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={circumference * (1 - percentage / 100)} className="text-primary-container transition-[stroke-dashoffset]" /></svg>
+      <span className="absolute inset-0 flex items-center justify-center font-body-sm-medium text-body-sm-medium text-primary">{ledgerAvailable ? `${percentage}%` : '—'}</span>
+    </div>
+    <div className="min-w-0 flex-1 lg:text-center"><p className="font-label-sm text-label-sm uppercase tracking-wide text-text-secondary">Live attendance</p>{ledger.state.status === 'loading' ? <p className="mt-1 font-caption text-caption text-text-secondary">Loading scan totals…</p> : ledger.state.status === 'error' ? <button type="button" onClick={ledger.reload} className="mt-1 font-caption text-caption text-primary underline">Retry attendance summary</button> : <div className="mt-1 flex flex-wrap gap-x-space-md gap-y-1 font-caption text-caption text-text-secondary lg:justify-center"><span>{timeIn} checked in</span><span>{timeOut} checked out</span></div>}</div>
+  </aside>;
+}
+
 function SeminarCard({ seminar, now, ongoing = false }: { seminar: OrgSeminar; now: number; ongoing?: boolean }) {
-  const status = seminar.cancellation ? 'Cancelled' : getOrgLifecycle(seminar, now);
+  const status = getOrgLifecycle(seminar, now);
   const percent = seminar.capacity ? Math.min(100, Math.round(seminar.registeredCount / seminar.capacity * 100)) : 0;
   return (
     <article className={`group flex min-w-0 flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface-card shadow-card transition hover:shadow-overlay ${ongoing ? 'lg:flex-row' : ''}`}>
       <div className={`relative flex items-center justify-center overflow-hidden bg-gradient-to-br from-surface-container-low via-surface-container to-primary-fixed/60 ${ongoing ? 'h-40 lg:h-auto lg:min-h-60 lg:w-5/12' : 'h-40'}`}>
         {seminar.imageUrl ? <img src={seminar.imageUrl} alt="" className="h-full w-full object-cover" /> : <Icon name="school" size={32} className="text-primary/70" />}
-        <span className={`absolute left-3 top-3 rounded-md px-2.5 py-1 font-label-sm text-label-sm capitalize shadow-card ${status === 'ongoing' ? 'bg-secondary text-on-secondary' : 'bg-surface-card/95 text-primary'}`}>{status}</span>
+        <span className="absolute left-3 top-3"><OrgStatusBadge status={status} /></span>
       </div>
-      <div className="flex flex-1 flex-col justify-between gap-space-md p-space-lg">
-        <div>
+      <div className={`flex flex-1 flex-col justify-between gap-space-md p-space-lg ${ongoing ? 'lg:flex-row lg:items-center' : ''}`}>
+        <div className="flex min-w-0 flex-1 flex-col justify-between gap-space-md">
+          <div>
           <div className="flex flex-wrap items-center justify-between gap-2"><span className="font-label-sm text-label-sm uppercase tracking-wide text-text-secondary">{seminar.department}</span><span className="font-caption text-caption text-text-subtle">{seminar.reference}</span></div>
           <h3 className="mt-1 font-title-lg text-title-lg text-on-surface group-hover:text-primary">{seminar.title}</h3>
           <div className="mt-space-sm flex flex-col gap-1.5 font-body-sm text-body-sm text-text-secondary">
@@ -46,15 +69,18 @@ function SeminarCard({ seminar, now, ongoing = false }: { seminar: OrgSeminar; n
             <p className="flex items-start gap-2"><Icon name="location_on" size={16} className="mt-0.5 shrink-0" />{seminar.venue}</p>
             <p className="flex items-start gap-2"><Icon name="record_voice_over" size={16} className="mt-0.5 shrink-0" />{seminar.speaker.name}</p>
           </div>
+          </div>
+          <div>
+            <div className="mb-1.5 flex items-center justify-between gap-2 font-caption text-caption"><span className="text-text-secondary">Slots reserved</span><span className="font-semibold text-primary">{seminar.registeredCount} of {seminar.capacity} ({percent}%)</span></div>
+            <ProgressBar value={seminar.registeredCount} max={seminar.capacity} label={`${seminar.title}: ${seminar.registeredCount} of ${seminar.capacity} seats reserved`} />
+            <div className="mt-1.5 flex items-center justify-between gap-2 font-caption text-caption text-text-secondary"><span>{Math.max(0, seminar.capacity - seminar.registeredCount)} slots remaining</span><span>Limit: {seminar.capacity}</span></div>
+          </div>
+          <div className="flex gap-space-sm">
+            <Link to={`/org/my-seminars/${seminar.id}`} className={`${ongoing ? actionPrimary : actionTonal} flex-1 justify-center`}>{ongoing ? 'Open live console' : 'Open seminar'}<Icon name="arrow_forward" size={16} /></Link>
+            {ongoing && <Link to={`/org/my-seminars/${seminar.id}/scanner`} aria-label={`Open scanner for ${seminar.title}`} className={actionTonal}><Icon name="qr_code_scanner" size={18} /></Link>}
+          </div>
         </div>
-        <div>
-          <div className="mb-1.5 flex items-center justify-between gap-2 font-caption text-caption"><span className="text-text-secondary">Slots reserved</span><span className="font-semibold text-on-surface">{seminar.registeredCount} / {seminar.capacity} ({percent}%)</span></div>
-          <div className="h-2 overflow-hidden rounded-full bg-surface-container-high"><div className="h-full rounded-full bg-primary-container" style={{ width: `${percent}%` }} /></div>
-        </div>
-        <div className="flex gap-space-sm">
-          <Link to={`/org/my-seminars/${seminar.id}`} className={`${ongoing ? actionPrimary : actionTonal} flex-1 justify-center`}>{ongoing ? 'Open live console' : 'Open seminar'}<Icon name="arrow_forward" size={16} /></Link>
-          {ongoing && <Link to={`/org/my-seminars/${seminar.id}/scanner`} aria-label={`Open scanner for ${seminar.title}`} className={actionTonal}><Icon name="qr_code_scanner" size={18} /></Link>}
-        </div>
+        {ongoing && <LiveAttendanceWidget seminar={seminar} />}
       </div>
     </article>
   );
@@ -72,6 +98,8 @@ function DraftCard({ draft }: { draft: SeminarDraft }) {
 
 export default function OrgSeminarsPage() {
   const now = useNow();
+  const online = useOnlineStatus();
+  const pendingScans = useUnsyncedScanCount();
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const [filter, setFilter] = useState<View>('all');
@@ -109,6 +137,7 @@ export default function OrgSeminarsPage() {
 
   return (
     <PageContainer>
+      {(!online || pendingScans > 0) && <aside role="status" aria-live="polite" className="flex flex-col gap-space-sm rounded-xl border border-outline-variant/50 bg-surface-container-highest p-space-md shadow-sm sm:flex-row sm:items-center"><Icon name={online ? 'sync' : 'cloud_off'} size={20} className="shrink-0 text-secondary" /><div className="min-w-0"><p className="font-body-sm-medium text-body-sm-medium text-on-surface">{online ? `${pendingScans} attendance ${pendingScans === 1 ? 'scan' : 'scans'} waiting to sync` : 'You are offline'}</p><p className="font-caption text-caption text-text-secondary">{online ? 'Queued scans remain on this device until the server confirms them.' : 'Cached seminar information is available. Scans sync when a connection returns.'}</p></div></aside>}
       <header className="flex flex-col justify-between gap-space-md md:flex-row md:items-center">
         <div className="max-w-3xl"><p className="flex flex-wrap items-center gap-2 font-label-sm text-label-sm uppercase tracking-widest text-text-secondary"><span>Curriculum &amp; Events</span><span>/</span><span className="text-secondary">{listing.state.status === 'success' ? 'College of Computer Studies' : 'Organization'}</span></p><h1 className="mt-1 font-headline-xl text-headline-xl-mobile tracking-tight text-on-surface md:text-headline-xl">My Seminars</h1><p className="mt-1 font-body-base text-body-base text-text-secondary">Manage and monitor your organization seminars.</p></div>
         <button type="button" onClick={() => void createDraft()} disabled={creating} className={actionPrimary}><Icon name="add" size={20} />{creating ? 'Creating draft…' : 'Create seminar'}</button>
@@ -120,17 +149,17 @@ export default function OrgSeminarsPage() {
         <div className="flex flex-col gap-space-md lg:flex-row lg:items-center lg:justify-between">
           <form role="search" onSubmit={(event) => event.preventDefault()} className="relative min-w-0 flex-1">
             <Icon name="search" size={18} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" />
-            <input aria-label="Search seminars by title, speaker, or venue" type="search" value={query} onChange={(event) => { const value = event.target.value; setParams((previous) => { const next = new URLSearchParams(previous); value ? next.set('q', value) : next.delete('q'); return next; }, { replace: true }); }} placeholder="Search seminar title, speaker, or venue…" className="h-11 w-full rounded-lg border border-border-subtle bg-surface-container-low pl-10 pr-3 font-body-sm text-body-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20" />
+            <input aria-label="Search seminars by title, speaker, or venue" type="search" value={query} onChange={(event) => { const value = event.target.value; setParams((previous) => { const next = new URLSearchParams(previous); value ? next.set('q', value) : next.delete('q'); return next; }, { replace: true }); }} placeholder="Search seminar title, speaker, or venue…" className="h-12 w-full rounded-xl border border-outline-variant/60 bg-surface-container-lowest pl-10 pr-3 font-body-sm text-body-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20" />
           </form>
           <div className="flex flex-wrap items-center gap-space-sm">
-            <label htmlFor="seminar-sort" className="sr-only">Sort seminars</label><select id="seminar-sort" value={sort} onChange={(event) => setSort(event.target.value as Sort)} className="h-11 rounded-lg border border-border-subtle bg-surface-container-low px-3 font-body-sm-medium text-body-sm-medium text-on-surface outline-none focus:border-primary"><option value="nearest">Nearest date</option><option value="az">Title (A–Z)</option><option value="registrants">Most registrants</option></select>
+            <label htmlFor="seminar-sort" className="sr-only">Sort seminars</label><select id="seminar-sort" value={sort} onChange={(event) => setSort(event.target.value as Sort)} className="h-12 rounded-xl border border-outline-variant/60 bg-surface-container-lowest px-3 font-body-sm-medium text-body-sm-medium text-on-surface outline-none focus:border-primary"><option value="nearest">Nearest date</option><option value="az">Title (A–Z)</option><option value="registrants">Most registrants</option></select>
             <span className="rounded-lg bg-surface-container-low px-3 py-2 font-label-sm text-label-sm text-text-secondary">{total} total</span>
           </div>
         </div>
-        <div className="flex items-center gap-1 overflow-x-auto pb-1" role="group" aria-label="Filter seminars">
+        <div className="flex items-center gap-1 overflow-x-auto rounded-xl bg-surface-container-high p-1.5 pb-1.5" role="group" aria-label="Filter seminars">
           {FILTERS.map((item) => {
             const count = item.value === 'all' ? total : item.value === 'ongoing' ? ongoing.length : item.value === 'upcoming' ? upcoming.length : item.value === 'drafts' ? visibleDrafts.length : recentlyFinished.length;
-            return <button key={item.value} type="button" aria-pressed={filter === item.value} onClick={() => setFilter(item.value)} className={`min-h-10 shrink-0 rounded-lg px-space-md font-body-sm-medium text-body-sm-medium transition ${filter === item.value ? 'bg-primary-container text-on-primary' : 'text-text-secondary hover:bg-surface-container-high'}`}>{item.label} ({count})</button>;
+            return <button key={item.value} type="button" aria-pressed={filter === item.value} onClick={() => setFilter(item.value)} className={`min-h-11 shrink-0 rounded-xl px-space-md font-body-sm-medium text-body-sm-medium transition ${filter === item.value ? 'bg-surface-container-lowest text-primary shadow-sm' : 'text-text-secondary hover:bg-surface-container-highest'}`}>{item.label} ({count})</button>;
           })}
         </div>
       </section>

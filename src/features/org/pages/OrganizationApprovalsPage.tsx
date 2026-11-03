@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import type { OrgRequest, OrgRequestStatus } from '../../../api/client';
 import { api } from '../../../api/client';
 import { PageContainer } from '../../../components/shell/PageContainer';
-import { actionTonal } from '../../../components/ui/actionStyles';
+import { orgActionTonal as actionTonal } from '../orgActionStyles';
 import { Dialog } from '../../../components/ui/Dialog';
 import { Icon } from '../../../components/ui/Icon';
 import { LoadingRegion, RetryButton, Skeleton, StateMessage } from '../../../components/ui/StateMessage';

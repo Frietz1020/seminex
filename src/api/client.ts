@@ -361,6 +361,8 @@ export const api = {
   listOrgSeminars,
   listOrgRoster,
   listLedger,
+  getOrgSeminarEvaluation: orgImpl.getOrgSeminarEvaluation,
+  getOrgSeminarCertificates: orgImpl.getOrgSeminarCertificates,
   syncQueuedScans,
   createOrgDraft,
   createOrgEditDraft,

@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import type { AuthoredQuestion, SeminarDraft } from '../../../api/client';
 import { api } from '../../../api/client';
 import { PageContainer } from '../../../components/shell/PageContainer';
-import { actionPrimary, actionTonal } from '../../../components/ui/actionStyles';
+import { orgActionPrimary as actionPrimary, orgActionTonal as actionTonal } from '../orgActionStyles';
 import { Icon } from '../../../components/ui/Icon';
 import { LoadingRegion, RetryButton, Skeleton, StateMessage } from '../../../components/ui/StateMessage';
 import { useResource } from '../../../hooks/useResource';
