@@ -162,6 +162,64 @@
   --shadow-overlay: 0 25px 50px -12px rgb(0 0 0 / 0.25);
 }
 
+/* Keep the audit header proportional to the space it actually receives. The sidebar consumes
+   part of the viewport on desktop, so viewport breakpoints alone can otherwise squeeze its cards. */
+.audit-page-container {
+  width: 100vw;
+  max-width: none;
+  align-items: stretch;
+  container-type: inline-size;
+}
+
+@media (min-width: 64rem) {
+  .audit-page-container {
+    width: calc(100vw - 18rem);
+  }
+}
+
+.audit-overview-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@container (min-width: 72rem) {
+  .audit-overview-grid {
+    grid-template-columns: minmax(0, 2fr) minmax(17rem, 1fr);
+  }
+}
+
+.admin-profile-page {
+  width: 100vw;
+  max-width: none;
+  align-items: stretch;
+  container-type: inline-size;
+}
+
+.admin-profile-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 64rem) {
+  .admin-profile-page {
+    width: calc(100vw - 18rem);
+  }
+}
+
+@container (min-width: 72rem) {
+  .admin-profile-grid {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+  }
+
+  .admin-profile-main {
+    grid-column: span 8;
+  }
+
+  .admin-profile-aside {
+    grid-column: span 4;
+  }
+}
+
 /* Auth-screen names, aliased to the canonical tokens above (or kept where there is no counterpart). */
 @theme static {
   --color-maroon: var(--color-primary-container);
