@@ -262,6 +262,8 @@ export interface NameBox {
   height: number;
   fontFamily: string;
   fontSize: number;
+    /** Optional line height in canvas pixels. */
+    lineHeight?: number;
   fontWeight: 400 | 700;
   align: NameBoxAlign;
   /** Six digit hex with a leading hash, for example #1B365D. */
@@ -272,6 +274,8 @@ export interface CertificateTemplate {
   /** Address of the background image. The mock uses a data URL. */
   backgroundUrl: string;
   nameBox: NameBox;
+  /** Optional organization e-signature image and placement on the certificate canvas. */
+  signatureBox?: Pick<NameBox, 'x' | 'y' | 'width' | 'height'> & { imageUrl: string };
   updatedAt: string;
 }
 

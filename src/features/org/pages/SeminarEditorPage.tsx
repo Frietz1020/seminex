@@ -5,6 +5,7 @@ import { api } from '../../../api/client';
 import { PageContainer } from '../../../components/shell/PageContainer';
 import { orgActionPrimary as actionPrimary, orgActionTonal as actionTonal } from '../orgActionStyles';
 import { Icon } from '../../../components/ui/Icon';
+import { CertificateDesigner } from '../components/CertificateDesigner';
 import { LoadingRegion, RetryButton, Skeleton, StateMessage } from '../../../components/ui/StateMessage';
 import { useResource } from '../../../hooks/useResource';
 import { getDraftReadiness } from '../readiness';
@@ -79,8 +80,44 @@ export default function SeminarEditorPage() {
     });
   }
 
-  function updateNameBox(field: 'fontFamily' | 'fontSize' | 'fontWeight' | 'x' | 'y' | 'width' | 'height' | 'align' | 'color', value: string | number) {
+  function updateNameBox(field: 'fontFamily' | 'fontSize' | 'fontWeight' | 'x' | 'y' | 'width' | 'height' | 'align' | 'color' | 'lineHeight', value: string | number) {
     setDraft((current) => current?.certificate ? { ...current, certificate: { ...current.certificate, nameBox: { ...current.certificate.nameBox, [field]: value }, updatedAt: new Date().toISOString() } } : current);
+  }
+
+  function updateNameBoxGeometry(value: Pick<NonNullable<SeminarDraft['certificate']>['nameBox'], 'x' | 'y' | 'width' | 'height'>) {
+    setDraft((current) => current?.certificate ? { ...current, certificate: { ...current.certificate, nameBox: { ...current.certificate.nameBox, ...value }, updatedAt: new Date().toISOString() } } : current);
+  }
+
+  async function onSignatureImage(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) { setFailure('Choose a PNG, JPG, or WebP signature image.'); return; }
+    if (file.size > 5 * 1024 * 1024) { setFailure('Choose a signature image smaller than 5 MB.'); return; }
+    try {
+      const imageUrl = await fileAsDataUrl(file);
+      setDraft((current) => current?.certificate ? {
+        ...current,
+        certificate: {
+          ...current.certificate,
+          signatureBox: { ...(current.certificate.signatureBox ?? { x: 1320, y: 850, width: 400, height: 120 }), imageUrl },
+          updatedAt: new Date().toISOString(),
+        },
+      } : current);
+      setFailure(null); setMessage(null);
+    } catch { setFailure('The signature image could not be read. Please choose another file.'); }
+  }
+
+  function removeSignatureBox() {
+    setDraft((current) => current?.certificate ? { ...current, certificate: { ...current.certificate, signatureBox: undefined, updatedAt: new Date().toISOString() } } : current);
+  }
+
+  function updateSignatureGeometry(value: Pick<NonNullable<SeminarDraft['certificate']>['nameBox'], 'x' | 'y' | 'width' | 'height'>) {
+    setDraft((current) => current?.certificate?.signatureBox ? { ...current, certificate: { ...current.certificate, signatureBox: { ...current.certificate.signatureBox, ...value }, updatedAt: new Date().toISOString() } } : current);
+  }
+
+  function resetNameBox() {
+    setDraft((current) => current?.certificate ? { ...current, certificate: { ...current.certificate, nameBox: { x: 360, y: 480, width: 1200, height: 140, fontFamily: 'Outfit', fontSize: 72, lineHeight: 90, fontWeight: 700, align: 'center', color: '#1B365D' }, updatedAt: new Date().toISOString() } } : current);
   }
 
   function updateSurveyTitle(title: string) {
@@ -147,7 +184,6 @@ export default function SeminarEditorPage() {
 
   const details = draft.details;
   const questions = draft.survey?.sections.flatMap((section) => section.questions) ?? [];
-  const nameBox = draft.certificate?.nameBox;
 
   return (
     <PageContainer>
@@ -174,7 +210,7 @@ export default function SeminarEditorPage() {
           <div className="flex flex-col gap-2 font-body-sm-medium text-on-surface md:col-span-2">Cover image<label className="flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border border-border-subtle bg-surface-light px-3.5 font-body-sm text-body-sm text-text-secondary"><Icon name="upload_file" size={18} />Choose PNG or JPG, up to 5 MB<input type="file" accept="image/png,image/jpeg,image/webp" onChange={(e) => void onImage(e, 'cover')} className="sr-only" /></label>{details.coverImageUrl && <img src={details.coverImageUrl} alt="Seminar cover preview" className="max-h-48 rounded-lg border border-border-subtle object-cover" />}</div>
         </div></div>}
 
-        {step === 1 && <div className="grid gap-space-lg xl:grid-cols-[1.4fr_0.6fr]"><div><div className="mb-space-md"><h2 className="font-title-lg text-title-lg text-on-surface">Digital certificate template</h2><p className="mt-1 font-body-sm text-body-sm text-text-secondary">Upload a background and position the dynamic student name on the 16:9 certificate canvas.</p></div><div className="relative flex aspect-[16/9] items-center justify-center overflow-hidden rounded-lg border border-border-subtle bg-surface-container-low bg-cover bg-center" style={draft.certificate?.backgroundUrl ? { backgroundImage: `url("${draft.certificate.backgroundUrl}")` } : undefined}>{!draft.certificate && <div className="text-center"><Icon name="workspace_premium" size={32} className="mx-auto text-primary" /><p className="mt-2 font-body-sm text-body-sm text-text-secondary">Upload a certificate background to preview it.</p></div>}{draft.certificate && nameBox && <div className="absolute flex overflow-hidden" style={{ left: `${nameBox.x / 1920 * 100}%`, top: `${nameBox.y / 1080 * 100}%`, width: `${nameBox.width / 1920 * 100}%`, height: `${nameBox.height / 1080 * 100}%`, alignItems: 'center', justifyContent: nameBox.align === 'left' ? 'flex-start' : nameBox.align === 'right' ? 'flex-end' : 'center', textAlign: nameBox.align, fontFamily: nameBox.fontFamily, fontSize: `clamp(12px, ${nameBox.fontSize / 1920 * 100}vw, 36px)`, fontWeight: nameBox.fontWeight, color: nameBox.color }}>Student Full Name</div>}</div><label className="mt-space-md flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border border-border-subtle bg-surface-light px-4 font-body-sm-medium text-body-sm-medium text-on-surface"><Icon name="upload_file" size={18} />{draft.certificate ? 'Replace certificate background' : 'Upload certificate background'}<input type="file" accept="image/png,image/jpeg,image/svg+xml" onChange={(e) => void onImage(e, 'certificate')} className="sr-only" /></label></div><div className="flex flex-col gap-space-md"><div><label className="mb-2 block font-body-sm-medium text-body-sm-medium text-on-surface">Font family</label><select disabled={!nameBox} value={nameBox?.fontFamily ?? 'Outfit'} onChange={(e) => updateNameBox('fontFamily', e.target.value)} className={inputClass}><option>Outfit</option><option>DM Sans</option><option>Georgia</option><option>Cinzel</option></select></div><div><label className="mb-2 block font-body-sm-medium text-body-sm-medium text-on-surface">Font size (px)</label><input disabled={!nameBox} type="number" min="16" max="160" value={nameBox?.fontSize ?? 72} onChange={(e) => updateNameBox('fontSize', Number(e.target.value))} className={inputClass} /></div><div className="grid grid-cols-2 gap-space-sm">{(['x','y','width','height'] as const).map((key) => <label key={key} className="flex flex-col gap-1 font-caption text-caption capitalize text-text-secondary">{key} position<input disabled={!nameBox} type="number" value={nameBox?.[key] ?? 0} onChange={(e) => updateNameBox(key, Number(e.target.value))} className={inputClass} /></label>)}</div><p className="rounded-lg bg-surface-container-low p-space-sm font-caption text-caption text-text-secondary">Coordinates use the 1920 × 1080 certificate canvas.</p></div></div>}
+        {step === 1 && <CertificateDesigner certificate={draft.certificate} title={details.title ?? ''} speaker={details.speakerName ?? ''} venue={details.venue ?? ''} startsAt={details.startsAt} requiredAttendancePercent={details.requiredAttendancePercent ?? 60} onChangeBackground={(event) => void onImage(event, 'certificate')} onUpdateField={updateNameBox} onUpdateGeometry={updateNameBoxGeometry} onSelectSignature={(event) => void onSignatureImage(event)} onRemoveSignature={removeSignatureBox} onUpdateSignatureGeometry={updateSignatureGeometry} onReset={resetNameBox} />}
 
         {step === 2 && <div className="flex flex-col gap-space-lg"><div><h2 className="font-title-lg text-title-lg text-on-surface">Evaluation form</h2><p className="mt-1 font-body-sm text-body-sm text-text-secondary">Participants receive this form after the seminar. Required answers are kept with the evaluation.</p></div><label className="flex flex-col gap-2 font-body-sm-medium text-body-sm-medium text-on-surface">Form title<input value={draft.survey?.title ?? ''} onChange={(e) => updateSurveyTitle(e.target.value)} className={inputClass} placeholder="Seminar evaluation" /></label><div className="flex flex-col gap-space-sm">{questions.map((question, index) => <QuestionEditor key={question.id} question={question} onChange={(next) => updateQuestion(index, next)} onRemove={() => updateQuestion(index, null)} />)}</div><button type="button" onClick={addQuestion} className={`${actionTonal} w-fit`}><Icon name="add" size={18} />Add question</button><p className="rounded-lg bg-surface-container-low p-space-md font-caption text-caption text-text-secondary">Responses are associated with the seminar and displayed according to the organization’s evaluation privacy rules.</p></div>}
 
