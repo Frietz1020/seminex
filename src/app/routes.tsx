@@ -36,6 +36,9 @@ const OrgScannerPage = lazy(() => import('../features/org/pages/OrgScannerPage')
 const SeminarEditorPage = lazy(() => import('../features/org/pages/SeminarEditorPage'));
 const OrgHomePage = lazy(() => import('../features/org/pages/OrgHomePage'));
 const AdminMembersPage = lazy(() => import('../features/admin/pages/AdminMembersPage'));
+const AdminSeminarsPage = lazy(() => import('../features/admin/pages/AdminSeminarsPage'));
+const AdminAuditLogPage = lazy(() => import('../features/admin/pages/AdminAuditLogPage'));
+const AdminProfilePage = lazy(() => import('../features/admin/pages/AdminProfilePage'));
 
 function OrgPage({ children }: { children: ReactNode }) {
   return <Suspense fallback={<div role="status" className="mx-auto w-full max-w-7xl px-gutter py-space-xl md:px-margin">Loading organization page…</div>}>{children}</Suspense>;
@@ -93,6 +96,9 @@ export function AppRoutes() {
               <Route path="adviser" element={<Navigate to="/org/adviser/requests" replace />} />
               <Route path="adviser/members" element={<OrgPage><AdminMembersPage /></OrgPage>} />
               <Route path="adviser/requests" element={<OrgPage><OrganizationApprovalsPage /></OrgPage>} />
+              <Route path="adviser/seminars" element={<OrgPage><AdminSeminarsPage /></OrgPage>} />
+              <Route path="adviser/audit-log" element={<OrgPage><AdminAuditLogPage /></OrgPage>} />
+              <Route path="adviser/profile" element={<OrgPage><AdminProfilePage /></OrgPage>} />
             </Route>
           </Route>
         </Route>

@@ -42,7 +42,7 @@ function ShellFrame() {
         id="main"
         ref={mainRef}
         tabIndex={-1}
-        className="min-h-dvh pb-[calc(5rem+env(safe-area-inset-bottom))] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] pt-[calc(3.5rem+env(safe-area-inset-top))] outline-none lg:pb-0 lg:pl-64 lg:pr-0 lg:pt-16"
+        className={`min-h-dvh pb-[calc(5rem+env(safe-area-inset-bottom))] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] pt-[calc(3.5rem+env(safe-area-inset-top))] outline-none lg:pb-0 ${identity?.role === 'adviser' ? 'lg:pl-72' : 'lg:pl-64'} lg:pr-0 lg:pt-16`}
       >
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-space-sm px-gutter pt-space-md md:px-margin">
           <OfflineBanner />

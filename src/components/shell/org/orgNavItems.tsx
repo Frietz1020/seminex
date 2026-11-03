@@ -10,4 +10,7 @@ export const ORG_NAV_ITEMS: readonly NavItem[] = [
 export const ADVISER_NAV_ITEMS: readonly NavItem[] = [
   { to: '/org/adviser/members', label: 'Members', icon: 'group' },
   { to: '/org/adviser/requests', label: 'Requests', icon: 'how_to_reg' },
+  { to: '/org/adviser/seminars', label: 'Seminars', icon: 'event_note' },
+  { to: '/org/adviser/audit-log', label: 'Audit Log', icon: 'fact_check' },
+  { to: '/org/adviser/profile', label: 'Profile', icon: 'person' },
 ];

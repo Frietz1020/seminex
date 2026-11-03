@@ -9,13 +9,14 @@ import { WorkspaceSwitcher } from './WorkspaceSwitcher';
 /** Desktop sidebar (lg and up) for the organization portal. */
 export function OrgSidebar({ items, identity }: { items: readonly NavItem[]; identity: OrgIdentity | null }) {
   const { pathname } = useLocation();
+  const adviser = identity?.role === 'adviser';
   return (
-    <aside className="fixed left-0 top-0 z-50 hidden h-dvh w-64 flex-col bg-surface-container-low pb-space-lg pt-space-lg shadow-shell lg:flex">
+    <aside className={`fixed left-0 top-0 z-50 hidden h-dvh ${adviser ? 'w-72' : 'w-64'} flex-col bg-surface-container-low pb-space-lg pt-space-lg shadow-shell lg:flex`}>
       <div className="mb-space-xl flex items-center gap-space-sm px-space-lg">
         <BrandMark size={40} />
         <div className="flex flex-col">
           <span className="font-title-md text-title-md tracking-tight text-primary">Seminex</span>
-          <span className="font-caption text-caption tracking-wider text-text-subtle">Organization portal</span>
+          <span className="font-caption text-caption tracking-wider text-text-subtle">{adviser ? 'ADMIN PORTAL' : 'Organization portal'}</span>
         </div>
       </div>
 
@@ -42,7 +43,7 @@ export function OrgSidebar({ items, identity }: { items: readonly NavItem[]; ide
       </nav>
 
       <div className="px-space-md">
-        <WorkspaceSwitcher identity={identity} variant="menu" />
+        {adviser ? <div className="flex flex-col gap-space-xs rounded-xl bg-surface-container p-space-md"><span className="font-label-sm text-label-sm uppercase tracking-wider text-text-secondary">Adviser workspace</span><span className="font-body-sm-medium text-body-sm-medium text-on-surface">{identity?.organization.department ?? 'Gordon College · CCS'}</span></div> : <WorkspaceSwitcher identity={identity} variant="menu" />}
       </div>
     </aside>
   );
