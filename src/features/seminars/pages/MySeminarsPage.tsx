@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import { api, type Seminar } from '../../../api/client';
 import { PageContainer } from '../../../components/shell/PageContainer';
 import { actionPrimary } from '../../../components/ui/actionStyles';
-import { AcademicYearPill } from '../../../components/ui/AcademicYearPill';
 import { errorText } from '../../../components/ui/errorText';
 import { Icon } from '../../../components/ui/Icon';
 import { ProgressBar } from '../../../components/ui/ProgressBar';
@@ -12,7 +11,6 @@ import { LoadingRegion, RetryButton, Skeleton, StateMessage } from '../../../com
 import { useToast } from '../../../components/ui/Toast';
 import { useNow } from '../../../hooks/useNow';
 import { useResource } from '../../../hooks/useResource';
-import { getAcademicPeriod } from '../academicPeriod';
 import { formatDayLabel, formatTimeRange } from '../format';
 import { QrCode } from '../QrCode';
 import { getLifecycle } from '../status';
@@ -35,7 +33,6 @@ const CONTROL =
 
 export default function MySeminarsPage() {
   const now = useNow();
-  const period = getAcademicPeriod(now);
   const { showToast } = useToast();
   const seminars = useResource(() => api.listSeminars(), 'my-seminars');
   const searchRef = useRef<HTMLInputElement>(null);
@@ -208,17 +205,37 @@ export default function MySeminarsPage() {
   return (
     <PageContainer>
       <header className="flex flex-col gap-space-xs">
-        <div className="flex flex-wrap items-center gap-space-sm">
-          <p className="font-label-sm text-label-sm uppercase tracking-widest text-secondary">Student portal</p>
-          <AcademicYearPill academicYear={period.academicYear} />
-        </div>
         <h1 className="font-headline-xl text-headline-xl-mobile tracking-tight text-primary md:text-headline-xl">
           My seminars
         </h1>
-        <p className="font-body-base text-body-base text-text-secondary">
-          View your registered seminars, manage your seats, and access your attendance details.
-        </p>
       </header>
+
+      <aside
+        aria-labelledby="my-seminars-notice-heading"
+        className="flex flex-col items-start justify-between gap-space-md rounded-xl bg-surface-container-low p-space-lg md:flex-row md:items-center"
+      >
+        <div className="flex items-start gap-space-md">
+          <div aria-hidden="true" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-surface-card text-primary shadow-card">
+            <Icon name="info" size={20} />
+          </div>
+          <div className="flex flex-col">
+            <h2 id="my-seminars-notice-heading" className="font-body-base-medium text-body-base-medium text-on-surface">
+              Attendance and certification notice
+            </h2>
+            <p className="mt-0.5 font-body-sm text-body-sm text-text-secondary">
+              Registering reserves your seat. Your certificate is issued once your attendance is verified by QR
+              scan at the venue entrance.
+            </p>
+          </div>
+        </div>
+        <Link
+          to="/guidelines"
+          className="inline-flex min-h-11 shrink-0 items-center gap-1 font-body-sm-medium text-body-sm-medium text-primary transition-colors hover:text-maroon-dark"
+        >
+          <span>Registration guidelines</span>
+          <Icon name="arrow_forward" size={16} />
+        </Link>
+      </aside>
 
       {view && (
         <dl className="grid grid-cols-1 gap-space-sm sm:grid-cols-3">

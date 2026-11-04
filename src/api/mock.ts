@@ -102,6 +102,8 @@ const ticketTokens = new Map<string, string>();
 
 const MOCK_PROFILE_KEY = (studentId: string) => `seminex.mock.profile.${studentId}`;
 type StoredProfile = EditableProfile;
+const DEMO_APPLICANT_ID = '202410001';
+const DEMO_APPLICANT_PASSWORD = 'Seminex_Demo1';
 
 // MOCK: the college and enrollment status are fixed placeholders. A real server returns them.
 const MOCK_COLLEGE = 'College of Computer Studies';
@@ -119,14 +121,24 @@ const DEFAULT_PROFILE: StoredProfile = {
   block: 'A',
 };
 
+const DEMO_APPLICANT_PROFILE: StoredProfile = {
+  firstName: 'Juan',
+  lastName: 'Cruz',
+  middleInitial: 'D',
+  program: 'CS',
+  yearLevel: 3,
+  block: 'A',
+};
+
 function readStoredProfile(studentId: string): StoredProfile {
+  const fallback = studentId === DEMO_APPLICANT_ID ? DEMO_APPLICANT_PROFILE : DEFAULT_PROFILE;
   try {
     const raw = window.localStorage.getItem(MOCK_PROFILE_KEY(studentId));
-    if (raw) return { ...DEFAULT_PROFILE, ...(JSON.parse(raw) as Partial<StoredProfile>) };
+    if (raw) return { ...fallback, ...(JSON.parse(raw) as Partial<StoredProfile>) };
   } catch {
     // Fall through to the default profile.
   }
-  return DEFAULT_PROFILE;
+  return fallback;
 }
 
 function toItem(seminar: Seminar): SeminarListItem {
@@ -153,6 +165,9 @@ export async function signIn(input: SignInInput): Promise<ApiResult<Session>> {
   const outcome = currentOutcome();
   if (outcome === 'invalid_credentials' || outcome === 'session_expired' || outcome === 'network') {
     return fail(outcome);
+  }
+  if (input.studentId === DEMO_APPLICANT_ID && input.password !== DEMO_APPLICANT_PASSWORD) {
+    return fail('invalid_credentials');
   }
   return ok(startSession(input.studentId));
 }

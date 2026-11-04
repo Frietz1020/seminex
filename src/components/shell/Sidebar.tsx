@@ -1,12 +1,25 @@
+import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { api } from '../../api/client';
+import { actionPrimary, actionTonal } from '../ui/actionStyles';
 import { Icon } from '../ui/Icon';
 import { cx } from '../ui/cx';
+import { Dialog } from '../ui/Dialog';
+import { Spinner } from '../ui/Spinner';
 import { BrandMark } from './BrandMark';
 import { isNavItemActive, NAV_ITEMS } from './navItems';
 
 /** Desktop sidebar (lg and up). */
 export function Sidebar() {
   const { pathname } = useLocation();
+  const [confirmingSignOut, setConfirmingSignOut] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
+
+  async function handleSignOut() {
+    if (signingOut) return;
+    setSigningOut(true);
+    await api.signOut();
+  }
 
   return (
     <aside className="fixed left-0 top-0 z-50 hidden h-dvh w-64 flex-col bg-surface-container-low pb-space-lg pt-space-lg shadow-shell lg:flex">
@@ -39,6 +52,39 @@ export function Sidebar() {
           );
         })}
       </nav>
+
+      <div className="mx-space-md mt-space-md border-t border-outline-variant/50 pt-space-md">
+        <button
+          type="button"
+          onClick={() => setConfirmingSignOut(true)}
+          className="flex min-h-11 w-full items-center gap-space-sm rounded-lg px-space-md py-2.5 font-body-base text-on-surface-variant transition-colors hover:bg-danger-ink hover:text-on-error"
+        >
+          <Icon name="logout" size={20} />
+          <span>Sign out</span>
+        </button>
+      </div>
+
+      <Dialog open={confirmingSignOut} onClose={() => setConfirmingSignOut(false)} title="Sign out of Seminex?">
+        <p className="mt-space-sm font-body-sm text-body-sm text-text-secondary">
+          Tickets and drafts saved on this device are removed. You need an internet connection to sign in again and
+          get your tickets back.
+        </p>
+        <div className="mt-space-lg flex flex-col-reverse gap-space-sm sm:flex-row sm:justify-end">
+          <button type="button" onClick={() => setConfirmingSignOut(false)} className={actionTonal}>
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleSignOut()}
+            aria-disabled={signingOut || undefined}
+            aria-busy={signingOut || undefined}
+            className={cx(actionPrimary, signingOut && 'cursor-wait opacity-90')}
+          >
+            {signingOut && <Spinner />}
+            <span>{signingOut ? 'Signing out' : 'Sign out'}</span>
+          </button>
+        </div>
+      </Dialog>
     </aside>
   );
 }

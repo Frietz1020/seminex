@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useProfile } from '../../session/ProfileProvider';
 import { Avatar } from '../ui/Avatar';
+import { Dialog } from '../ui/Dialog';
 import { Icon } from '../ui/Icon';
 import { formatStudentLine } from '../../features/seminars/format';
 import { BrandMark } from './BrandMark';
@@ -11,6 +13,7 @@ import { BrandMark } from './BrandMark';
  */
 export function TopBar() {
   const { state } = useProfile();
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
 
   const profile = state.status === 'success' ? state.data : null;
   const fullName = profile ? `${profile.firstName} ${profile.lastName}` : '';
@@ -26,8 +29,9 @@ export function TopBar() {
       </div>
 
       <div className="flex items-center gap-space-md lg:gap-space-lg">
-        <Link
-          to="/notifications"
+        <button
+          type="button"
+          onClick={() => setNotificationsOpen(true)}
           aria-label={bellLabel}
           className="relative flex h-11 w-11 items-center justify-center rounded-lg text-on-surface-variant transition-colors hover:bg-surface-container-high hover:text-on-surface"
         >
@@ -35,7 +39,7 @@ export function TopBar() {
           {unread > 0 && (
             <span aria-hidden="true" className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-primary-container" />
           )}
-        </Link>
+        </button>
 
         <div className="flex items-center gap-space-sm">
           <div className="hidden flex-col text-right sm:flex" aria-busy={state.status === 'loading'}>
@@ -62,6 +66,17 @@ export function TopBar() {
           />
         </div>
       </div>
+
+      <Dialog open={notificationsOpen} onClose={() => setNotificationsOpen(false)} title="Notifications">
+        <div className="mt-space-md flex flex-col items-center gap-space-sm rounded-xl bg-surface-container-low px-space-lg py-space-xl text-center">
+          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-surface-card text-primary shadow-card">
+            <Icon name="notifications" size={24} />
+          </span>
+          <p className="font-body-sm text-body-sm text-text-secondary">
+            Notifications are not available yet.
+          </p>
+        </div>
+      </Dialog>
     </header>
   );
 }

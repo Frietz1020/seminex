@@ -8,8 +8,6 @@ import { Icon } from '../../../components/ui/Icon';
 import { LoadingRegion, RetryButton, Skeleton, StateMessage } from '../../../components/ui/StateMessage';
 import { useNow } from '../../../hooks/useNow';
 import { useResource } from '../../../hooks/useResource';
-import { AcademicYearPill } from '../../../components/ui/AcademicYearPill';
-import { getAcademicPeriod } from '../academicPeriod';
 import { filterAndSort, getDepartments, getMetrics, getOpenItems, type SortKey } from '../catalog';
 import { SeminarCard } from '../components/SeminarCard';
 import { SeminarToolbar } from '../components/SeminarToolbar';
@@ -44,7 +42,6 @@ export default function AvailableSeminarsPage() {
     [openItems, query, activeDepartment, sort],
   );
   const metrics = getMetrics(openItems);
-  const period = getAcademicPeriod(now);
   const offline = seminars.state.status === 'success' && seminars.state.fromCache;
 
   let content;
@@ -142,16 +139,9 @@ export default function AvailableSeminarsPage() {
     <PageContainer>
       <header className="flex flex-col justify-between gap-space-lg md:flex-row md:items-end">
         <div className="flex max-w-2xl flex-col gap-space-xs">
-          <div className="flex flex-wrap items-center gap-space-sm">
-            <AcademicYearPill academicYear={period.academicYear} />
-            <span className="font-caption text-caption text-text-subtle">{period.term} workshops</span>
-          </div>
           <h1 className="font-headline-xl text-headline-xl-mobile tracking-tight text-primary md:text-headline-xl">
             Available seminars
           </h1>
-          <p className="font-body-base text-body-base text-text-secondary">
-            Browse and register for upcoming CCS Student Council technical seminars and workshops.
-          </p>
         </div>
 
         {seminars.state.status === 'loading' ? (
@@ -162,13 +152,6 @@ export default function AvailableSeminarsPage() {
               <dt className="font-caption text-caption font-semibold text-text-subtle">Active sessions</dt>
               <dd className="font-headline-sm text-headline-sm text-on-surface">
                 {metrics.sessions} {metrics.sessions === 1 ? 'session' : 'sessions'}
-              </dd>
-            </div>
-            <div aria-hidden="true" className="h-8 w-px bg-surface-container-high" />
-            <div className="flex flex-col">
-              <dt className="font-caption text-caption font-semibold text-text-subtle">Open seats</dt>
-              <dd className="font-headline-sm text-headline-sm text-status-available">
-                {metrics.openSeats} {metrics.openSeats === 1 ? 'seat' : 'seats'}
               </dd>
             </div>
           </dl>

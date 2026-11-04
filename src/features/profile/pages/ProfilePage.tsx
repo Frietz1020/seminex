@@ -21,13 +21,9 @@ export default function ProfilePage() {
     <PageContainer>
       <header className="flex flex-col justify-between gap-space-md md:flex-row md:items-end">
         <div className="flex flex-col gap-space-xs">
-          <p className="font-label-sm text-label-sm uppercase tracking-widest text-secondary">Student portal</p>
           <h1 className="font-headline-xl text-headline-xl-mobile tracking-tight text-primary md:text-headline-xl">
             Profile
           </h1>
-          <p className="font-body-base text-body-base text-text-secondary">
-            Manage your student record, academic activity, and account.
-          </p>
         </div>
       </header>
 

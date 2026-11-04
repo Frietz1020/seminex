@@ -3,13 +3,11 @@ import { Link } from 'react-router-dom';
 import { api } from '../../../api/client';
 import { PageContainer } from '../../../components/shell/PageContainer';
 import { actionPrimary, actionTonal } from '../../../components/ui/actionStyles';
-import { AcademicYearPill } from '../../../components/ui/AcademicYearPill';
 import { errorText } from '../../../components/ui/errorText';
 import { Icon } from '../../../components/ui/Icon';
 import { LoadingRegion, RetryButton, Skeleton, StateMessage } from '../../../components/ui/StateMessage';
 import { useNow } from '../../../hooks/useNow';
 import { useResource } from '../../../hooks/useResource';
-import { getAcademicPeriod } from '../../seminars/academicPeriod';
 import { HistoryMetrics } from '../components/HistoryMetrics';
 import { HistoryToolbar } from '../components/HistoryToolbar';
 import { PolicyBanner } from '../components/PolicyBanner';
@@ -19,7 +17,6 @@ import { buildHistoryRecords, summarizeHistory } from '../records';
 
 export default function HistoryPage() {
   const now = useNow();
-  const period = getAcademicPeriod(now);
   const history = useResource(() => api.listHistory(), 'history');
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<HistoryFilter>('all');
@@ -43,16 +40,9 @@ export default function HistoryPage() {
     <PageContainer>
       <header className="flex flex-col justify-between gap-space-lg lg:flex-row lg:items-end">
         <div className="flex max-w-2xl flex-col gap-space-xs">
-          <div className="flex flex-wrap items-center gap-space-sm">
-            <p className="font-label-sm text-label-sm uppercase tracking-widest text-secondary">Student portal</p>
-            <AcademicYearPill academicYear={period.academicYear} />
-          </div>
           <h1 className="font-headline-xl text-headline-xl-mobile tracking-tight text-primary md:text-headline-xl">
             History
           </h1>
-          <p className="font-body-base text-body-base text-text-secondary">
-            Browse past seminars, check your attendance and evaluation records, and get your certificates.
-          </p>
         </div>
         {hasRecords && <HistoryMetrics summary={summary} />}
       </header>
