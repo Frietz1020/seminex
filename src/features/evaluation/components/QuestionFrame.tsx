@@ -7,7 +7,7 @@ export const questionLegendId = (questionId: string) => `legend-${questionId}`;
 interface QuestionFrameProps {
   questionId: string;
   number: number;
-  prompt: string;
+  prompt: ReactNode;
   help?: string;
   required: boolean;
   error?: string;

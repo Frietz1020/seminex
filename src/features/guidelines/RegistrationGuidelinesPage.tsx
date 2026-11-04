@@ -88,9 +88,9 @@ export default function RegistrationGuidelinesPage() {
   }, []);
 
   return (
-    <PageContainer width="reading">
+    <PageContainer width="standard">
       <div className="flex flex-col gap-space-lg">
-        <BackLink to="/seminars">Available seminars</BackLink>
+        <BackLink to="/seminars">Back to available seminars</BackLink>
         <header className="flex flex-col gap-space-sm">
           <h1 className="font-headline-lg text-headline-lg text-on-surface">Registration guidelines</h1>
           <p className="font-body-base text-body-base text-text-secondary">
@@ -99,33 +99,34 @@ export default function RegistrationGuidelinesPage() {
         </header>
       </div>
 
-      <div className="flex flex-col gap-space-md">
-        {CARDS.map((card) => (
-          <section
-            key={card.id}
-            aria-labelledby={`guideline-${card.id}`}
-            className="rounded-xl bg-surface-card p-space-lg shadow-card"
-          >
-            <h2
-              id={`guideline-${card.id}`}
-              className="mb-space-sm flex items-center gap-2.5 font-title-md text-title-md text-primary-container"
+      <div className="grid items-start gap-space-xl lg:grid-cols-[minmax(0,1.35fr)_minmax(20rem,0.9fr)]">
+        <div className="flex flex-col gap-space-md">
+          {CARDS.map((card) => (
+            <section
+              key={card.id}
+              aria-labelledby={`guideline-${card.id}`}
+              className="rounded-xl bg-surface-card p-space-lg shadow-card"
             >
-              <Icon name={card.icon} size={22} />
-              <span>{card.title}</span>
-            </h2>
-            <p className="font-body-base text-body-base leading-relaxed text-on-surface">{card.body}</p>
-          </section>
-        ))}
+              <h2
+                id={`guideline-${card.id}`}
+                className="mb-space-sm flex items-center gap-2.5 font-title-md text-title-md text-primary-container"
+              >
+                <Icon name={card.icon} size={22} />
+                <span>{card.title}</span>
+              </h2>
+              <p className="font-body-base text-body-base leading-relaxed text-on-surface">{card.body}</p>
+            </section>
+          ))}
+        </div>
+
+        <section aria-labelledby="guidelines-questions" className="flex flex-col gap-space-md">
+          <h2 id="guidelines-questions" className="font-headline-sm text-headline-sm text-on-surface">
+            Common questions
+          </h2>
+          <Accordion name="guidelines-faq" items={QUESTIONS} initiallyOpenId="evaluation" />
+        </section>
       </div>
 
-      <section aria-labelledby="guidelines-questions" className="flex flex-col gap-space-md">
-        <h2 id="guidelines-questions" className="font-headline-sm text-headline-sm text-on-surface">
-          Common questions
-        </h2>
-        <Accordion name="guidelines-faq" items={QUESTIONS} initiallyOpenId="evaluation" />
-      </section>
-
-      <BackLink to="/seminars">Back to available seminars</BackLink>
     </PageContainer>
   );
 }

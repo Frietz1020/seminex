@@ -145,6 +145,7 @@ export type OrgSeminar = Seminar & OrgSeminarFields;
 
 /** The details step of the create and edit wizard. Every field is optional while a draft is open. */
 export interface SeminarDetailsDraft {
+  seminarType?: 'seminar' | 'webinar';
   title?: string;
   description?: string;
   speakerName?: string;
@@ -274,8 +275,15 @@ export interface CertificateTemplate {
   /** Address of the background image. The mock uses a data URL. */
   backgroundUrl: string;
   nameBox: NameBox;
+  /** Custom pixel dimensions for the certificate canvas. */
+  canvasWidth?: number;
+  canvasHeight?: number;
   /** Optional organization e-signature image and placement on the certificate canvas. */
   signatureBox?: Pick<NameBox, 'x' | 'y' | 'width' | 'height'> & { imageUrl: string };
+  /** Multiple independently positioned signature images. */
+  signatureBoxes?: Array<Pick<NameBox, 'x' | 'y' | 'width' | 'height'> & { id: string; imageUrl: string; imageName: string }>;
+  /** Optional, movable certificate QR code placement. */
+  qrCodeBox?: Pick<NameBox, 'x' | 'y' | 'width' | 'height'>;
   updatedAt: string;
 }
 

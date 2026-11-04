@@ -98,6 +98,7 @@ export interface Speaker {
 
 export interface Seminar {
   id: string;
+  seminarType?: 'seminar' | 'webinar';
   reference: string;
   title: string;
   /** Short text for cards. */
