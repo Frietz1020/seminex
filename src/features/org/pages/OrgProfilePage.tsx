@@ -17,15 +17,16 @@ function Detail({ label, children }: { label: string; children: ReactNode }) {
 
 function IdentityDetails({ identity }: { identity: OrgIdentity }) {
   const identityLabel = identity.role === 'adviser' ? 'Faculty adviser' : 'Organization officer';
-  return <div className="flex flex-col gap-space-lg">
-    <section className="relative flex flex-col items-center gap-space-md overflow-hidden rounded-xl border border-outline-variant/45 bg-surface-card p-space-lg pt-space-xl text-center shadow-card sm:p-space-xl">
-      <div aria-hidden="true" className="absolute inset-x-0 top-0 h-2 bg-primary" />
+  return <section className="flex flex-col items-center gap-space-md overflow-hidden rounded-xl border border-outline-variant/45 bg-surface-card p-space-lg text-center shadow-card sm:p-space-xl">
       <Avatar src={identity.avatarUrl} firstName={identity.firstName} lastName={identity.lastName} size="xl" />
       <div><h2 className="font-headline-lg text-headline-lg text-on-surface">{identity.firstName} {identity.lastName}</h2><p className="mt-1 font-body-sm text-body-sm text-text-secondary">{identityLabel} · {identity.organization.department}</p></div>
       <div className="inline-flex max-w-full items-center gap-2 rounded-lg bg-surface-container-low px-space-md py-space-sm font-body-sm-medium text-body-sm-medium text-on-surface"><Icon name="badge" size={18} /><span className="break-all">{identity.studentId ?? identity.email}</span></div>
       <span className="rounded-lg bg-surface-container-low px-space-md py-space-sm font-body-sm text-body-sm text-text-secondary">{identity.position} · {identity.organization.name}</span>
-    </section>
+  </section>;
+}
 
+function InstitutionalDetails({ identity }: { identity: OrgIdentity }) {
+  return (
     <section className="flex flex-col gap-space-md rounded-xl border border-outline-variant/45 bg-surface-card p-space-lg shadow-card" aria-labelledby="records-heading">
       <div className="flex items-center gap-space-sm"><Icon name="verified_user" size={20} className="text-primary" /><div><h2 id="records-heading" className="font-title-lg text-title-lg text-on-surface">Institutional identity</h2><p className="mt-0.5 font-caption text-caption text-text-secondary">Read-only details from approved organization access.</p></div></div>
       <dl className="grid gap-space-lg border-t border-outline-variant/50 pt-space-md sm:grid-cols-2">
@@ -36,7 +37,7 @@ function IdentityDetails({ identity }: { identity: OrgIdentity }) {
       </dl>
       <p className="flex items-start gap-space-sm rounded-xl bg-surface-container-low p-space-md font-caption text-caption text-text-secondary"><Icon name="info" size={16} className="mt-0.5 shrink-0 text-primary" />Institutional and academic attributes are provisioned through the campus identity system and can’t be edited here.</p>
     </section>
-  </div>;
+  );
 }
 
 function AppointmentCard({ identity }: { identity: OrgIdentity }) {
@@ -93,16 +94,17 @@ export default function OrgProfilePage() {
   const identity = state.data;
 
   return <PageContainer>
-    <header className="flex flex-col gap-space-xs">
-      <p className="font-label-sm text-label-sm uppercase tracking-widest text-secondary">Workspace / Organization</p>
-      <h1 className="font-headline-xl text-headline-xl-mobile tracking-tight text-primary md:text-headline-xl">Organization Profile &amp; Credentials</h1>
-      <p className="max-w-3xl font-body-base text-body-base text-text-secondary">Manage your institutional profile, collegiate officer credentials, and active workspace preferences.</p>
+    <header>
+      <h1 className="font-headline-xl text-headline-xl-mobile tracking-tight text-primary md:text-headline-xl">Profile</h1>
     </header>
 
-    <div className="grid items-start gap-space-lg lg:grid-cols-[minmax(0,1.08fr)_minmax(0,0.92fr)]">
-      <IdentityDetails identity={identity} />
-      <div className="flex flex-col gap-space-lg">
+    <div className="grid grid-cols-1 items-start gap-space-lg lg:grid-cols-12">
+      <div className="flex flex-col gap-space-lg lg:col-span-4">
+        <IdentityDetails identity={identity} />
         <AppointmentCard identity={identity} />
+      </div>
+      <div className="flex flex-col gap-space-lg lg:col-span-8">
+        <InstitutionalDetails identity={identity} />
         <section className="flex flex-col gap-space-md rounded-xl border border-outline-variant/45 bg-surface-card p-space-lg shadow-card" aria-labelledby="security-heading">
           <div className="flex items-center gap-space-sm"><Icon name="verified_user" size={20} className="text-primary" /><div><h2 id="security-heading" className="font-title-lg text-title-lg text-on-surface">Account &amp; security</h2><p className="mt-0.5 font-caption text-caption text-text-secondary">Switch workspace or end this session.</p></div></div>
           <div className="flex flex-col gap-space-sm rounded-xl bg-surface-container-low p-space-md"><p className="font-body-sm-medium text-body-sm-medium text-on-surface">Active workspace</p><p className="font-caption text-caption text-text-secondary">Your credentials stay the same when you switch portals.</p><WorkspaceSwitcher identity={identity} variant="menu" /></div>

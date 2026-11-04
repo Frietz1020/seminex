@@ -7,6 +7,8 @@ interface AuthLayoutProps {
   footer?: ReactNode;
   width?: 'narrow' | 'wide';
   fixed?: boolean;
+  brandMessage?: ReactNode;
+  brandSupportingText?: ReactNode;
 }
 
 const WIDTHS = {
@@ -14,10 +16,10 @@ const WIDTHS = {
   wide: 'max-w-[420px] md:max-w-[480px]',
 };
 
-export function AuthLayout({ children, footer, width = 'narrow', fixed = false }: AuthLayoutProps) {
+export function AuthLayout({ children, footer, width = 'narrow', fixed = false, brandMessage, brandSupportingText }: AuthLayoutProps) {
   return (
     <div className={cx('flex w-full flex-col md:flex-row', fixed ? 'h-dvh overflow-hidden' : 'min-h-dvh')}>
-      <BrandPanel />
+      <BrandPanel message={brandMessage} supportingText={brandSupportingText} />
       <main className={cx(
         'flex flex-1 justify-center bg-cream-50 pl-[max(1.5rem,env(safe-area-inset-left))] pr-[max(1.5rem,env(safe-area-inset-right))] md:items-center lg:pl-12 lg:pr-12',
         fixed

@@ -5,7 +5,6 @@ import { PageContainer } from '../../../components/shell/PageContainer';
 import { orgActionPrimary as actionPrimary, orgActionTonal as actionTonal } from '../orgActionStyles';
 import { Icon } from '../../../components/ui/Icon';
 import { ProgressBar } from '../../../components/ui/ProgressBar';
-import { AcademicYearPill } from '../../../components/ui/AcademicYearPill';
 import { LoadingRegion, RetryButton, Skeleton, StateMessage } from '../../../components/ui/StateMessage';
 import { useNow } from '../../../hooks/useNow';
 import { useOnlineStatus } from '../../../hooks/useOnlineStatus';
@@ -82,9 +81,6 @@ export default function OrgHomePage() {
   const ongoing = active.filter((item) => getOrgLifecycle(item, now) === 'ongoing');
   const recentlyFinished = seminars.filter((item) => isOrgRecentlyFinished(item, now)).sort((a, b) => b.endsAt.localeCompare(a.endsAt));
   const registered = active.reduce((total, item) => total + item.registeredCount, 0);
-  const organizationName = identity.status === 'success' ? identity.data.organization.name : 'Organization workspace';
-  const academicYearStart = new Date(now).getMonth() >= 7 ? new Date(now).getFullYear() : new Date(now).getFullYear() - 1;
-  const academicYear = `${academicYearStart}–${academicYearStart + 1}`;
   const metrics = [
     { label: 'Active seminars', value: active.length, detail: `${ongoing.length} ongoing now`, icon: 'event_note', to: '/org/my-seminars' },
     { label: 'Registered', value: registered, detail: 'Across active seminars', icon: 'group', to: '/org/my-seminars' },
@@ -119,9 +115,7 @@ export default function OrgHomePage() {
       </section>}
       <header className="flex flex-col justify-between gap-space-lg md:flex-row md:items-end">
         <div>
-          <div className="flex flex-wrap items-center gap-space-sm"><AcademicYearPill academicYear={academicYear} /><span className="font-caption text-caption text-text-secondary">{organizationName}</span></div>
-          <h1 className="mt-space-xs font-headline-xl text-headline-xl-mobile tracking-tight text-on-surface md:text-headline-xl">Welcome back{identity.status === 'success' ? `, ${identity.data.firstName}` : ''}</h1>
-          <p className="mt-space-xs font-body-base text-body-base text-text-secondary">{organizationName} · Academic Year {academicYear}</p>
+          <h1 className="font-headline-xl text-headline-xl-mobile tracking-tight text-on-surface md:text-headline-xl">Welcome back{identity.status === 'success' ? `, ${identity.data.firstName}` : ''}</h1>
         </div>
         <button type="button" onClick={() => void createSeminar()} disabled={creating} className={actionPrimary}><Icon name="add" size={20} />{creating ? 'Creating draft…' : 'Create seminar'}</button>
       </header>

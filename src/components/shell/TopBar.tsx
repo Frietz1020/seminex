@@ -1,17 +1,19 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import type { OrgIdentity } from '../../api/client';
 import { useProfile } from '../../session/ProfileProvider';
 import { Avatar } from '../ui/Avatar';
 import { Dialog } from '../ui/Dialog';
 import { Icon } from '../ui/Icon';
 import { formatStudentLine } from '../../features/seminars/format';
 import { BrandMark } from './BrandMark';
+import { WorkspaceSwitcher } from './org/WorkspaceSwitcher';
 
 /**
  * Desktop: bell, name with student number and program, avatar (the logo lives only in the
  * sidebar). Below lg, where there is no sidebar: logo, bell, avatar, and the name block from sm up.
  */
-export function TopBar() {
+export function TopBar({ workspaceIdentity }: { workspaceIdentity: OrgIdentity | null }) {
   const { state } = useProfile();
   const [notificationsOpen, setNotificationsOpen] = useState(false);
 
@@ -26,6 +28,11 @@ export function TopBar() {
         <Link to="/home" aria-label="Seminex home" className="flex min-h-11 items-center rounded-lg lg:hidden">
           <BrandMark />
         </Link>
+        {workspaceIdentity?.role === 'org_member' && (
+          <div className="min-w-0 lg:hidden">
+            <WorkspaceSwitcher identity={workspaceIdentity} variant="sheet" />
+          </div>
+        )}
       </div>
 
       <div className="flex items-center gap-space-md lg:gap-space-lg">

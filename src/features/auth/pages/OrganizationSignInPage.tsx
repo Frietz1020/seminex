@@ -5,6 +5,7 @@ import { api, type ApiErrorCode, type OrgAccess } from '../../../api/client';
 import { AuthLayout } from '../../../components/auth/AuthLayout';
 import { Alert } from '../../../components/ui/Alert';
 import { Button } from '../../../components/ui/Button';
+import { Dialog } from '../../../components/ui/Dialog';
 import { PasswordField } from '../../../components/ui/PasswordField';
 import { TextField } from '../../../components/ui/TextField';
 import { STUDENT_EMAIL_DOMAIN } from '../../../config';
@@ -50,6 +51,7 @@ export default function OrganizationSignInPage() {
   const [failure, setFailure] = useState<ApiErrorCode | null>(null);
   const [noAccess, setNoAccess] = useState<NoOrgAccess | null>(null);
   const [pending, setPending] = useState(false);
+  const [showSignupPrompt, setShowSignupPrompt] = useState(false);
   const offlineRef = useRef<HTMLDivElement>(null);
   const noAccessRef = useRef<HTMLDivElement>(null);
 
@@ -100,7 +102,11 @@ export default function OrganizationSignInPage() {
   }
 
   return (
-    <AuthLayout width="wide">
+    <AuthLayout
+      width="wide"
+      brandMessage="Create and streamline your organization's seminars with Seminex."
+      brandSupportingText="Coordinate events, manage registrations, and support student participation in one place."
+    >
       <div className="mb-5 flex items-center justify-between">
         <Link to="/" className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-charcoal-700 hover:text-maroon">
           <ArrowLeft aria-hidden="true" className="h-4 w-4" />
@@ -109,7 +115,7 @@ export default function OrganizationSignInPage() {
       </div>
       <h1 className="font-heading text-2xl font-bold tracking-tight text-charcoal-900 md:text-3xl">Organization sign in</h1>
       <p className="mt-2 text-sm leading-relaxed text-charcoal-700">
-        Officers sign in with their Student ID. Advisers sign in with their faculty email.
+        Create and streamline your organization's seminars, coordinate events, and support student participation with Seminex.
       </p>
 
       <aside className="mt-5 rounded-xl border border-border-subtle bg-surface-light p-4" aria-label="Sample organization account">
@@ -159,12 +165,13 @@ export default function OrganizationSignInPage() {
       <form noValidate onSubmit={submit} aria-busy={pending} className="space-y-5 rounded-2xl bg-white p-5 shadow-control md:p-7">
         <TextField
           id="organization-identifier"
-          label="Student ID or faculty email"
+          label="Student ID"
           required
           type="text"
           autoComplete="username"
           autoCapitalize="none"
           spellCheck={false}
+          placeholder="202110482"
           value={values.identifier}
           error={errors.identifier}
           readOnly={pending}
@@ -195,10 +202,22 @@ export default function OrganizationSignInPage() {
       </form>
       <p className="mt-5 text-center text-sm text-charcoal-700">
         Need officer access?{' '}
-        <Link to="/organization/sign-up" className="ml-1 font-semibold text-maroon hover:underline">
+        <button type="button" onClick={() => setShowSignupPrompt(true)} className="ml-1 font-semibold text-maroon hover:underline">
           Create an organization account
-        </Link>
+        </button>
       </p>
+      <Dialog open={showSignupPrompt} onClose={() => setShowSignupPrompt(false)} title="Do you already have an account in the applicant domain?">
+        <p className="mt-space-sm font-body-sm text-body-sm text-text-secondary">
+          Are you already signed in on the applicant side? If so, we can use your student profile to set up organization access.
+        </p>
+        <div className="mt-space-lg flex flex-col-reverse gap-space-sm sm:flex-row sm:justify-end">
+          <Button variant="secondary" onClick={() => { setShowSignupPrompt(false); navigate('/organization/sign-up'); }}>No, create an account</Button>
+          <Button onClick={() => {
+            setShowSignupPrompt(false);
+            navigate('/organization/sign-up?applicant=1');
+          }}>Yes, continue</Button>
+        </div>
+      </Dialog>
     </AuthLayout>
   );
 }
