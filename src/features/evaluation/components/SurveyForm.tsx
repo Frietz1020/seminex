@@ -5,6 +5,7 @@ import { ParagraphQuestion } from './ParagraphQuestion';
 import { QuestionFrame } from './QuestionFrame';
 import { RatingQuestion } from './RatingQuestion';
 import { ScaleQuestion } from './ScaleQuestion';
+import { FormattedText } from './FormattedText';
 
 interface SurveyFormProps {
   survey: Survey;
@@ -50,7 +51,7 @@ export function SurveyForm({ survey, speaker, answers, errors, onAnswer }: Surve
                 key={question.id}
                 questionId={question.id}
                 number={numbers.get(question.id) ?? 0}
-                prompt={question.prompt}
+                prompt={<FormattedText text={question.prompt} />}
                 help={question.help}
                 required={question.required}
                 error={error}

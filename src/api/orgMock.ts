@@ -513,6 +513,7 @@ export function createOrgEditDraft(seminarId: string): Promise<ApiResult<Seminar
       updatedAt: now,
       editingSeminarId: seminar.id,
       details: {
+        seminarType: seminar.seminarType ?? 'seminar',
         title: seminar.title,
         description: seminar.description,
         speakerName: seminar.speaker.name,
@@ -550,19 +551,21 @@ export function publishOrgDraft(draftId: string): Promise<ApiResult<OrgSeminar>>
     const draft = data.drafts.find((entry) => entry.id === draftId && session.organizationIds.includes(entry.organizationId));
     if (!draft) return fail('not_found');
     const details = draft.details;
-    if (!details.title?.trim() || !details.description?.trim() || !details.speakerName?.trim() || !details.speakerRole?.trim() || !details.venue?.trim() || !details.department?.trim() || !details.startsAt || !details.endsAt || !details.capacity || !draft.certificate || !draft.survey) {
+    if (!details.title?.trim() || !details.description?.trim() || !details.speakerName?.trim() || !details.venue?.trim() || !details.startsAt || !details.endsAt || !details.capacity || !draft.certificate || !draft.survey) {
       return fail('not_available');
     }
     const year = new Date().getFullYear();
     const existing = draft.editingSeminarId ? data.seminars.find((item) => item.id === draft.editingSeminarId) : undefined;
+    const organization = data.organizations.find((item) => item.id === draft.organizationId);
     const seminar: OrgSeminar = {
       id: existing?.id ?? `org-sem-${crypto.randomUUID()}`,
       reference: existing?.reference ?? `SEM-${year}-${String(data.seminars.length + 200).padStart(4, '0')}`,
       title: details.title.trim(),
+      seminarType: details.seminarType ?? 'seminar',
       description: details.description.trim(),
-      speaker: { name: details.speakerName.trim(), role: details.speakerRole.trim() },
+      speaker: { name: details.speakerName.trim(), role: details.speakerRole?.trim() || 'Speaker' },
       venue: details.venue.trim(),
-      department: details.department.trim(),
+      department: details.department?.trim() || organization?.department || 'General',
       topics: [],
       startsAt: details.startsAt,
       endsAt: details.endsAt,
