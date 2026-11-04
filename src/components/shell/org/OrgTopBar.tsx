@@ -1,15 +1,19 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { OrgIdentity } from '../../../api/client';
 import type { ResourceState } from '../../../hooks/useResource';
 import { Avatar } from '../../ui/Avatar';
+import { Dialog } from '../../ui/Dialog';
+import { Icon } from '../../ui/Icon';
 import { BrandMark } from '../BrandMark';
 import { WorkspaceSwitcher } from './WorkspaceSwitcher';
 
 /**
- * Desktop: name with Student ID and position, then avatar. Below lg there is no sidebar, so
- * the logo and the workspace button sit on the left. There is no notification bell: notifications are on hold.
+ * Desktop: notification bell, name with Student ID and position, then avatar. Below lg there is no sidebar,
+ * so the logo and workspace button sit on the left.
  */
 export function OrgTopBar({ state }: { state: ResourceState<OrgIdentity> }) {
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const identity = state.status === 'success' ? state.data : null;
 
   const detail = identity
@@ -28,6 +32,14 @@ export function OrgTopBar({ state }: { state: ResourceState<OrgIdentity> }) {
       </div>
 
       <div className="flex shrink-0 items-center gap-space-sm" aria-busy={state.status === 'loading'}>
+        <button
+          type="button"
+          onClick={() => setNotificationsOpen(true)}
+          aria-label="Notifications"
+          className="relative flex h-11 w-11 items-center justify-center rounded-lg text-on-surface-variant transition-colors hover:bg-surface-container-high hover:text-on-surface"
+        >
+          <Icon name="notifications" size={22} />
+        </button>
         <div className="hidden flex-col text-right sm:flex">
           {identity ? (
             <>
@@ -46,6 +58,15 @@ export function OrgTopBar({ state }: { state: ResourceState<OrgIdentity> }) {
         {identity && <span className="sr-only sm:hidden">{`${identity.firstName} ${identity.lastName}`}</span>}
         <Avatar src={identity?.avatarUrl} firstName={identity?.firstName ?? ''} lastName={identity?.lastName ?? ''} size="sm" />
       </div>
+
+      <Dialog open={notificationsOpen} onClose={() => setNotificationsOpen(false)} title="Notifications">
+        <div className="mt-space-md flex flex-col items-center gap-space-sm rounded-xl bg-surface-container-low px-space-lg py-space-xl text-center">
+          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-surface-card text-primary shadow-card">
+            <Icon name="notifications" size={24} />
+          </span>
+          <p className="font-body-sm text-body-sm text-text-secondary">Notifications are not available yet.</p>
+        </div>
+      </Dialog>
     </header>
   );
 }

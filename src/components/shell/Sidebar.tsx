@@ -1,16 +1,17 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { api } from '../../api/client';
+import { api, type OrgIdentity } from '../../api/client';
 import { actionPrimary, actionTonal } from '../ui/actionStyles';
 import { Icon } from '../ui/Icon';
 import { cx } from '../ui/cx';
 import { Dialog } from '../ui/Dialog';
 import { Spinner } from '../ui/Spinner';
+import { WorkspaceSwitcher } from './org/WorkspaceSwitcher';
 import { BrandMark } from './BrandMark';
 import { isNavItemActive, NAV_ITEMS } from './navItems';
 
 /** Desktop sidebar (lg and up). */
-export function Sidebar() {
+export function Sidebar({ workspaceIdentity }: { workspaceIdentity: OrgIdentity | null }) {
   const { pathname } = useLocation();
   const [confirmingSignOut, setConfirmingSignOut] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
@@ -52,6 +53,12 @@ export function Sidebar() {
           );
         })}
       </nav>
+
+      {workspaceIdentity?.role === 'org_member' && (
+        <div className="px-space-md">
+          <WorkspaceSwitcher identity={workspaceIdentity} variant="menu" />
+        </div>
+      )}
 
       <div className="mx-space-md mt-space-md border-t border-outline-variant/50 pt-space-md">
         <button

@@ -1,4 +1,7 @@
 import { Outlet } from 'react-router-dom';
+import { api, type OrgIdentity } from '../../api/client';
+import { useResource } from '../../hooks/useResource';
+import { useSession } from '../../session/useSession';
 import { ProfileProvider } from '../../session/ProfileProvider';
 import { ToastProvider } from '../ui/Toast';
 import { BottomNav } from './BottomNav';
@@ -7,6 +10,15 @@ import { TopBar } from './TopBar';
 
 /** Signed-in layout: sidebar and top bar on desktop, condensed top bar and bottom nav below lg. */
 export function AppShell() {
+  const session = useSession();
+  const organization = useResource<OrgIdentity | null>(
+    () => session?.role === 'org_member'
+      ? api.getOrgIdentity()
+      : Promise.resolve({ ok: true as const, data: null }),
+    session?.studentId ?? 'no-session',
+  );
+  const workspaceIdentity = organization.state.status === 'success' ? organization.state.data : null;
+
   return (
     <ProfileProvider>
       <ToastProvider>
@@ -17,8 +29,8 @@ export function AppShell() {
           >
             Skip to main content
           </a>
-          <Sidebar />
-          <TopBar />
+          <Sidebar workspaceIdentity={workspaceIdentity} />
+          <TopBar workspaceIdentity={workspaceIdentity} />
           <main
             id="main"
             tabIndex={-1}
