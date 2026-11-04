@@ -63,18 +63,25 @@ export function MySeminarCard({ item, group, now, onCancel }: MySeminarCardProps
   return (
     <article
       aria-labelledby={titleId}
-      className="flex flex-col gap-space-lg rounded-xl border border-border-subtle bg-surface-card p-space-lg shadow-card transition-shadow hover:shadow-card-hover md:flex-row"
+      className="relative flex flex-col gap-space-lg rounded-xl border border-border-subtle bg-surface-card p-space-lg shadow-card transition-shadow hover:shadow-card-hover md:flex-row"
     >
-      <Cover seminar={seminar} />
+      <Link
+        to={`/my-seminars/${seminar.id}`}
+        aria-label={`Open your seminar: ${seminar.title}`}
+        className="absolute inset-0 z-0 rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+      />
+      <div className="pointer-events-none relative z-10">
+        <Cover seminar={seminar} />
+      </div>
 
-      <div className="flex min-w-0 flex-1 flex-col gap-space-md">
+      <div className="pointer-events-none relative z-10 flex min-w-0 flex-1 flex-col gap-space-md">
         <div className="flex items-start justify-between gap-space-sm">
           <div className="flex flex-wrap items-center gap-space-sm">
             <StatusBadge status={phase} shape="pill" />
             <StatusBadge status="registered" shape="pill" />
           </div>
           {group === 'upcoming' && (
-            <div className="-mr-2 -mt-2">
+            <div className="pointer-events-auto -mr-2 -mt-2">
               <Menu
                 label={`More options for ${seminar.title}`}
                 items={[{ id: 'cancel', label: 'Cancel registration', icon: 'event_busy', onSelect: () => onCancel(seminar) }]}
@@ -84,9 +91,7 @@ export function MySeminarCard({ item, group, now, onCancel }: MySeminarCardProps
         </div>
 
         <h3 id={titleId} className="font-headline-sm text-headline-sm text-on-surface">
-          <Link to={`/my-seminars/${seminar.id}`} className="hover:text-primary hover:underline">
-            {seminar.title}
-          </Link>
+          {seminar.title}
         </h3>
 
         <dl className="grid grid-cols-1 gap-space-sm font-body-sm text-body-sm text-text-secondary sm:grid-cols-2">
@@ -128,12 +133,12 @@ export function MySeminarCard({ item, group, now, onCancel }: MySeminarCardProps
 
         <div className="mt-auto flex justify-end border-t border-border-subtle pt-space-md">
           {group === 'evaluation' ? (
-            <Link to={`/my-seminars/${seminar.id}/evaluation`} className={cx(actionPrimary, 'w-full sm:w-auto')}>
+            <Link to={`/my-seminars/${seminar.id}/evaluation`} className={cx(actionPrimary, 'pointer-events-auto w-full sm:w-auto')}>
               <Icon name="rate_review" size={18} />
               <span>Answer evaluation</span>
             </Link>
           ) : (
-            <Link to={`/my-seminars/${seminar.id}?tab=ticket`} className={cx(actionPrimary, 'w-full sm:w-auto')}>
+            <Link to={`/my-seminars/${seminar.id}?tab=ticket`} className={cx(actionPrimary, 'pointer-events-auto w-full sm:w-auto')}>
               <Icon name="qr_code_2" size={18} />
               <span>View QR code</span>
             </Link>

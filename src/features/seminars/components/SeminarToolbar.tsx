@@ -64,8 +64,13 @@ export function SeminarToolbar({
             className="h-11 w-full cursor-pointer appearance-none rounded-lg border border-charcoal-300 bg-surface-light pl-9 pr-9 font-body-sm-medium text-body-sm-medium text-on-surface outline-none focus:border-primary-container focus:ring-2 focus:ring-primary-container/30"
           >
             <option value="nearest">Sort by: Date (nearest first)</option>
+            <option value="latest">Sort by: Date (latest first)</option>
             <option value="title">Sort by: Title (A to Z)</option>
+            <option value="title-desc">Sort by: Title (Z to A)</option>
             <option value="slots">Sort by: Available slots (most first)</option>
+            <option value="fewest-slots">Sort by: Available slots (fewest first)</option>
+            <option value="shortest">Sort by: Duration (shortest first)</option>
+            <option value="longest">Sort by: Duration (longest first)</option>
           </select>
           <Icon
             name="keyboard_arrow_down"

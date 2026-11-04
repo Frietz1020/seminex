@@ -1,5 +1,5 @@
 import type { Profile } from '../../../api/client';
-import { STUDENT_EMAIL_DOMAIN, STUDENT_ROLE_LABEL } from '../../../config';
+import { STUDENT_EMAIL_DOMAIN } from '../../../config';
 import { blockLabel, programLabel, yearLevelLabel } from '../../../data/academic';
 import { formatFullName } from '../../seminars/format';
 import { AvatarUpload } from './AvatarUpload';
@@ -15,7 +15,6 @@ export function IdentityCard({ profile, onAvatarUploaded }: IdentityCardProps) {
       aria-labelledby="identity-name"
       className="relative flex flex-col items-center overflow-hidden rounded-xl border border-border-subtle bg-surface-card p-space-lg pt-space-xl text-center shadow-card"
     >
-      <div aria-hidden="true" className="absolute inset-x-0 top-0 h-2 bg-primary" />
       <AvatarUpload profile={profile} onUploaded={onAvatarUploaded} />
 
       <h2 id="identity-name" className="mt-space-md font-headline-md text-headline-md leading-tight tracking-tight text-on-surface">
@@ -29,16 +28,6 @@ export function IdentityCard({ profile, onAvatarUploaded }: IdentityCardProps) {
         {yearLevelLabel(profile.yearLevel)} · {programLabel(profile.program)} · {blockLabel(profile.block)}
       </p>
 
-      <dl className="mt-space-md flex w-full flex-col gap-space-sm text-left">
-        <div className="flex items-start justify-between gap-space-md font-caption text-caption">
-          <dt className="text-text-secondary">College</dt>
-          <dd className="text-right font-medium text-on-surface">{profile.college}</dd>
-        </div>
-        <div className="flex items-start justify-between gap-space-md font-caption text-caption">
-          <dt className="text-text-secondary">Role</dt>
-          <dd className="text-right font-medium text-on-surface">{STUDENT_ROLE_LABEL}</dd>
-        </div>
-      </dl>
     </section>
   );
 }

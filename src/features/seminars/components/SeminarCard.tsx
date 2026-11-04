@@ -56,8 +56,13 @@ export function SeminarCard({
       : null;
 
   return (
-    <article className="group flex flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface-card shadow-card transition-shadow hover:shadow-card-hover">
-      <div className={cx('relative w-full overflow-hidden bg-maroon-container', detailed ? 'h-48' : 'h-44')}>
+    <article className="group relative flex flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface-card shadow-card transition-shadow hover:shadow-card-hover">
+      <Link
+        to={`/seminars/${seminar.id}`}
+        aria-label={`View seminar details: ${seminar.title}`}
+        className="absolute inset-0 z-0 rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+      />
+      <div className={cx('pointer-events-none relative z-10 w-full overflow-hidden bg-maroon-container', detailed ? 'h-48' : 'h-44')}>
         {seminar.imageUrl ? (
           <>
             <img
@@ -96,7 +101,7 @@ export function SeminarCard({
         </div>
       </div>
 
-      <div className={cx('flex flex-1 flex-col', detailed ? 'gap-space-md p-space-lg' : 'gap-space-sm p-space-md')}>
+      <div className={cx('pointer-events-none relative z-10 flex flex-1 flex-col', detailed ? 'gap-space-md p-space-lg' : 'gap-space-sm p-space-md')}>
         {detailed ? (
           <div className="flex flex-col gap-space-xs">
             <div className="flex flex-wrap items-center justify-between gap-2">
@@ -126,9 +131,7 @@ export function SeminarCard({
             </p>
 
             <Title className="mt-1 line-clamp-2 font-title-md text-title-md text-on-surface">
-              <Link to={`/seminars/${seminar.id}`} className="hover:text-primary hover:underline">
-                {seminar.title}
-              </Link>
+              {seminar.title}
             </Title>
 
             <p className="mt-1 flex flex-wrap items-center gap-x-2">
@@ -146,7 +149,7 @@ export function SeminarCard({
                 aria-expanded={descriptionExpanded}
                 aria-controls={descriptionId}
                 onClick={() => setDescriptionExpanded((expanded) => !expanded)}
-                className="mt-1 min-h-10 self-start rounded-md font-body-sm-medium text-body-sm-medium text-primary underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-primary"
+                className="pointer-events-auto mt-1 min-h-10 self-start rounded-md font-body-sm-medium text-body-sm-medium text-primary underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-primary"
               >
                 {descriptionExpanded ? 'See less' : 'See more'}
               </button>
@@ -155,9 +158,7 @@ export function SeminarCard({
         ) : (
           <>
             <Title className="line-clamp-2 font-title-md text-title-md text-on-surface">
-              <Link to={`/seminars/${seminar.id}`} className="hover:text-primary hover:underline">
-                {seminar.title}
-              </Link>
+              {seminar.title}
             </Title>
             <div className="flex flex-col gap-1.5 font-body-sm text-body-sm text-text-secondary">
               <p className="flex items-center gap-2">
@@ -195,7 +196,7 @@ export function SeminarCard({
           )}
 
           {registered ? (
-            <Link to={`/my-seminars/${seminar.id}?tab=ticket`} className={cx(actionTonal, 'w-full')}>
+            <Link to={`/my-seminars/${seminar.id}?tab=ticket`} className={cx(actionTonal, 'pointer-events-auto w-full')}>
               <Icon name="confirmation_number" size={18} className="text-primary" />
               <span>View ticket</span>
             </Link>
@@ -205,7 +206,7 @@ export function SeminarCard({
                 type="button"
                 disabled
                 aria-describedby={reasonId}
-                className={cx(actionDisabled, 'w-full')}
+                className={cx(actionDisabled, 'pointer-events-auto w-full')}
               >
                 <Icon name="lock" size={18} />
                 <span>{finished ? 'Registration closed' : 'Full (closed)'}</span>
@@ -219,7 +220,7 @@ export function SeminarCard({
               type="button"
               onClick={() => onRegister(seminar.id)}
               aria-disabled={registering || locked || undefined}
-              className={cx(actionPrimary, 'w-full active:scale-[0.99]', (registering || locked) && 'cursor-wait')}
+              className={cx(actionPrimary, 'pointer-events-auto w-full active:scale-[0.99]', (registering || locked) && 'cursor-wait')}
             >
               {registering ? (
                 <>
