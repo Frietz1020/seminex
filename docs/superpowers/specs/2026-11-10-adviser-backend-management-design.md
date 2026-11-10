@@ -9,6 +9,7 @@ Replace the five mock-only adviser organization-management operations with Supab
 - `public.organization_memberships` already assigns advisers to organizations through `role = 'adviser'` and `status = 'active'`.
 - `public.organization_access_requests` already stores pending and decided requests. Advisers can read requests for their assigned organizations through RLS.
 - The membership table currently has a composite key `(organization_id, user_id)`, but no stable membership ID or position and appointment fields required by the adviser directory contract.
+- `src/api/auth.ts:getOrgIdentity()` currently derives the member ID synthetically and reads position from the latest approved access request, so membership edits and reactivation would not be reflected consistently in the member identity.
 - The existing UI already calls all five operations through `src/api/client.ts`. In Supabase mode, those calls currently return `not_available`.
 - `src/api/orgMock.ts` defines the expected request and directory behavior and remains the local development adapter.
 
@@ -25,6 +26,8 @@ Position updates apply only to active `org_member` rows. Removal changes an acti
 ## API and data flow
 
 Keep the existing UI boundary and method signatures in `src/api/client.ts`. Add `src/api/adviser.ts` for the Supabase adapter and route the five operations to it when Supabase mode is active. Keep mock mode on `src/api/orgMock.ts`; align mock approval with the approved reactivation rule.
+
+Update `src/api/auth.ts:getOrgIdentity()` to use the active membership row as the source of the member's stable membership ID, current position, appointment time, and endorsing adviser. Do not derive these fields from the latest approved access request after a membership exists. Preserve the existing public identity shape and adviser identity fallback behavior. This keeps the member portal consistent after an adviser changes a position or reactivates a member.
 
 The five operations are:
 
@@ -63,6 +66,8 @@ Add pgTAP coverage for:
 - Adviser directory entries cannot be changed or removed through member operations.
 
 Add frontend adapter tests for Supabase RPC selection, DTO mapping, stable error mapping, and mock/Supabase mode routing. Run the focused Vitest tests, local Supabase database tests, lint, and build after implementation. Do not apply migrations to a hosted project as part of this work.
+
+Add an `auth.ts` regression test proving that `getOrgIdentity()` returns the active membership's stable ID and current position when the latest approved access request still contains an older position.
 
 ## Out of scope
 
