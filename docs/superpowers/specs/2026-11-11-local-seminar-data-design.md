@@ -24,10 +24,13 @@ New drafts may contain only the empty editable structures required by the existi
 ## Persistence and Failure Behavior
 
 - Store data under a versioned IndexedDB schema with explicit upgrade handling.
+- Provide a user-triggered, versioned JSON export/import for the local seminar store. The backup includes seminar-domain records and attached binary assets, but excludes account fixtures, passwords, sessions, keys, and signed URLs.
+- Validate the entire import before replacing data. Show that import replaces all local seminar data, require explicit confirmation, then apply the replacement atomically. Do not merge with Supabase or silently merge two local backups.
 - Hydrate the local seminar store before mock API reads or writes that depend on it.
 - Persist a successful mutation before returning success to the UI. Use transactions or rollback so a quota, blocked database, or write error cannot make an unsaved mutation look committed.
 - Validate records read from IndexedDB. Invalid or unsupported persisted data must fail safely with a recoverable error and must not be treated as a successful empty save.
 - Store binary user content as IndexedDB Blobs where applicable; do not persist temporary `blob:` object URLs.
+- Make export and import available only in mock mode to organization users with existing organization access. Explain that the downloaded file is the user's responsibility to protect.
 - Existing volatile mock seminar state is not durable and cannot be reliably migrated after a reload. The new store starts without synthetic records. Account and access fixtures remain available.
 
 ## Behavior Boundaries
@@ -36,6 +39,7 @@ New drafts may contain only the empty editable structures required by the existi
 - Supabase mode reads and writes remain unchanged and use Supabase as the canonical source.
 - Sample accounts remain usable in local/mock mode. They are not provisioned into production by this change.
 - Empty student and organization screens are expected until a local user creates and publishes seminar data.
+- Local export/import can move a backup between browser profiles; it does not sync records or write to Supabase.
 - No database migrations, hosted-project changes, or service-role browser access are part of this design.
 
 ## Security and Data Integrity
@@ -53,12 +57,14 @@ New drafts may contain only the empty editable structures required by the existi
 3. A local organization account can create, save, publish, and edit seminar content; the student portal sees the published seminar and its correct registration state.
 4. Local registrations, tickets, roster, scans, webinar proof, evaluation data, and certificate-template/issuance records remain consistent across both portals and after a full page reload.
 5. Failed IndexedDB writes do not return success or leave only a misleading in-memory change.
-6. With Supabase configuration enabled, API reads and writes continue to use Supabase only; IndexedDB local records do not appear in Supabase mode.
-7. The README and local environment/API documentation describe the local persistence boundary and data-clearing implications.
+6. An export contains the current local seminar data and assets but no account credentials, session tokens, Supabase keys, or signed URLs.
+7. Import rejects malformed, unsupported, or oversized data without changing existing records; a valid confirmed import replaces all local seminar data atomically.
+8. With Supabase configuration enabled, API reads and writes continue to use Supabase only; IndexedDB local records do not appear in Supabase mode, and backup controls are not offered.
+9. The README and local environment/API documentation describe the local persistence boundary, backup procedure, import replacement behavior, and data-clearing implications.
 
 ## Out of Scope
 
 - Syncing local data to hosted Supabase or importing local data into staging/production.
 - Removing sample identities or organization access fixtures.
 - Changing Supabase schema, migrations, RLS, hosted Auth, or production records.
-- Cloud backup or cross-device export/import.
+- Cloud backup or automatic cross-device synchronization.
