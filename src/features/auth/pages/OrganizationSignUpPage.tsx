@@ -7,6 +7,7 @@ import { InlineError } from '../../../components/ui/StateMessage';
 import { useResource } from '../../../hooks/useResource';
 import { Button } from '../../../components/ui/Button';
 import { BrandPanel } from '../../../components/auth/BrandPanel';
+import { OtpField } from '../../../components/auth/OtpField';
 import { BrandMark } from '../../../components/shell/BrandMark';
 import { PasswordField } from '../../../components/ui/PasswordField';
 import { PasswordRules } from '../../../components/auth/PasswordRules';
@@ -56,7 +57,8 @@ export default function OrganizationSignUpPage() {
     () => applicantSession ? api.getProfile() : Promise.resolve({ ok: true as const, data: null }),
     `org-signup-profile-${session?.studentId ?? 'none'}`,
   );
-  const period = getAcademicPeriod(useNow());
+  const now = useNow();
+  const period = now === null ? null : getAcademicPeriod(now);
   const { state: orgState, reload: reloadOrgs } = useResource(() => api.listOrganizations(), 'organizations');
   const organizations = orgState.status === 'success' ? orgState.data.map((item) => ({ value: item.id, label: item.name })) : [];
   const [step, setStep] = useState<Step>(applicantSession ? 3 : 1);
@@ -64,8 +66,6 @@ export default function OrganizationSignUpPage() {
   const [errors, setErrors] = useState<Errors>({});
   const [failure, setFailure] = useState<ApiErrorCode | null>(null);
   const [pending, setPending] = useState(false);
-  const [otpSent, setOtpSent] = useState(false);
-  const [otpValue, setOtpValue] = useState('');
   const [otpVerified, setOtpVerified] = useState(false);
   const [otpError, setOtpError] = useState('');
   const offlineRef = useRef<HTMLDivElement>(null);
@@ -92,9 +92,7 @@ export default function OrganizationSignUpPage() {
     const next = { ...values, [field]: value };
     setValues(next);
     if (field === 'studentId' && value !== values.studentId) {
-      setOtpSent(false);
       setOtpVerified(false);
-      setOtpValue('');
       setOtpError('');
     }
     if (errors[field]) setErrors((current) => ({ ...current, [field]: validate(field, next) }));
@@ -113,7 +111,7 @@ export default function OrganizationSignUpPage() {
     if (step === 1) {
       if (validateFields(['studentId', 'password', 'confirmPassword'])) return;
       if (!otpVerified) {
-        setOtpError(otpSent ? 'Verify the OTP to continue.' : 'Send and verify an OTP to continue.');
+        setOtpError('Send and verify an OTP to continue.');
         return;
       }
       setStep(2);
@@ -121,32 +119,6 @@ export default function OrganizationSignUpPage() {
     }
     const fields: Field[] = ['firstName', 'lastName', 'program', 'yearLevel', 'block'];
     if (!validateFields(fields)) setStep(3);
-  }
-
-  function sendOtp() {
-    const error = validateStudentId(values.studentId);
-    if (error) {
-      setErrors((current) => ({ ...current, studentId: error }));
-      return;
-    }
-    if (!online) {
-      offlineRef.current?.focus();
-      return;
-    }
-    setOtpSent(true);
-    setOtpVerified(false);
-    setOtpValue('');
-    setOtpError('');
-  }
-
-  function verifyOtp() {
-    if (otpValue.trim() === '246810') {
-      setOtpVerified(true);
-      setOtpError('');
-    } else {
-      setOtpVerified(false);
-      setOtpError('That OTP is not correct. Try the code shown here.');
-    }
   }
 
   async function submitRequest(event: FormEvent<HTMLFormElement>) {
@@ -187,7 +159,7 @@ export default function OrganizationSignUpPage() {
     setPending(false);
     if (result.ok) {
       try { window.sessionStorage.setItem('seminex.auth.returnTo', '/organization/sign-in'); } catch { /* Route state remains available in this tab. */ }
-      navigate('/verify-email', { replace: true, state: { email: result.data.email, returnTo: '/organization/sign-in' } });
+      navigate('/organization/sign-in', { replace: true });
     }
     else if (result.error.code === 'student_id_taken') setErrors((current) => ({ ...current, studentId: 'An account already exists for this Student ID. Sign in, or check the number and try again.' }));
     else setFailure(result.error.code);
@@ -239,14 +211,7 @@ export default function OrganizationSignUpPage() {
               <section className="space-y-4">
                 <div><p className="text-xs font-semibold uppercase tracking-wider text-burnt">Step 1 of 3</p><h3 className="font-heading text-lg font-bold text-charcoal-900">Credentials and OTP</h3></div>
                 <StudentIdField id="org-signup-student-id" value={values.studentId} error={errors.studentId} onChange={(value) => setField('studentId', value)} onBlur={() => setErrors((current) => ({ ...current, studentId: validate('studentId', values) }))} />
-                {!validateStudentId(values.studentId) && <Button variant="secondary" onClick={sendOtp}>{otpSent ? 'Resend OTP' : 'Send OTP'}</Button>}
-                {otpSent && (
-                  <div className="space-y-3 rounded-xl bg-cream-50 p-4">
-                    <p className="text-sm text-charcoal-700">Enter the OTP for your student account. Local demo code: <strong>246810</strong>.</p>
-                    <TextField id="org-signup-otp" label="One-time password" required inputMode="numeric" autoComplete="one-time-code" maxLength={6} placeholder="Enter 6-digit OTP" value={otpValue} onChange={setOtpValue} />
-                    <Button variant="secondary" onClick={verifyOtp} disabled={otpVerified}>{otpVerified ? 'OTP verified' : 'Verify OTP'}</Button>
-                  </div>
-                )}
+                <OtpField key={values.studentId} id="org-signup-otp" studentId={values.studentId} password={values.password} verified={otpVerified} onVerifiedChange={(verified) => { setOtpVerified(verified); if (verified) setOtpError(''); }} />
                 <div><PasswordField id="org-signup-password" label="Account password" required autoComplete="new-password" value={values.password} error={errors.password} onChange={(value) => setField('password', value)} onBlur={() => setErrors((current) => ({ ...current, password: validate('password', values) }))} /><PasswordRules password={values.password} /></div>
                 <div><PasswordField id="org-signup-confirm" label="Confirm password" required autoComplete="new-password" value={values.confirmPassword} error={errors.confirmPassword} onChange={(value) => setField('confirmPassword', value)} onBlur={() => setErrors((current) => ({ ...current, confirmPassword: validate('confirmPassword', values) }))} /></div>
               </section>
@@ -275,7 +240,7 @@ export default function OrganizationSignUpPage() {
               {orgState.status === 'error' && <InlineError onRetry={reloadOrgs}>Organizations could not be loaded.</InlineError>}
               <SelectField id="org-signup-organization" label="Student organization" required placeholder={orgState.status === 'loading' ? 'Loading organizations' : 'Select your organization'} disabled={orgState.status !== 'success'} options={organizations} value={values.organization} error={errors.organization} onChange={(value) => setField('organization', value)} />
               <SelectField id="org-signup-role" label="Constitutional role" required placeholder="Select your official role" options={ROLES} value={values.role} error={errors.role} onChange={(value) => setField('role', value)} />
-              <div><label className="mb-2 block text-sm font-semibold text-charcoal-900">Term / Academic Year</label><div className="rounded-control border border-charcoal-200 bg-cream-50 px-3.5 py-3 text-sm text-charcoal-700">Academic Year {period.academicYear}</div></div>
+              <div><label className="mb-2 block text-sm font-semibold text-charcoal-900">Term / Academic Year</label><div className="rounded-control border border-charcoal-200 bg-cream-50 px-3.5 py-3 text-sm text-charcoal-700">{period ? `Academic Year ${period.academicYear}` : 'Checking academic calendar…'}</div></div>
               <div className="rounded-xl border border-charcoal-300 bg-white p-4 text-sm leading-relaxed text-charcoal-900"><strong className="block">Adviser approval</strong>Your adviser reviews your request. Until it is approved, you can use the participant portal only.</div>
               <div className="rounded-xl bg-cream-100 p-4"><p className="text-xs font-semibold uppercase tracking-wider text-charcoal-500">Request summary</p><div className="mt-2 flex justify-between gap-3 text-sm"><span className="text-charcoal-600">Selected organization</span><strong className="text-right text-charcoal-900">{organizationLabel || 'Not selected'}</strong></div><div className="mt-2 flex justify-between gap-3 text-sm"><span className="text-charcoal-600">Appointed role</span><strong className="text-right text-maroon">{values.role || 'Not selected'}</strong></div></div>
               <Button type="submit" loading={pending} loadingLabel="Creating request...">{applicantSession ? 'Send organization access request' : 'Create account and send request'}</Button>

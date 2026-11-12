@@ -1,7 +1,6 @@
-// Org-side data contract used by the mock client. It is NOT confirmed against a backend.
-// Student-side types stay in ./types and are reused here, not changed.
+// Organization data types. Student-side types stay in ./types and are reused here.
 
-import type { Block, EvaluationAnswers, Program, Seminar, SurveyOption, SurveyQuestion, YearLevel } from './types';
+import type { Block, CursorPage, CursorPageRequest, EvaluationAnswers, Program, Seminar, SurveyOption, SurveyQuestion, YearLevel } from './types';
 
 // ---- Organizations, people, and access -------------------------------------------
 
@@ -139,6 +138,9 @@ export interface OrgSeminarFields {
   /** Set by "End now". The seminar counts as ended from this time instead of endsAt. */
   endedEarlyAt: string | null;
   cancellation: CancellationRecord | null;
+  confirmationOpensHoursBefore?: number;
+  confirmationClosesHoursBefore?: number;
+  joinUrl?: string;
 }
 
 export type OrgSeminar = Seminar & OrgSeminarFields;
@@ -157,6 +159,9 @@ export interface SeminarDetailsDraft {
   capacity?: number;
   requiredAttendancePercent?: number;
   coverImageUrl?: string;
+  confirmationOpensHoursBefore?: number;
+  confirmationClosesHoursBefore?: number;
+  joinUrl?: string;
 }
 
 export interface SeminarDraft {
@@ -208,11 +213,17 @@ export interface OrgRegistration {
   firstName: string;
   lastName: string;
   middleInitial: string;
-  program: Program;
-  yearLevel: YearLevel;
-  block: Block;
+  program: Program | null;
+  yearLevel: YearLevel | null;
+  block: Block | null;
   email: string;
+  avatarUrl?: string;
   registeredAt: string;
+  status?: 'registered' | 'confirmed' | 'released' | 'cancelled';
+  confirmedAt?: string | null;
+  attendanceAckAt?: string | null;
+  /** Local projection used to preserve a student's evaluation completion after reload. */
+  evaluationSubmittedAt?: string | null;
   /** Set when an officer removed the student. The row is kept for the record. */
   removal: RegistrationRemoval | null;
 }
@@ -220,7 +231,38 @@ export interface OrgRegistration {
 // ---- Attendance ledger -----------------------------------------------------------
 
 export type LedgerKind = 'time_in' | 'time_out' | 'correction';
-export type ScanMethod = 'qr' | 'manual';
+export type ScanMethod = 'qr' | 'manual' | 'webinar_proof' | 'correction';
+
+/** Values an org client may submit; the server chooses the attendance kind and timestamp. */
+export interface RecordOrgScanInput {
+  seminarId: string;
+  studentId: string;
+  method: 'manual';
+  idempotencyKey: string;
+  reason?: string;
+}
+
+export interface RecordOrgChallengeScanInput {
+  seminarId: string;
+  challenge: string;
+  idempotencyKey: string;
+}
+
+export interface ScannedStudentIdentity {
+  studentId: string;
+  firstName: string;
+  lastName: string;
+  middleInitial: string;
+  program: Program | null;
+  yearLevel: YearLevel | null;
+  block: Block | null;
+  avatarUrl?: string;
+}
+
+export interface RecordOrgScanResult {
+  entry: ScanLedgerEntry;
+  student: ScannedStudentIdentity;
+}
 
 /**
  * One line of the attendance ledger. The ledger is append-only: an entry is never edited or deleted.
@@ -242,10 +284,8 @@ export interface ScanLedgerEntry {
   correctsEntryId?: string;
   officerId: string;
   officerName: string;
-  /** When the device recorded the entry, ISO 8601. Differs from the server time for an offline scan. */
-  clientTimestamp: string;
-  /** False while the entry waits in the device queue. */
-  synced: boolean;
+  /** Optional client-reported submission time for audit context; never used as attendance time. */
+  clientTimestamp?: string;
 }
 
 // ---- Certificates ----------------------------------------------------------------
@@ -272,7 +312,7 @@ export interface NameBox {
 }
 
 export interface CertificateTemplate {
-  /** Address of the background image. The mock uses a data URL. */
+  /** Address of the background image. */
   backgroundUrl: string;
   nameBox: NameBox;
   /** Custom pixel dimensions for the certificate canvas. */
@@ -354,14 +394,12 @@ export interface AuthoredSurvey {
   sections: AuthoredSection[];
 }
 
-/** An officer sees responses without names. The label is stable within one seminar. */
+/** Organization response reads omit timing and identity clues; the opaque ID is used only for paging. */
 export interface SurveyResponse {
   id: string;
   seminarId: string;
   surveyId: string;
   surveyVersion: number;
-  respondentLabel: string;
-  submittedAt: string;
   answers: EvaluationAnswers;
 }
 
@@ -401,7 +439,9 @@ export interface SurveyAggregate {
 /** Read model used by the seminar details dashboard. */
 export interface OrgSeminarEvaluationData {
   survey: AuthoredSurvey | null;
-  responses: SurveyResponse[];
+  surveyVersions: AuthoredSurvey[];
+  aggregates: SurveyAggregate[];
+  responses: CursorPage<SurveyResponse>;
 }
 
 /** Read model used by the seminar certificate dashboard. */
@@ -411,7 +451,7 @@ export interface OrgSeminarCertificateData {
   overrideRequests: OverrideRequest[];
 }
 
-// ---- Listings and sync -----------------------------------------------------------
+// ---- Listings --------------------------------------------------------------------
 
 /** Everything the org lists show: published seminars and unpublished drafts of the officer's organization. */
 export interface OrgSeminarListing {
@@ -419,7 +459,14 @@ export interface OrgSeminarListing {
   drafts: SeminarDraft[];
 }
 
-export interface SyncScansResult {
-  /** Ids of the queued entries the server accepted. Entries it already had count as accepted. */
-  accepted: string[];
+/** Separate cursors keep published seminars and drafts independently pageable. */
+export interface OrgSeminarListingRequest {
+  seminars?: CursorPageRequest;
+  drafts?: CursorPageRequest;
+}
+
+/** Organization listing pages preserve the published and draft collections as separate read models. */
+export interface OrgSeminarListingPage {
+  seminars: CursorPage<OrgSeminar>;
+  drafts: CursorPage<SeminarDraft>;
 }

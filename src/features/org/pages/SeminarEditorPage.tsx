@@ -10,6 +10,7 @@ import { LoadingRegion, RetryButton, Skeleton, StateMessage } from '../../../com
 import { useResource } from '../../../hooks/useResource';
 import { getDraftReadiness } from '../readiness';
 import { sanitizeRichText } from '../../evaluation/richText';
+import { legacyCoverDataUrlToFile } from '../coverImage';
 
 const STEPS = ['Details', 'Certificate', 'Evaluation', 'Review & Publish'] as const;
 const inputClass = 'h-11 w-full rounded-lg border border-border-subtle bg-surface-light px-3.5 font-body-sm text-body-sm text-on-surface outline-none transition-colors placeholder:text-text-subtle focus:border-primary focus:bg-surface-card focus:ring-2 focus:ring-primary/20';
@@ -28,6 +29,22 @@ function fileAsDataUrl(file: File): Promise<string> {
     reader.onerror = () => reject(reader.error ?? new Error('Could not read file'));
     reader.readAsDataURL(file);
   });
+}
+
+function seminarCoverObjectPath(publicUrl: string | undefined, draftId: string): string | null {
+  if (!publicUrl) return null;
+  try {
+    const pathname = new URL(publicUrl).pathname;
+    const marker = '/storage/v1/object/public/seminar-covers/';
+    const markerIndex = pathname.indexOf(marker);
+    if (markerIndex < 0) return null;
+    const path = decodeURIComponent(pathname.slice(markerIndex + marker.length));
+    const segments = path.split('/');
+    if (segments.length !== 3 || segments[1] !== draftId) return null;
+    return path;
+  } catch {
+    return null;
+  }
 }
 
 function QuestionEditor({
@@ -89,19 +106,28 @@ function createQuestionType(question: AuthoredQuestion, type: QuestionKind): Aut
 export default function SeminarEditorPage() {
   const { draftId = '' } = useParams();
   const navigate = useNavigate();
-  const listing = useResource(() => api.listOrgSeminars(), `org-editor-${draftId}`);
-  const source = listing.state.status === 'success' ? listing.state.data.drafts.find((item) => item.id === draftId) : undefined;
+  const listing = useResource(() => api.listOrgSeminars({ seminars: { pageSize: 1 }, drafts: { pageSize: 999 } }), `org-editor-${draftId}`);
+  const source = listing.state.status === 'success' ? listing.state.data.drafts.items.find((item) => item.id === draftId) : undefined;
   const [draft, setDraft] = useState<SeminarDraft | null>(null);
   const [step, setStep] = useState(0);
   const [activeQuestionId, setActiveQuestionId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
+  const savedCoverUrl = useRef<string | undefined>(undefined);
 
-  useEffect(() => { if (source && !draft) setDraft(source); }, [source, draft]);
+  useEffect(() => {
+    if (source && !draft) {
+      savedCoverUrl.current = source.details.coverImageUrl;
+      setDraft(source);
+    }
+  }, [source, draft]);
   useEffect(() => { document.title = 'Create seminar - Seminex'; }, []);
 
-  const readiness = useMemo(() => draft ? getDraftReadiness(draft) : null, [draft]);
+  const activeCount = listing.state.status === 'success' && draft?.editingSeminarId
+    ? listing.state.data.seminars.items.find((item) => item.id === draft.editingSeminarId)?.registeredCount ?? 0
+    : 0;
+  const readiness = useMemo(() => draft ? getDraftReadiness(draft, activeCount) : null, [draft, activeCount]);
 
   function updateDetails(field: keyof SeminarDraft['details'], value: string | number | undefined) {
     setDraft((current) => current ? { ...current, details: { ...current.details, [field]: value } } : current);
@@ -244,10 +270,64 @@ export default function SeminarEditorPage() {
   async function saveDraft(): Promise<SeminarDraft | null> {
     if (!draft || saving) return null;
     setSaving(true); setFailure(null); setMessage(null);
-    const result = await api.saveOrgDraft(draft);
+    let draftToSave = draft;
+    let uploadedCover: { publicUrl: string; objectPath: string } | null = null;
+    if (draft.details.coverImageUrl?.startsWith('data:')) {
+      let file: File;
+      try {
+        file = legacyCoverDataUrlToFile(draft.details.coverImageUrl);
+      } catch {
+        setSaving(false);
+        setFailure('Choose a valid PNG, JPG, or WebP cover image no larger than 5 MiB.');
+        return null;
+      }
+      const upload = await api.uploadOrgSeminarCover(draft.id, file);
+      if (!upload.ok) {
+        setSaving(false);
+        setFailure('The cover could not be uploaded. Check your connection and try again.');
+        return null;
+      }
+      uploadedCover = upload.data;
+      draftToSave = { ...draft, details: { ...draft.details, coverImageUrl: uploadedCover.publicUrl } };
+    }
+
+    const result = await api.saveOrgDraft(draftToSave);
+    if (!result.ok) {
+      const saveStatusUnknown = result.error.code === 'network';
+      let cleanupFailed = false;
+      if (uploadedCover && !saveStatusUnknown) {
+        try {
+          const cleanup = await api.removeOrgSeminarCover(draft.id, uploadedCover.objectPath);
+          cleanupFailed = !cleanup.ok;
+        } catch {
+          cleanupFailed = true;
+        }
+      }
+      setSaving(false);
+      setFailure(saveStatusUnknown
+        ? 'We could not confirm whether the draft was saved. The new cover may already be linked and is public; reload the draft before retrying.'
+        : cleanupFailed
+          ? 'Your draft could not be saved. The new public cover could not be removed; try saving again or contact support.'
+          : 'Your draft could not be saved. Check your connection and try again.');
+      return null;
+    }
+
+    const previousCoverPath = uploadedCover
+      ? seminarCoverObjectPath(savedCoverUrl.current, draft.id)
+      : null;
+    savedCoverUrl.current = result.data.details.coverImageUrl;
+    setDraft(result.data);
+    let cleanupFailed = false;
+    if (previousCoverPath && previousCoverPath !== uploadedCover?.objectPath) {
+      try {
+        const cleanup = await api.removeOrgSeminarCover(draft.id, previousCoverPath);
+        cleanupFailed = !cleanup.ok;
+      } catch {
+        cleanupFailed = true;
+      }
+    }
     setSaving(false);
-    if (!result.ok) { setFailure('Your draft could not be saved. Check your connection and try again.'); return null; }
-    setDraft(result.data); setMessage('Draft saved.');
+    setMessage(cleanupFailed ? 'Draft saved. The previous public cover could not be removed.' : 'Draft saved.');
     return result.data;
   }
 
@@ -301,12 +381,14 @@ export default function SeminarEditorPage() {
           <label className="flex flex-col gap-2 font-body-sm-medium text-body-sm-medium text-on-surface md:col-span-2">Seminar description *<textarea required rows={5} value={details.description ?? ''} onChange={(e) => updateDetails('description', e.target.value)} className={textareaClass} placeholder="Describe the seminar, its topics, and who should attend." /></label>
           <label className="flex flex-col gap-2 font-body-sm-medium text-body-sm-medium text-on-surface">Start date and time *<input type="datetime-local" value={localDateTime(details.startsAt)} onChange={(e) => updateDetails('startsAt', e.target.value ? new Date(e.target.value).toISOString() : undefined)} className={inputClass} /></label>
           <label className="flex flex-col gap-2 font-body-sm-medium text-on-surface">End date and time *<input type="datetime-local" value={localDateTime(details.endsAt)} onChange={(e) => updateDetails('endsAt', e.target.value ? new Date(e.target.value).toISOString() : undefined)} className={inputClass} /></label>
-          <label className="flex flex-col gap-2 font-body-sm-medium text-on-surface">Venue / hall *<input value={details.venue ?? ''} onChange={(e) => updateDetails('venue', e.target.value)} className={inputClass} placeholder="Room or venue" /></label>
-          <label className="flex flex-col gap-2 font-body-sm-medium text-on-surface">Target capacity *<input type="number" min="1" value={details.capacity ?? ''} onChange={(e) => updateDetails('capacity', e.target.value ? Number(e.target.value) : undefined)} className={inputClass} placeholder="Number of seats" /></label>
+          {details.seminarType === 'webinar' ? <label className="flex flex-col gap-2 font-body-sm-medium text-on-surface md:col-span-2">HTTPS join link *<input type="url" inputMode="url" value={details.joinUrl ?? ''} onChange={(e) => updateDetails('joinUrl', e.target.value)} className={inputClass} placeholder="https://…" /></label> : <label className="flex flex-col gap-2 font-body-sm-medium text-on-surface">Venue / hall *<input value={details.venue ?? ''} onChange={(e) => updateDetails('venue', e.target.value)} className={inputClass} placeholder="Room or venue" /></label>}
+          <label className="flex flex-col gap-2 font-body-sm-medium text-on-surface">Target capacity *<input type="number" min={Math.max(1, activeCount)} value={details.capacity ?? ''} onChange={(e) => updateDetails('capacity', e.target.value ? Number(e.target.value) : undefined)} className={inputClass} placeholder="Number of seats" />{activeCount > 0 && <span className="font-caption text-caption text-text-secondary">At least {activeCount} active registrations are already on this seminar.</span>}</label>
+          <label className="flex flex-col gap-2 font-body-sm-medium text-on-surface">Confirmation opens (hours before start)<input type="number" min="2" value={details.confirmationOpensHoursBefore ?? 24} onChange={(e) => updateDetails('confirmationOpensHoursBefore', Number(e.target.value))} className={inputClass} /></label>
+          <label className="flex flex-col gap-2 font-body-sm-medium text-on-surface">Confirmation closes (hours before start)<input type="number" min="1" value={details.confirmationClosesHoursBefore ?? 1} onChange={(e) => updateDetails('confirmationClosesHoursBefore', Number(e.target.value))} className={inputClass} /></label>
           <label className="flex flex-col gap-2 font-body-sm-medium text-on-surface">Lead speaker name *<input value={details.speakerName ?? ''} onChange={(e) => updateDetails('speakerName', e.target.value)} className={inputClass} placeholder="Full name" /></label>
           
           <label className="flex flex-col gap-2 font-body-sm-medium text-on-surface">Required attendance (%)<input type="number" min="1" max="100" value={details.requiredAttendancePercent ?? 60} onChange={(e) => updateDetails('requiredAttendancePercent', Number(e.target.value))} className={inputClass} /></label>
-          <div className="flex flex-col gap-2 font-body-sm-medium text-on-surface md:col-span-2">Cover image<label className="flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border border-border-subtle bg-surface-light px-3.5 font-body-sm text-body-sm text-text-secondary"><Icon name="upload_file" size={18} />Choose PNG or JPG, up to 5 MB<input type="file" accept="image/png,image/jpeg,image/webp" onChange={(e) => void onImage(e, 'cover')} className="sr-only" /></label>{details.coverImageUrl && <img src={details.coverImageUrl} alt="Seminar cover preview" className="max-h-48 rounded-lg border border-border-subtle object-cover" />}</div>
+          <div className="flex flex-col gap-2 font-body-sm-medium text-on-surface md:col-span-2">Cover image<label className="flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border border-border-subtle bg-surface-light px-3.5 font-body-sm text-body-sm text-text-secondary"><Icon name="upload_file" size={18} />Choose PNG, JPG, or WebP, up to 5 MiB<input type="file" accept="image/png,image/jpeg,image/webp" onChange={(e) => void onImage(e, 'cover')} className="sr-only" /></label><span className="font-caption text-caption text-text-secondary">Cover images are public after upload.</span>{details.coverImageUrl && <img src={details.coverImageUrl} alt="Seminar cover preview" className="max-h-48 rounded-lg border border-border-subtle object-cover" />}</div>
         </div></div>}
 
         {step === 1 && <CertificateDesigner certificate={draft.certificate} qrValue={`Seminex certificate template: ${draft.id}`} requiredAttendancePercent={details.requiredAttendancePercent ?? 60} onChangeBackground={(event) => void onImage(event, 'certificate')} onUpdateCanvasSize={updateCanvasSize} onUpdateField={updateNameBox} onUpdateGeometry={updateNameBoxGeometry} onUpdateQrCodeGeometry={updateQrCodeGeometry} onSelectSignature={(event, id) => void onSignatureImage(event, id)} onRemoveSignature={removeSignatureBox} onUpdateSignatureGeometry={updateSignatureGeometry} onReset={resetNameBox} />}

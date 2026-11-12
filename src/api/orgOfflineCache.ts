@@ -1,11 +1,11 @@
 /**
- * Offline cache for the signed-in org account: identity, seminar lists, rosters, ledgers, and the
- * queue of scans recorded on this device but not yet sent. Kept apart from offlineCache.ts, which holds
+ * Offline cache for the signed-in org account: identity, seminar lists, rosters, and ledgers. Attendance
+ * changes require a connection and are never cached for later submission. Kept apart from offlineCache.ts, which holds
  * the student side.
  *
  * Mechanism: one localStorage entry per account ("seminex.org.offline.v1.<accountId>"). The account id is
  * the Student ID, or the faculty email for an adviser. Writes are best effort. Everything is removed when the
- * person signs out, including queued scans, so the sign-out screen must warn about unsynced scans first.
+ * person signs out.
  */
 import type {
   OrgIdentity,
@@ -21,35 +21,14 @@ interface OrgCache {
   listing?: OrgSeminarListing;
   /** Registrations by seminar id. */
   rosters: Record<string, OrgRegistration[]>;
-  /** Server ledger entries by seminar id. */
-  ledgers: Record<string, ScanLedgerEntry[]>;
-  /** Entries recorded on this device and not yet accepted by the server. */
-  queue: ScanLedgerEntry[];
+  /** Read-only copies of server ledger entries by seminar id. */
+  ledgers: Record<string, import('./orgTypes').ScanLedgerEntry[]>;
 }
 
 const key = (accountId: string) => `seminex.org.offline.v1.${accountId}`;
 
-const listeners = new Set<() => void>();
-
-function notify(): void {
-  listeners.forEach((listener) => listener());
-}
-
-/** Calls the listener after any write on this page, and after a write from another tab. */
-export function subscribeOrgCache(listener: () => void): () => void {
-  listeners.add(listener);
-  const onStorage = (event: StorageEvent) => {
-    if (event.key === null || event.key.startsWith('seminex.org.offline.v1.')) listener();
-  };
-  window.addEventListener('storage', onStorage);
-  return () => {
-    listeners.delete(listener);
-    window.removeEventListener('storage', onStorage);
-  };
-}
-
 function empty(): OrgCache {
-  return { version: 1, cachedAt: new Date().toISOString(), rosters: {}, ledgers: {}, queue: [] };
+  return { version: 1, cachedAt: new Date().toISOString(), rosters: {}, ledgers: {} };
 }
 
 function read(accountId: string): OrgCache {
@@ -71,7 +50,6 @@ function write(accountId: string, cache: OrgCache): void {
   } catch {
     // Best effort only.
   }
-  notify();
 }
 
 export function cacheOrgIdentity(accountId: string, identity: OrgIdentity): void {
@@ -114,42 +92,11 @@ export function readOrgLedger(accountId: string, seminarId: string): ScanLedgerE
   return read(accountId).ledgers[seminarId] ?? null;
 }
 
-// ---- Scan queue ------------------------------------------------------------------
-
-/** Adds an entry recorded on this device. It stays here, marked unsynced, until the server accepts it. */
-export function queueScan(accountId: string, entry: ScanLedgerEntry): void {
-  const cache = read(accountId);
-  if (cache.queue.some((queued) => queued.id === entry.id)) return;
-  cache.queue.push({ ...entry, synced: false });
-  write(accountId, cache);
-}
-
-export function readQueuedScans(accountId: string): ScanLedgerEntry[] {
-  return read(accountId).queue;
-}
-
-export function queueOrgScan(accountId: string, entry: ScanLedgerEntry): void {
-  queueScan(accountId, entry);
-}
-
-/** A number, so it can be a stable snapshot for useSyncExternalStore. */
-export function countQueuedScans(accountId: string): number {
-  return read(accountId).queue.length;
-}
-
-export function removeQueuedScans(accountId: string, ids: readonly string[]): void {
-  const cache = read(accountId);
-  const before = cache.queue.length;
-  cache.queue = cache.queue.filter((entry) => !ids.includes(entry.id));
-  if (cache.queue.length !== before) write(accountId, cache);
-}
-
-/** Removes everything held for this account on this device. Called when signing out. */
+/** Removes cached org identity and read-only data when signing out. */
 export function clearOrgOfflineCache(accountId: string): void {
   try {
     window.localStorage.removeItem(key(accountId));
   } catch {
     // Nothing to do.
   }
-  notify();
 }

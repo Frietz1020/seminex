@@ -1,0 +1,54 @@
+name: Frontend CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: 2.7.13
+      - name: Test certificate renderer
+        run: deno test --allow-env=NODE_ENV --allow-read=supabase/functions/issue-certificate/resvg.wasm --config=supabase/functions/issue-certificate/deno.json supabase/functions/issue-certificate/render_certificate_test.ts
+
+  identity-db:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        id: npm-ci
+        run: npm ci
+      - name: Start the local Supabase stack
+        run: npx supabase start
+      - name: Rebuild the local identity database
+        run: npx supabase db reset
+      - name: Run identity database tests
+        run: npx supabase test db
+      - name: Verify atomic adviser decisions
+        run: node supabase/tests/adviser_decision_concurrency.mjs
+      - name: Verify atomic registration capacity
+        run: node supabase/tests/registration_concurrency.mjs
+      - name: Stop the local Supabase stack
+        if: always() && steps.npm-ci.outcome == 'success'
+        run: npx supabase stop

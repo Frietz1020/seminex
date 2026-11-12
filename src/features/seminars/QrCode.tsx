@@ -5,7 +5,7 @@ const FOREGROUND = '#000000';
 const BACKGROUND = '#FFFFFF';
 
 interface QrCodeProps {
-  /** The ticket token. It is drawn in the browser, so it also works from the offline cache. */
+  /** The Student ID encoded for the organization's roster check. */
   value: string;
   /** Pixel size including the built-in quiet zone. */
   size: number;

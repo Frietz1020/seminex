@@ -1,16 +1,13 @@
 import type { Registration, Seminar, SeminarListItem } from '../../api/types';
+import { getLifecycle } from '../../lib/seminarLifecycle';
 
 export type SeminarStatus = 'available' | 'full' | 'ongoing' | 'finished' | 'registered';
-export type Lifecycle = 'upcoming' | 'ongoing' | 'finished';
+export type { Lifecycle } from '../../lib/seminarLifecycle';
 
 const MINUTE = 60_000;
 
 /** Every status is derived from schedule, capacity, and registration. Nothing is stored as a string. */
-export function getLifecycle(seminar: Seminar, now: number): Lifecycle {
-  if (now >= Date.parse(seminar.endsAt)) return 'finished';
-  if (now >= Date.parse(seminar.startsAt)) return 'ongoing';
-  return 'upcoming';
-}
+export { getLifecycle } from '../../lib/seminarLifecycle';
 
 export function slotsLeft(seminar: Seminar): number {
   return Math.max(0, seminar.capacity - seminar.registeredCount);
@@ -43,8 +40,8 @@ export function isEvaluationDue(item: SeminarListItem, now: number): boolean {
   const { seminar, registration } = item;
   return (
     registration !== null &&
-    getLifecycle(seminar, now) === 'finished' &&
     registration.timeOut?.validated === true &&
+    getAttendance(seminar, registration, now).satisfied &&
     registration.evaluationSubmittedAt === null
   );
 }
