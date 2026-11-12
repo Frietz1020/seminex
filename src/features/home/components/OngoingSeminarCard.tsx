@@ -8,8 +8,9 @@ import { Skeleton } from '../../../components/ui/StateMessage';
 import { StatusBadge } from '../../../components/ui/StatusBadge';
 import { useResource } from '../../../hooks/useResource';
 import { formatClockTime, formatDuration, formatStarted, formatTimeRange } from '../../seminars/format';
-import { QrCode } from '../../seminars/QrCode';
+import { AttendanceQr } from '../../seminars/AttendanceQr';
 import { getAttendance } from '../../seminars/status';
+import { getStudentSeminarPlacement } from '../../../lib/seminarStatus';
 
 interface OngoingSeminarCardProps {
   seminar: Seminar;
@@ -20,6 +21,7 @@ interface OngoingSeminarCardProps {
 export function OngoingSeminarCard({ seminar, registration, now }: OngoingSeminarCardProps) {
   const ticket = useResource(() => api.getTicket(seminar.id), `ticket-${seminar.id}`);
   const attendance = getAttendance(seminar, registration, now);
+  const recentlyFinished = getStudentSeminarPlacement(seminar, now) === 'home' && Date.parse(seminar.endsAt) <= now;
 
   return (
     <section
@@ -29,8 +31,9 @@ export function OngoingSeminarCard({ seminar, registration, now }: OngoingSemina
       <div className="flex flex-1 flex-col justify-between gap-space-lg">
         <div className="flex flex-col gap-space-sm">
           <div className="flex flex-wrap items-center gap-space-sm">
-            <StatusBadge status="ongoing" shape="pill" />
+            <StatusBadge status={recentlyFinished ? 'finished' : 'ongoing'} shape="pill" />
             <StatusBadge status="registered" shape="pill" />
+            {seminar.seminarType === 'webinar' && <span className="rounded-full bg-surface-container-low px-3 py-1 font-label-sm text-label-sm text-primary">Webinar</span>}
           </div>
           <h2 id={`ongoing-${seminar.id}`} className="mt-1 font-headline-md text-headline-md text-on-surface">
             {seminar.title}
@@ -81,7 +84,7 @@ export function OngoingSeminarCard({ seminar, registration, now }: OngoingSemina
             ) : (
               <p className="flex items-center gap-1.5 font-body-sm-medium text-body-sm-medium text-on-surface">
                 <Icon name="schedule" size={16} className="text-status-ongoing" />
-                Time-In not recorded yet. Show your QR code at the entrance.
+                {seminar.seminarType === 'webinar' ? 'Time-In proof has not been approved yet.' : 'Time-In not recorded yet. Show your QR code at the entrance.'}
               </p>
             )}
             <span className="font-caption text-caption text-text-secondary">
@@ -109,13 +112,10 @@ export function OngoingSeminarCard({ seminar, registration, now }: OngoingSemina
       </div>
 
       <div className="flex shrink-0 flex-col items-center justify-center gap-space-md rounded-lg bg-surface-container-low p-space-md text-center lg:w-72">
+        {seminar.seminarType === 'webinar' ? <div className="flex min-h-36 w-full flex-col items-center justify-center gap-space-sm rounded-lg bg-surface-card p-space-md"><Icon name="play_circle" size={26} className="text-primary"/><p className="font-body-sm-medium text-body-sm-medium text-on-surface">Webinar attendance proof</p><p className="font-caption text-caption text-text-secondary">Upload Time-In and Time-Out screenshots from your ticket.</p></div> : <>
         <div className="flex h-36 w-36 items-center justify-center rounded-lg bg-white shadow-card">
           {ticket.state.status === 'success' ? (
-            <QrCode
-              value={ticket.state.data.token}
-              size={128}
-              label={`QR code ticket for ${seminar.title}`}
-            />
+            <AttendanceQr seminarId={seminar.id} title={seminar.title} size={128} />
           ) : ticket.state.status === 'loading' ? (
             <div role="status">
               <span className="sr-only">Loading your QR code</span>
@@ -134,14 +134,15 @@ export function OngoingSeminarCard({ seminar, registration, now }: OngoingSemina
             </div>
           )}
         </div>
+        </>}
 
         <div className="flex w-full flex-col gap-1">
           <Link to={`/my-seminars/${seminar.id}?tab=ticket`} className={cx(actionPrimary, 'w-full')}>
-            <Icon name="qr_code" size={18} />
-            <span>View QR code</span>
+            <Icon name={seminar.seminarType === 'webinar' ? 'fact_check' : 'qr_code'} size={18} />
+            <span>{seminar.seminarType === 'webinar' ? 'Open attendance proof' : 'View QR code'}</span>
           </Link>
           <span className="font-caption text-caption text-text-subtle">
-            {ticket.state.status === 'success' && ticket.state.fromCache
+            {seminar.seminarType === 'webinar' ? 'Attendance proof uploads need a connection.' : ticket.state.status === 'success' && ticket.state.fromCache
               ? 'Showing your saved ticket.'
               : 'Show this code at the exit to record your Time-Out.'}
           </span>

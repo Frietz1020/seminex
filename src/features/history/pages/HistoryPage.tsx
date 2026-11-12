@@ -14,10 +14,11 @@ import { PolicyBanner } from '../components/PolicyBanner';
 import { RecordCard } from '../components/RecordCard';
 import { countByFilter, viewRecords, type HistoryFilter, type HistorySort } from '../historyView';
 import { buildHistoryRecords, summarizeHistory } from '../records';
+import { getStudentSeminarPlacement } from '../../../lib/seminarStatus';
 
 export default function HistoryPage() {
   const now = useNow();
-  const history = useResource(() => api.listHistory(), 'history');
+  const history = useResource(() => api.listHistory({ pageSize: 999 }), 'history');
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<HistoryFilter>('all');
   const [sort, setSort] = useState<HistorySort>('recent');
@@ -27,11 +28,17 @@ export default function HistoryPage() {
   }, []);
 
   const state = history.state;
-  const items = state.status === 'success' ? state.data : null;
-  const records = useMemo(() => (items ? buildHistoryRecords(items, now) : []), [items, now]);
+  const items = state.status === 'success' ? state.data.items : null;
+  const records = useMemo(() => items && now !== null
+    ? buildHistoryRecords(items.filter((item) => getStudentSeminarPlacement(item.seminar, now) === 'history'), now)
+    : [], [items, now]);
   const summary = useMemo(() => summarizeHistory(records), [records]);
   const counts = useMemo(() => countByFilter(records), [records]);
   const visible = useMemo(() => viewRecords(records, filter, query, sort), [records, filter, query, sort]);
+
+  if (now === null) {
+    return <PageContainer><p role="status" className="font-body-sm text-body-sm text-text-secondary">Loading current seminar times…</p></PageContainer>;
+  }
 
   const isEmpty = state.status === 'success' && records.length === 0;
   const hasRecords = state.status === 'success' && records.length > 0;

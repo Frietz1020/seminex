@@ -60,7 +60,7 @@ export default function OrganizationRequestStatusPage() {
       <main className="mx-auto max-w-5xl px-5 py-8 sm:px-8 sm:py-12">
         <div className="mb-7 flex flex-wrap items-end justify-between gap-4"><div><p className="text-xs font-semibold uppercase tracking-widest text-burnt">Office of Student Affairs · Registrar Gateway</p><h1 className="mt-2 font-heading text-3xl font-bold tracking-tight text-charcoal-900">Chartered Organization Access</h1><p className="mt-2 max-w-2xl text-sm leading-relaxed text-charcoal-700">Check adviser review, appointment details, and access to your organization workspace.</p></div>{data && <Button variant="secondary" disabled={state.status === 'loading'} loading={state.status === 'loading'} icon={<RefreshCw className="h-4 w-4" />} onClick={reload}>Refresh status</Button>}</div>
 
-        {submitted && data.status === 'pending' && <div className="mb-5"><Alert variant="neutral" icon={Check} title="Officer request submitted">Your request is saved in this device’s Seminex mock records and is now pending adviser review.</Alert></div>}
+        {submitted && data.status === 'pending' && <div className="mb-5"><Alert variant="neutral" icon={Check} title="Officer request submitted">Your request is saved in Seminex and is now pending adviser review.</Alert></div>}
         {actionError && <div className="mb-5"><Alert variant="error" icon={TriangleAlert} title="Action not completed">{actionError}</Alert></div>}
 
         {state.status === 'loading' && <LoadingRegion label="Loading organization request status"><Skeleton className="h-40 w-full" /><Skeleton className="mt-5 h-64 w-full" /></LoadingRegion>}

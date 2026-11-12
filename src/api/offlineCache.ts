@@ -1,10 +1,10 @@
 /**
  * Offline cache for the signed-in student's registered seminars, tickets, profile, and evaluation
- * drafts. Version 2 added the profile's college, enrollment status, and photo; older entries are ignored.
+ * drafts. Version 3 removes random ticket tokens and stores Student ID tickets; older entries are ignored.
  *
- * Mechanism: one localStorage entry per student ("seminex.offline.v2.<studentId>").
+ * Mechanism: one localStorage entry per student ("seminex.offline.v3.<studentId>").
  * The data is a few kilobytes, localStorage needs no dependency, and the QR code is drawn
- * in the browser from the ticket token, so no image has to be cached. Writes are best
+ * in the browser from the Student ID, so no image has to be cached. Writes are best
  * effort: a full or unavailable store is ignored and the app works online as usual.
  * If the data grows, move this to IndexedDB or a service worker cache.
  */
@@ -19,7 +19,7 @@ export interface EvaluationDraft {
 }
 
 interface StudentCache {
-  version: 2;
+  version: 3;
   cachedAt: string;
   profile?: Profile;
   items: Record<string, SeminarListItem>;
@@ -28,10 +28,10 @@ interface StudentCache {
   drafts?: Record<string, EvaluationDraft>;
 }
 
-const key = (studentId: string) => `seminex.offline.v2.${studentId}`;
+const key = (studentId: string) => `seminex.offline.v3.${studentId}`;
 
 function empty(): StudentCache {
-  return { version: 2, cachedAt: new Date().toISOString(), items: {}, tickets: {} };
+  return { version: 3, cachedAt: new Date().toISOString(), items: {}, tickets: {} };
 }
 
 function read(studentId: string): StudentCache {
@@ -39,7 +39,7 @@ function read(studentId: string): StudentCache {
     const raw = window.localStorage.getItem(key(studentId));
     if (raw) {
       const parsed = JSON.parse(raw) as StudentCache;
-      if (parsed && parsed.version === 2) return parsed;
+      if (parsed && parsed.version === 3) return parsed;
     }
   } catch {
     // Corrupt or unavailable: start fresh.
@@ -55,6 +55,13 @@ function write(studentId: string, cache: StudentCache): void {
   }
 }
 
+function withoutWebinarJoinUrl(item: SeminarListItem): SeminarListItem {
+  if (!item.seminar.joinUrl) return item;
+  const seminar = { ...item.seminar };
+  delete seminar.joinUrl;
+  return { ...item, seminar };
+}
+
 export function cacheProfile(studentId: string, profile: Profile): void {
   const cache = read(studentId);
   cache.profile = profile;
@@ -66,7 +73,8 @@ export function cacheRegisteredItems(studentId: string, items: SeminarListItem[]
   const cache = read(studentId);
   cache.items = {};
   for (const item of items) {
-    if (item.registration) cache.items[item.seminar.id] = item;
+    if (item.registration) cache.items[item.seminar.id] = withoutWebinarJoinUrl(item);
+    if (item.registration?.status === 'released' || item.registration?.status === 'cancelled') delete cache.tickets[item.seminar.id];
   }
   for (const id of Object.keys(cache.tickets)) {
     if (!cache.items[id]) delete cache.tickets[id];
@@ -77,7 +85,8 @@ export function cacheRegisteredItems(studentId: string, items: SeminarListItem[]
 export function cacheItem(studentId: string, item: SeminarListItem): void {
   if (!item.registration) return;
   const cache = read(studentId);
-  cache.items[item.seminar.id] = item;
+  cache.items[item.seminar.id] = withoutWebinarJoinUrl(item);
+  if (item.registration.status === 'released' || item.registration.status === 'cancelled') delete cache.tickets[item.seminar.id];
   write(studentId, cache);
 }
 
@@ -99,11 +108,26 @@ export function readProfile(studentId: string): Profile | null {
 }
 
 export function readRegisteredItems(studentId: string): SeminarListItem[] {
-  return Object.values(read(studentId).items);
+  const cache = read(studentId);
+  const cachedItems = Object.values(cache.items);
+  const items = cachedItems.map(withoutWebinarJoinUrl);
+  if (items.some((item, index) => item !== cachedItems[index])) {
+    cache.items = Object.fromEntries(items.map((item) => [item.seminar.id, item]));
+    write(studentId, cache);
+  }
+  return items;
 }
 
 export function readItem(studentId: string, seminarId: string): SeminarListItem | null {
-  return read(studentId).items[seminarId] ?? null;
+  const cache = read(studentId);
+  const item = cache.items[seminarId];
+  if (!item) return null;
+  const safeItem = withoutWebinarJoinUrl(item);
+  if (safeItem !== item) {
+    cache.items[seminarId] = safeItem;
+    write(studentId, cache);
+  }
+  return safeItem;
 }
 
 export function readTicket(studentId: string, seminarId: string): Ticket | null {

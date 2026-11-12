@@ -4,6 +4,14 @@ import { numberQuestions } from './surveyText';
 export function isAnswered(question: SurveyQuestion, answers: EvaluationAnswers): boolean {
   const value = answers[question.id];
   if (value === undefined || value === '') return false;
+  if (question.type === 'checkbox') {
+    try {
+      const selected = JSON.parse(value) as unknown;
+      return Array.isArray(selected) && selected.length > 0;
+    } catch {
+      return false;
+    }
+  }
   return question.type === 'paragraph' ? value.trim().length > 0 : true;
 }
 
@@ -16,6 +24,8 @@ export function missingMessage(question: SurveyQuestion): string {
       return `Select a rating from 1 to ${question.max} stars.`;
     case 'choice':
       return 'Choose one option.';
+    case 'checkbox':
+      return 'Select at least one option.';
     case 'paragraph':
       return 'Write your answer.';
   }
@@ -42,6 +52,14 @@ function isValidValue(question: SurveyQuestion, value: string): boolean {
     }
     case 'choice':
       return question.options.some((option) => option.value === value);
+    case 'checkbox': {
+      try {
+        const selected = JSON.parse(value) as unknown;
+        return Array.isArray(selected) && selected.every((item) => typeof item === 'string' && question.options.some((option) => option.value === item));
+      } catch {
+        return false;
+      }
+    }
     case 'paragraph':
       return true;
   }
@@ -53,7 +71,14 @@ export function sanitizeAnswers(survey: Survey, answers: EvaluationAnswers): Eva
   for (const { question } of numberQuestions(survey)) {
     const value = answers[question.id];
     if (typeof value !== 'string' || !isValidValue(question, value)) continue;
-    clean[question.id] = question.type === 'paragraph' ? value.slice(0, question.maxLength) : value;
+    if (question.type === 'paragraph') {
+      clean[question.id] = value.slice(0, question.maxLength);
+    } else if (question.type === 'checkbox') {
+      const selected = JSON.parse(value) as string[];
+      clean[question.id] = JSON.stringify([...new Set(selected)]);
+    } else {
+      clean[question.id] = value;
+    }
   }
   return clean;
 }

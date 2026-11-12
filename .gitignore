@@ -1,14 +1,59 @@
 # Dependencies
 node_modules
 
+# Local-only archive of files removed from the active project.
+/redundant/
+
 # Build output
 dist
 dev-dist
+coverage/
+.vite/
 
 # Environment files
 .env
 .env.*
 !.env.example
+.env.local
+
+# Supabase CLI runtime and cache files
+.supabase-home/
+supabase/.temp/
+
+# Local database exports can contain production or student data.
+/backups/
+/db-dumps/
+/supabase/backups/
+*.dump
+*.dump.gz
+*.pgdump
+*.backup
+
+# Graphify caches and per-machine state. Keep graph.json, graph.html,
+# GRAPH_REPORT.md, seminex-callflow.html, manifest.json, and labels.
+graphify-out/cache/
+graphify-out/.graphify_python
+graphify-out/.graphify_root
+graphify-out/.graphify_detect.json
+graphify-out/.graphify_extract.json
+graphify-out/.graphify_ast.json
+graphify-out/.graphify_semantic.json
+graphify-out/.graphify_analysis.json
+graphify-out/.graphify_build.json
+graphify-out/.graphify_build_state.json
+graphify-out/.graphify_incremental.json
+graphify-out/.graphify_cached.json
+graphify-out/.graphify_uncached.txt
+graphify-out/.graphify_semantic_new.json
+graphify-out/.graphify_old.json
+graphify-out/.graphify_chunk_*.json
+graphify-out/.graphify_labels.pending.json
+graphify-out/.graphify_labels.json.sig
+graphify-out/.needs_update
+graphify-out/.graph.json.before*
+graphify-out/SEMINEX_CALL_FLOWS.html
+graphify-out/cost.json
+graphify-out/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]/
 
 # Logs and OS files
 *.log

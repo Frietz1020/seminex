@@ -79,6 +79,10 @@ export default function SeminarDetailsPage() {
 
   if (!item) return null;
 
+  if (now === null) {
+    return <PageContainer><StateMessage icon="schedule" title="Current seminar time is unavailable">Reconnect to check registration availability and seminar status.</StateMessage></PageContainer>;
+  }
+
   const { seminar, registration: existingRegistration } = item;
   const lifecycle = getLifecycle(seminar, now);
   const status = getPrimaryStatus(item, now);
@@ -97,6 +101,7 @@ export default function SeminarDetailsPage() {
 
   return (
     <PageContainer>
+      {seminar.seminarType === 'webinar' && <span className="mb-space-sm inline-flex w-fit rounded-full bg-surface-container-low px-3 py-1 font-label-sm text-label-sm text-primary">Webinar</span>}
       <div className="mb-1">
         <Link
           to={registered ? '/my-seminars' : '/seminars'}

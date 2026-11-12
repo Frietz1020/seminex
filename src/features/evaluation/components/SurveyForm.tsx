@@ -1,6 +1,7 @@
 import type { EvaluationAnswers, Survey } from '../../../api/types';
 import { formatQuestionCount, localizeQuestion, numberQuestions } from '../surveyText';
 import { ChoiceQuestion } from './ChoiceQuestion';
+import { CheckboxQuestion } from './CheckboxQuestion';
 import { ParagraphQuestion } from './ParagraphQuestion';
 import { QuestionFrame } from './QuestionFrame';
 import { RatingQuestion } from './RatingQuestion';
@@ -59,6 +60,7 @@ export function SurveyForm({ survey, speaker, answers, errors, onAnswer }: Surve
                 {question.type === 'scale' && <ScaleQuestion question={question} value={value} onChange={change} />}
                 {question.type === 'rating' && <RatingQuestion question={question} value={value} onChange={change} />}
                 {question.type === 'choice' && <ChoiceQuestion question={question} value={value} onChange={change} />}
+                {question.type === 'checkbox' && <CheckboxQuestion question={question} value={value} onChange={change} />}
                 {question.type === 'paragraph' && (
                   <ParagraphQuestion question={question} value={value} onChange={change} hasError={Boolean(error)} />
                 )}

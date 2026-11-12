@@ -139,8 +139,8 @@ export function MySeminarCard({ item, group, now, onCancel }: MySeminarCardProps
             </Link>
           ) : (
             <Link to={`/my-seminars/${seminar.id}?tab=ticket`} className={cx(actionPrimary, 'pointer-events-auto w-full sm:w-auto')}>
-              <Icon name="qr_code_2" size={18} />
-              <span>View QR code</span>
+              <Icon name={seminar.seminarType === 'webinar' ? 'fact_check' : 'qr_code_2'} size={18} />
+              <span>{seminar.seminarType === 'webinar' ? 'Attendance proof' : 'View QR code'}</span>
             </Link>
           )}
         </div>

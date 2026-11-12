@@ -1,8 +1,7 @@
-import { useEffect } from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
-import { expireSession, wasExpired } from '../session/storage';
-import { useSession } from '../session/useSession';
+import { wasExpired } from '../session/storage';
+import { useSessionState } from '../session/useSession';
 
 const SIGN_IN_PATH = '/sign-in';
 const SESSION_EXPIRED_PATH = '/sign-in?reason=session-expired';
@@ -13,17 +12,18 @@ const SESSION_EXPIRED_PATH = '/sign-in?reason=session-expired';
  * so cached tickets stay viewable; the server decides on the next online request.
  */
 export function RequireSession() {
-  const session = useSession();
   const online = useOnlineStatus();
-  const clockExpired = session !== null && online && session.expiresAt <= Date.now();
+  const state = useSessionState(online);
 
-  useEffect(() => {
-    if (clockExpired) expireSession();
-  }, [clockExpired]);
-
-  if (clockExpired || (!session && wasExpired())) {
+  if (state.status === 'loading') {
+    return <div role="status" aria-live="polite">Checking your session…</div>;
+  }
+  if (state.status === 'signedOut' && wasExpired()) {
     return <Navigate to={SESSION_EXPIRED_PATH} replace />;
   }
-  if (!session) return <Navigate to={SIGN_IN_PATH} replace />;
-  return <Outlet />;
+  if ((state.status === 'signedIn' || state.status === 'offline') && state.identity?.onboardingComplete === false) {
+    return <Navigate to="/sign-up?resume=1" replace />;
+  }
+  if (state.status === 'signedIn' || (state.status === 'offline' && state.identity)) return <Outlet />;
+  return <Navigate to={SIGN_IN_PATH} replace />;
 }

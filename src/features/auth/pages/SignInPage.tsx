@@ -56,7 +56,7 @@ export default function SignInPage() {
   function finish(result: Awaited<ReturnType<typeof api.signIn>>) {
     setPending(null);
     if (result.ok) {
-      navigate(AFTER_SIGN_IN_PATH, { replace: true });
+      navigate(result.data.onboardingComplete === false ? '/sign-up?resume=1' : AFTER_SIGN_IN_PATH, { replace: true });
     } else {
       setFailure(result.error.code);
     }
@@ -89,7 +89,7 @@ export default function SignInPage() {
     finish(await api.signIn({ studentId: values.studentId, password: values.password }));
   }
 
-  const showAlerts = !online || sessionExpired || failure === 'invalid_credentials' || failure === 'network';
+  const showAlerts = !online || sessionExpired || failure === 'invalid_credentials' || failure === 'network' || failure === 'configuration_error';
 
   return (
     <AuthLayout
@@ -135,6 +135,11 @@ export default function SignInPage() {
           {failure === 'network' && online && (
             <Alert variant="error" icon={TriangleAlert} title="Connection problem">
               Seminex could not be reached. Check your connection and try again.
+            </Alert>
+          )}
+          {failure === 'configuration_error' && (
+            <Alert variant="error" icon={TriangleAlert} title="Sign in is not configured">
+              Set the Supabase project URL and publishable key in the app environment, then reload.
             </Alert>
           )}
         </div>
