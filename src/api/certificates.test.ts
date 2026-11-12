@@ -32,7 +32,8 @@ describe('Supabase certificate adapter', () => {
 
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error('Expected a certificate Blob');
-    expect(result.data).toBeInstanceOf(Blob);
+    expect(result.data.size).toBe(4);
+    expect(result.data.type).toBe('application/pdf');
     expect(await result.data.text()).toContain('%PDF');
     expect(client.functions.invoke).toHaveBeenCalledWith('issue-certificate', { body: { seminarId: 'seminar-1' } });
     expect(client.rpc).toHaveBeenCalledWith('get_my_certificate', { p_seminar_id: 'seminar-1' });
@@ -84,7 +85,9 @@ describe('Supabase certificate adapter', () => {
 
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error('Expected an organization certificate Blob');
-    expect(result.data).toBeInstanceOf(Blob);
+    expect(result.data.size).toBe(4);
+    expect(result.data.type).toBe('application/pdf');
+    expect(await result.data.text()).toContain('%PDF');
     expect(client.from).toHaveBeenCalledWith('certificate_issuances');
     expect(signed).toHaveBeenCalledWith('seminar-1/registration-1.pdf', 60);
   });

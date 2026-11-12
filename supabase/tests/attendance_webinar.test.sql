@@ -143,12 +143,17 @@ select throws_ok(
 );
 select is((select count(*)::integer from public.attendance_ledger where registration_id = '00000000-0000-4000-8000-000000000744'), 1, 'challenge retry creates one ledger entry');
 reset role;
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-000000000715","role":"authenticated"}', true);
+set local role authenticated;
+select set_config('test.expired_scan_challenge', public.issue_attendance_challenge('00000000-0000-4000-8000-000000000731')->>'challenge', true);
+reset role;
 update private.registration_scan_challenges
 set expires_at = now() - interval '1 second'
-where challenge_hash = extensions.digest(current_setting('test.scan_challenge'), 'sha256');
+where challenge_hash = extensions.digest(current_setting('test.expired_scan_challenge'), 'sha256');
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-000000000712","role":"authenticated"}', true);
 set local role authenticated;
 select throws_ok(
-  $$select public.record_org_challenge_scan('00000000-0000-4000-8000-000000000731', current_setting('test.scan_challenge'), '00000000-0000-4000-8000-000000000760')$$,
+  $$select public.record_org_challenge_scan('00000000-0000-4000-8000-000000000731', current_setting('test.expired_scan_challenge'), '00000000-0000-4000-8000-000000000760')$$,
   'P0001', 'not_available', 'expired challenge is rejected'
 );
 reset role;
