@@ -8,7 +8,6 @@ import { OfflineBanner } from './OfflineBanner';
 import { ADVISER_NAV_ITEMS, ORG_NAV_ITEMS } from './orgNavItems';
 import { OrgSidebar } from './OrgSidebar';
 import { OrgTopBar } from './OrgTopBar';
-import { SyncStatusBanner } from './SyncStatusBanner';
 
 function ShellFrame() {
   const { state, reload } = useOrgIdentity();
@@ -46,7 +45,6 @@ function ShellFrame() {
       >
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-space-sm px-gutter pt-space-md md:px-margin">
           <OfflineBanner />
-          <SyncStatusBanner />
         </div>
         {state.status === 'error' ? (
           <div className="mx-auto w-full max-w-3xl px-gutter py-space-xl">

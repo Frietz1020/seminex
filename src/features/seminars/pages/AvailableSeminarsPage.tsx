@@ -12,27 +12,36 @@ import { filterAndSort, getDepartments, getMetrics, getOpenItems, type SortKey }
 import { SeminarCard } from '../components/SeminarCard';
 import { SeminarToolbar } from '../components/SeminarToolbar';
 import { useRegistration } from '../useRegistration';
+import type { SeminarListItem } from '../../../api/types';
 
 export default function AvailableSeminarsPage() {
   const now = useNow();
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<SortKey>('nearest');
   const [department, setDepartment] = useState<string | null>(null);
+  const [additionalPages, setAdditionalPages] = useState<Array<{ items: SeminarListItem[]; nextCursor: string | null }>>([]);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [loadMoreError, setLoadMoreError] = useState(false);
 
   useEffect(() => {
     document.title = 'Available seminars - Seminex';
   }, []);
 
   const seminars = useResource(
-    () => api.listSeminars(),
+    () => api.listAvailableSeminars({ pageSize: 50 }),
     'available-seminars',
-    (items) => getOpenItems(items, Date.now()).length === 0,
+    (page) => now !== null && getOpenItems(page.items, now).length === 0 && page.nextCursor === null,
   );
-  const baseItems = seminars.state.status === 'success' ? seminars.state.data : null;
+  const baseItems = seminars.state.status === 'success'
+    ? [...seminars.state.data.items, ...additionalPages.flatMap((page) => page.items)]
+    : null;
+  const nextCursor = additionalPages.length > 0
+    ? additionalPages[additionalPages.length - 1]?.nextCursor ?? null
+    : seminars.state.status === 'success' ? seminars.state.data.nextCursor : null;
   const registration = useRegistration(baseItems);
 
   const openItems = useMemo(
-    () => (registration.items ? getOpenItems(registration.items, now) : []),
+    () => (registration.items && now !== null ? getOpenItems(registration.items, now) : []),
     [registration.items, now],
   );
   const departments = useMemo(() => getDepartments(openItems), [openItems]);
@@ -43,6 +52,26 @@ export default function AvailableSeminarsPage() {
   );
   const metrics = getMetrics(openItems);
   const offline = seminars.state.status === 'success' && seminars.state.fromCache;
+
+  if (now === null) {
+    return <PageContainer><p role="status" className="font-body-sm text-body-sm text-text-secondary">Loading current seminar times…</p></PageContainer>;
+  }
+
+  async function loadMore() {
+    if (!nextCursor || loadingMore) return;
+    setLoadingMore(true);
+    setLoadMoreError(false);
+    const result = await api.listAvailableSeminars({ cursor: nextCursor, pageSize: 50 });
+    if (result.ok) setAdditionalPages((pages) => [...pages, result.data]);
+    else setLoadMoreError(true);
+    setLoadingMore(false);
+  }
+
+  function reloadSeminars() {
+    setAdditionalPages([]);
+    setLoadMoreError(false);
+    seminars.reload();
+  }
 
   let content;
   if (seminars.state.status === 'loading') {
@@ -61,7 +90,7 @@ export default function AvailableSeminarsPage() {
         role="alert"
         icon="info"
         title="Seminars could not be loaded"
-        action={<RetryButton onClick={seminars.reload} />}
+        action={<RetryButton onClick={reloadSeminars} />}
       >
         {errorText(seminars.state.code)}
       </StateMessage>
@@ -207,6 +236,15 @@ export default function AvailableSeminarsPage() {
       )}
 
       {content}
+      {loadMoreError && <p role="alert" className="rounded-lg bg-danger-surface p-space-md font-body-sm text-body-sm text-danger-ink">More seminars could not be loaded. Please try again.</p>}
+      {nextCursor && (
+        <div className="flex flex-col items-center gap-space-sm">
+          <p className="sr-only" role="status" aria-live="polite">{loadingMore ? 'Loading more seminars' : `${visible.length} seminars currently shown`}</p>
+          <button type="button" onClick={() => void loadMore()} disabled={loadingMore} className="inline-flex min-h-11 items-center justify-center rounded-lg border border-border-subtle bg-surface-card px-space-lg font-body-sm-medium text-body-sm-medium text-primary shadow-card disabled:opacity-60">
+            {loadingMore ? 'Loading…' : 'Load more seminars'}
+          </button>
+        </div>
+      )}
     </PageContainer>
   );
 }

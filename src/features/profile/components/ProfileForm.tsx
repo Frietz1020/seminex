@@ -174,10 +174,10 @@ export function ProfileForm({ profile, onSaved }: ProfileFormProps) {
               {profile.studentId}@{STUDENT_EMAIL_DOMAIN}
             </ReadOnlyField>
             <ReadOnlyField label="Enrollment status" locked>
-              {ENROLLMENT_TEXT[profile.enrollmentStatus]}
+              {profile.enrollmentStatus ? ENROLLMENT_TEXT[profile.enrollmentStatus] : 'Not provided'}
             </ReadOnlyField>
             <ReadOnlyField label="College" locked>
-              {profile.college}
+              {profile.college ?? 'Not provided'}
             </ReadOnlyField>
           </dl>
         </section>

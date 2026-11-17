@@ -1,60 +1,78 @@
 /**
- * The only module components import for data access. To connect the real API,
- * replace the functions imported from ./mock. Components do not change.
+ * The only module components import for data access. This boundary dispatches
+ * Supabase adapters while owning offline fallbacks.
  *
  * This module also owns the offline fallback: when a call fails with "network", it returns
  * the cached copy (marked fromCache) if one exists. Only registered seminars, their tickets,
  * and the profile are cached. The org side follows the same rule with its own cache (orgOfflineCache.ts).
  */
-import { clearSession, getSession } from '../session/storage';
-import * as impl from './mock';
-import * as orgImpl from './orgMock';
+import { clearSession, getSessionIdentity, saveCachedIdentity } from '../session/storage';
+import { clearPrivateUserData } from '../session/privateData';
+import * as authImpl from './auth';
+import * as seminarApi from './seminars';
+import * as attendanceApi from './attendance';
+import * as evaluationApi from './evaluations';
+import * as certificateApi from './certificates';
+import * as adviserApi from './adviser';
+import * as serverTimeApi from './serverTime';
 import {
   cacheOrgIdentity,
   cacheOrgLedger,
   cacheOrgListing,
   cacheOrgRoster,
-  clearOrgOfflineCache,
   readOrgIdentity,
   readOrgLedger,
   readOrgListing,
   readOrgRoster,
-  readQueuedScans,
-  removeQueuedScans,
 } from './orgOfflineCache';
 import {
   cacheItem,
   cacheProfile,
   cacheRegisteredItems,
   cacheTicket,
-  clearOfflineCache,
   forgetSeminar,
   readItem,
   readProfile,
   readRegisteredItems,
   readTicket,
 } from './offlineCache';
-import { getLifecycle } from '../features/seminars/status';
 import type {
   OrgIdentity,
   OrgRegistration,
-  OrgSeminarListing,
+  OrgSignInInput,
+  OrgSeminarListingPage,
+  OrgSeminarListingRequest,
+  OrgSeminarEvaluationData,
   OrgSignUpInput,
+  Organization,
+  RecordOrgScanInput,
+  RecordOrgScanResult,
   ScanLedgerEntry,
 } from './orgTypes';
 import type {
   ApiResult,
   AvatarResult,
+  CursorPage,
+  CursorPageRequest,
   EditableProfile,
   Profile,
   SeminarListItem,
+  SignInInput,
   SignUpInput,
   SignUpResult,
   Ticket,
 } from './types';
 
 function currentStudent(): string | null {
-  return getSession()?.studentId ?? null;
+  return getSessionIdentity()?.studentId ?? null;
+}
+
+function getServerTime() {
+  return serverTimeApi.getServerTime();
+}
+
+function signalSessionChanged(): void {
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event('seminex:session-changed'));
 }
 
 function cached<T>(data: T): ApiResult<T> {
@@ -62,20 +80,23 @@ function cached<T>(data: T): ApiResult<T> {
 }
 
 /** Downloads tickets for registered seminars that have not finished, so they work offline. */
-function prefetchTickets(student: string, items: SeminarListItem[]): void {
-  const now = Date.now();
+async function prefetchTickets(student: string, items: SeminarListItem[]): Promise<void> {
+  const serverTime = await serverTimeApi.getServerTime();
+  if (!serverTime.ok) return;
+  const now = Date.parse(serverTime.data.now);
+  if (!Number.isFinite(now)) return;
   for (const item of items) {
     if (!item.registration) continue;
     if (new Date(item.seminar.endsAt).getTime() <= now) continue;
     if (readTicket(student, item.seminar.id)) continue;
-    void impl.getTicket(item.seminar.id).then((result) => {
+    void seminarApi.getTicket(item.seminar.id).then((result) => {
       if (result.ok) cacheTicket(student, result.data);
     });
   }
 }
 
 async function getProfile(): Promise<ApiResult<Profile>> {
-  const result = await impl.getProfile();
+  const result = await authImpl.getProfile();
   const student = currentStudent();
   if (!student) return result;
   if (result.ok) {
@@ -90,17 +111,17 @@ async function getProfile(): Promise<ApiResult<Profile>> {
 }
 
 async function updateProfile(input: EditableProfile): Promise<ApiResult<Profile>> {
-  const result = await impl.updateProfile(input);
+  const result = await authImpl.updateProfile(input);
   const student = currentStudent();
   if (student && result.ok) cacheProfile(student, result.data);
   return result;
 }
 
 async function uploadAvatar(file: File): Promise<ApiResult<AvatarResult>> {
-  const result = await impl.uploadAvatar(file);
+  const result = await authImpl.uploadAvatar(file);
   const student = currentStudent();
   if (student && result.ok) {
-    // The cache keeps only an address, so an object URL from the mock will not survive a reload.
+    // The cache keeps only a URL, not the image bytes.
     const profile = readProfile(student);
     if (profile) cacheProfile(student, { ...profile, avatarUrl: result.data.avatarUrl });
   }
@@ -115,47 +136,71 @@ async function uploadAvatar(file: File): Promise<ApiResult<AvatarResult>> {
 async function signOut(): Promise<ApiResult<void>> {
   const student = currentStudent();
   try {
-    return await impl.signOut();
+    return await authImpl.signOut();
   } finally {
     if (student) {
-      clearOfflineCache(student);
-      clearOrgOfflineCache(student);
+      await clearPrivateUserData(student);
     }
     clearSession();
+    signalSessionChanged();
   }
 }
 
-/** Finished seminars the student registered for. Offline, the saved registered seminars are filtered the same way. */
-async function listHistory(): Promise<ApiResult<SeminarListItem[]>> {
-  const result = await impl.listHistory();
+function cachedPage<T>(items: T[]): CursorPage<T> {
+  return { items, nextCursor: null };
+}
+
+/** Finished registrations after the Home window. Offline reads use saved registration data. */
+async function listHistory(request?: CursorPageRequest): Promise<ApiResult<CursorPage<SeminarListItem>>> {
+  const result = await seminarApi.listHistory(request);
   const student = currentStudent();
   if (!student) return result;
-  if (!result.ok && result.error.code === 'network') {
-    const now = Date.now();
-    const saved = readRegisteredItems(student).filter((item) => getLifecycle(item.seminar, now) === 'finished');
-    if (saved.length > 0) return cached(saved);
-  }
   return result;
 }
 
-async function listSeminars(): Promise<ApiResult<SeminarListItem[]>> {
-  const result = await impl.listSeminars();
+async function listAvailableSeminars(request?: CursorPageRequest): Promise<ApiResult<CursorPage<SeminarListItem>>> {
+  const result = await seminarApi.listAvailableSeminars(request);
   const student = currentStudent();
   if (!student) return result;
   if (result.ok) {
-    cacheRegisteredItems(student, result.data);
-    prefetchTickets(student, result.data);
+    const registered = result.data.items.filter((item) => item.registration !== null);
+    cacheRegisteredItems(student, registered);
+    void prefetchTickets(student, registered);
     return result;
   }
-  if (result.error.code === 'network') {
-    const items = readRegisteredItems(student);
-    if (items.length > 0) return cached(items);
+  if (!request?.cursor && result.error.code === 'network') {
+    const saved = readRegisteredItems(student);
+    if (saved.length > 0) return cached(cachedPage(saved));
   }
   return result;
 }
 
+async function listMySeminars(request?: CursorPageRequest): Promise<ApiResult<CursorPage<SeminarListItem>>> {
+  const result = await seminarApi.listMySeminars(request);
+  const student = currentStudent();
+  if (!student) return result;
+  if (result.ok) {
+    cacheRegisteredItems(student, result.data.items);
+    void prefetchTickets(student, result.data.items);
+    return result;
+  }
+  if (!request?.cursor && result.error.code === 'network') {
+    const items = readRegisteredItems(student);
+    if (items.length > 0) return cached(cachedPage(items));
+  }
+  return result;
+}
+
+/** Legacy non-paginated read retained for the attendance prompt. */
+async function listSeminars(): Promise<ApiResult<SeminarListItem[]>> {
+  const result = await listMySeminars({ pageSize: 999 });
+  return result.ok
+    ? { ok: true, data: result.data.items, ...(result.fromCache ? { fromCache: true } : {}) }
+    : result;
+}
+
 async function getSeminar(seminarId: string): Promise<ApiResult<SeminarListItem>> {
-  const result = await impl.getSeminar(seminarId);
+  const result = await seminarApi.getSeminar(seminarId);
   const student = currentStudent();
   if (!student) return result;
   if (result.ok) {
@@ -170,7 +215,7 @@ async function getSeminar(seminarId: string): Promise<ApiResult<SeminarListItem>
 }
 
 async function getTicket(seminarId: string): Promise<ApiResult<Ticket>> {
-  const result = await impl.getTicket(seminarId);
+  const result = await seminarApi.getTicket(seminarId);
   const student = currentStudent();
   if (!student) return result;
   if (result.ok) {
@@ -184,20 +229,66 @@ async function getTicket(seminarId: string): Promise<ApiResult<Ticket>> {
   return result;
 }
 
+async function getTicketPdf(seminarId: string): Promise<ApiResult<Blob>> {
+  const ticket = await getTicket(seminarId);
+  if (!ticket.ok) return ticket;
+
+  const [profile, item] = await Promise.all([getProfile(), getSeminar(seminarId)]);
+  if (!profile.ok) return profile;
+  if (!item.ok) return item;
+  const registration = item.data.registration;
+  if (
+    ticket.data.seminarId !== seminarId
+    || item.data.seminar.id !== seminarId
+    || ticket.data.studentId !== profile.data.studentId
+    || !registration
+    || (registration.status !== 'registered' && registration.status !== 'confirmed')
+  ) return { ok: false, error: { code: 'not_available' } };
+
+  try {
+    const { createTicketPdf } = await import('./ticketPdf');
+    return {
+      ok: true,
+      data: await createTicketPdf({
+        seminar: item.data.seminar,
+        ticket: ticket.data,
+        profile: profile.data,
+        registration,
+      }),
+    };
+  } catch {
+    return { ok: false, error: { code: 'not_available' } };
+  }
+}
+
 async function registerForSeminar(seminarId: string): Promise<ApiResult<SeminarListItem>> {
-  const result = await impl.registerForSeminar(seminarId);
+  const result = await seminarApi.registerForSeminar(seminarId);
   const student = currentStudent();
   if (student && result.ok) {
     cacheItem(student, result.data);
-    prefetchTickets(student, [result.data]);
+    void prefetchTickets(student, [result.data]);
   }
+  if (result.ok && typeof window !== 'undefined') window.dispatchEvent(new Event('seminex:registrations-changed'));
   return result;
 }
 
 async function cancelRegistration(seminarId: string): Promise<ApiResult<void>> {
-  const result = await impl.cancelRegistration(seminarId);
+  const result = await seminarApi.cancelRegistration(seminarId);
   const student = currentStudent();
   if (student && result.ok) forgetSeminar(student, seminarId);
+  if (result.ok && typeof window !== 'undefined') window.dispatchEvent(new Event('seminex:registrations-changed'));
+  return result;
+}
+
+async function confirmRegistration(seminarId: string) {
+  const result = await seminarApi.confirmRegistration(seminarId);
+  if (result.ok && typeof window !== 'undefined') window.dispatchEvent(new Event('seminex:registrations-changed'));
+  return result;
+}
+
+async function acknowledgeAttendance(seminarId: string) {
+  const result = await attendanceApi.acknowledgeAttendance(seminarId);
+  if (result.ok && typeof window !== 'undefined') window.dispatchEvent(new Event('seminex:registrations-changed'));
   return result;
 }
 
@@ -205,27 +296,31 @@ async function cancelRegistration(seminarId: string): Promise<ApiResult<void>> {
 // Same pattern as above: a network failure returns the saved copy, marked fromCache, when one exists.
 
 /**
- * Creates the student account, then the organization request. The request cannot be made without the
- * account, so a real API should take both in one call; the mock needs two.
+ * Creates the student account and organization request in one Supabase transaction.
  */
 async function orgSignUp(input: SignUpInput, organization: OrgSignUpInput): Promise<ApiResult<SignUpResult>> {
-  const created = await impl.signUp(input);
-  if (!created.ok) return created;
-  const fullName = `${input.firstName} ${input.lastName}`.trim();
-  const request = await orgImpl.createOrgRequest(input.studentId, fullName, organization);
-  if (!request.ok) return request;
-  return created;
+  const result = await authImpl.completeOrganizationSignup(input, organization);
+  if (result.ok) {
+    clearSession();
+    signalSessionChanged();
+  }
+  return result;
 }
 
 async function submitOrgAccessRequest(input: OrgSignUpInput & { fullName: string }): Promise<ApiResult<import('./orgTypes').OrgRequest>> {
-  const session = getSession();
-  if (!session) return { ok: false, error: { code: 'session_expired' } };
-  if (session.role === 'adviser') return { ok: false, error: { code: 'forbidden' } };
-  return orgImpl.createOrgRequest(session.studentId, input.fullName, input);
+  return authImpl.submitOrgAccessRequest(input);
+}
+
+function getMyOrgAccessStatus() {
+  return authImpl.getMyOrgAccessStatus();
+}
+
+function withdrawMyOrgRequest() {
+  return authImpl.withdrawOrgAccessRequest();
 }
 
 async function getOrgIdentity(): Promise<ApiResult<OrgIdentity>> {
-  const result = await orgImpl.getOrgIdentity();
+  const result = await authImpl.getOrgIdentity();
   const account = currentStudent();
   if (!account) return result;
   if (result.ok) {
@@ -239,23 +334,30 @@ async function getOrgIdentity(): Promise<ApiResult<OrgIdentity>> {
   return result;
 }
 
-async function listOrgSeminars(): Promise<ApiResult<OrgSeminarListing>> {
-  const result = await orgImpl.listOrgSeminars();
+async function listOrgSeminars(request?: OrgSeminarListingRequest): Promise<ApiResult<OrgSeminarListingPage>> {
+  const result = await seminarApi.listOrgSeminars(request);
   const account = currentStudent();
   if (!account) return result;
   if (result.ok) {
-    cacheOrgListing(account, result.data);
+    const previous = readOrgListing(account);
+    cacheOrgListing(account, {
+      seminars: request?.seminars?.cursor ? previous?.seminars ?? [] : result.data.seminars.items,
+      drafts: request?.drafts?.cursor ? previous?.drafts ?? [] : result.data.drafts.items,
+    });
     return result;
   }
-  if (result.error.code === 'network') {
+  if (!request?.seminars?.cursor && !request?.drafts?.cursor && result.error.code === 'network') {
     const listing = readOrgListing(account);
-    if (listing) return cached(listing);
+    if (listing) return cached({
+      seminars: cachedPage(listing.seminars),
+      drafts: cachedPage(listing.drafts),
+    });
   }
   return result;
 }
 
 async function listOrgRoster(seminarId: string): Promise<ApiResult<OrgRegistration[]>> {
-  const result = await orgImpl.listOrgRoster(seminarId);
+  const result = await attendanceApi.listOrgRoster(seminarId);
   const account = currentStudent();
   if (!account) return result;
   if (result.ok) {
@@ -270,7 +372,7 @@ async function listOrgRoster(seminarId: string): Promise<ApiResult<OrgRegistrati
 }
 
 async function listLedger(seminarId: string): Promise<ApiResult<ScanLedgerEntry[]>> {
-  const result = await orgImpl.listLedger(seminarId);
+  const result = await attendanceApi.listLedger(seminarId);
   const account = currentStudent();
   if (!account) return result;
   if (result.ok) {
@@ -284,91 +386,210 @@ async function listLedger(seminarId: string): Promise<ApiResult<ScanLedgerEntry[
   return result;
 }
 
-/** Sends the scans queued on this device. Entries the server accepted leave the queue; the rest stay. */
-async function syncQueuedScans(): Promise<ApiResult<{ synced: number }>> {
-  const account = currentStudent();
-  if (!account) return { ok: false, error: { code: 'session_expired' } };
-  const queued = readQueuedScans(account);
-  if (queued.length === 0) return { ok: true, data: { synced: 0 } };
-  const result = await orgImpl.syncScans(queued);
-  if (!result.ok) return result;
-  removeQueuedScans(account, result.data.accepted);
-  return { ok: true, data: { synced: result.data.accepted.length } };
-}
-
 async function createOrgDraft() {
-  const result = await orgImpl.createOrgDraft();
+  const result = await seminarApi.createOrgDraft();
   if (result.ok) await listOrgSeminars();
   return result;
 }
 
 async function createOrgEditDraft(seminarId: string) {
-  const result = await orgImpl.createOrgEditDraft(seminarId);
+  const result = await seminarApi.createOrgEditDraft(seminarId);
   if (result.ok) await listOrgSeminars();
   return result;
 }
 
 async function saveOrgDraft(draft: import('./orgTypes').SeminarDraft) {
-  const result = await orgImpl.saveOrgDraft(draft);
+  const result = await seminarApi.saveOrgDraft(draft);
   if (result.ok) await listOrgSeminars();
   return result;
+}
+
+function uploadOrgSeminarCover(draftId: string, file: File) {
+  return seminarApi.uploadOrgSeminarCover(draftId, file);
+}
+
+function removeOrgSeminarCover(draftId: string, objectPath: string) {
+  return seminarApi.removeOrgSeminarCover(draftId, objectPath);
 }
 
 async function publishOrgDraft(draftId: string) {
-  const result = await orgImpl.publishOrgDraft(draftId);
+  const result = await seminarApi.publishOrgDraft(draftId);
   if (result.ok) await listOrgSeminars();
   return result;
 }
 
-async function recordOrgScan(entry: ScanLedgerEntry) {
-  const result = await orgImpl.recordOrgScan(entry);
-  if (!result.ok) return result;
-  if (typeof navigator !== 'undefined' && navigator.onLine) await syncQueuedScans();
+async function recordOrgScan(input: RecordOrgScanInput): Promise<ApiResult<RecordOrgScanResult>> {
+  return attendanceApi.recordOrgScan(input);
+}
+
+async function issueAttendanceChallenge(seminarId: string) {
+  return attendanceApi.issueAttendanceChallenge(seminarId);
+}
+
+async function recordOrgChallengeScan(input: import('./orgTypes').RecordOrgChallengeScanInput): Promise<ApiResult<RecordOrgScanResult>> {
+  return attendanceApi.recordOrgChallengeScan(input);
+}
+
+function uploadWebinarProof(seminarId: string, kind: import('./types').ProofKind, file: File) {
+  return attendanceApi.uploadWebinarProof(seminarId, kind, file);
+}
+
+function listMyWebinarProofs(seminarId: string) {
+  return attendanceApi.listMyWebinarProofs(seminarId);
+}
+
+function listWebinarProofs(seminarId: string) {
+  return attendanceApi.listWebinarProofs(seminarId);
+}
+
+function reviewWebinarProof(proofId: string, approve: boolean, reason?: string) {
+  return attendanceApi.reviewWebinarProof(proofId, approve, reason);
+}
+
+async function getSession() {
+  return authImpl.getCurrentIdentity();
+}
+
+async function signIn(input: SignInInput) {
+  const result = await authImpl.signIn(input);
+  if (result.ok) {
+    saveCachedIdentity(result.data);
+    signalSessionChanged();
+  }
   return result;
 }
 
+async function signUp(input: SignUpInput) {
+  const result = await authImpl.completeStudentSignup(input);
+  if (result.ok) {
+    clearSession();
+    signalSessionChanged();
+  }
+  return result;
+}
+
+function sendSignupOtp(studentId: string, password: string) {
+  return authImpl.sendSignupOtp(studentId, password);
+}
+
+async function verifySignupOtp(studentId: string, code: string) {
+  const result = await authImpl.verifySignupOtp(studentId, code);
+  if (result.ok) {
+    const identity = await authImpl.getCurrentIdentity();
+    if (identity.ok && identity.data) saveCachedIdentity(identity.data);
+    signalSessionChanged();
+  }
+  return result;
+}
+
+function resendVerification(email: string) {
+  return authImpl.resendSignupOtp(email);
+}
+
+async function orgSignIn(input: OrgSignInInput) {
+  const result = await authImpl.orgSignIn(input);
+  if (result.ok) signalSessionChanged();
+  return result;
+}
+
+function sendPasswordResetOtp(studentId: string) {
+  return authImpl.sendPasswordResetOtp(studentId);
+}
+
+function verifyPasswordResetOtp(studentId: string, code: string) {
+  return authImpl.verifyPasswordResetOtp(studentId, code);
+}
+
+async function resetPassword(studentId: string, password: string) {
+  const result = await authImpl.resetPassword(studentId, password);
+  if (result.ok) {
+    clearSession();
+    signalSessionChanged();
+  }
+  return result;
+}
+
+function listOrganizations(): Promise<ApiResult<Organization[]>> {
+  return authImpl.listOrganizations();
+}
+
+function listEvaluationsDue() {
+  return evaluationApi.listEvaluationsDue();
+}
+
+function getEvaluationSurvey(seminarId: string) {
+  return evaluationApi.getEvaluationSurvey(seminarId);
+}
+
+function submitEvaluation(seminarId: string, surveyId: string, surveyVersion: number, answers: import('./types').EvaluationAnswers) {
+  return evaluationApi.submitEvaluation(seminarId, surveyId, surveyVersion, answers);
+}
+
+function getOrgSeminarEvaluation(seminarId: string, request?: CursorPageRequest): Promise<ApiResult<OrgSeminarEvaluationData>> {
+  return evaluationApi.getOrgSeminarEvaluation(seminarId, request);
+}
+
 export const api = {
-  signIn: impl.signIn,
-  signUp: impl.signUp,
-  resendVerification: impl.resendVerification,
+  signIn,
+  signUp,
+  sendSignupOtp,
+  verifySignupOtp,
+  resendVerification,
+  getServerTime,
+  getSession,
+  sendPasswordResetOtp,
+  verifyPasswordResetOtp,
+  resetPassword,
   getProfile,
   updateProfile,
   uploadAvatar,
   signOut,
   listHistory,
+  listAvailableSeminars,
+  listMySeminars,
   listSeminars,
   getSeminar,
   registerForSeminar,
   cancelRegistration,
+  confirmRegistration,
+  acknowledgeAttendance,
+  uploadWebinarProof,
+  listMyWebinarProofs,
   getTicket,
-  listEvaluationsDue: impl.listEvaluationsDue,
-  getTicketPdf: impl.getTicketPdf,
-  getCertificate: impl.getCertificate,
-  getEvaluationSurvey: impl.getEvaluationSurvey,
-  submitEvaluation: impl.submitEvaluation,
-  orgSignIn: orgImpl.orgSignIn,
+  listEvaluationsDue,
+  getTicketPdf,
+  getCertificate: certificateApi.getCertificate,
+  getEvaluationSurvey,
+  submitEvaluation,
+  orgSignIn,
   orgSignUp,
-  listAdviserOrgRequests: orgImpl.listAdviserOrgRequests,
-  listAdviserOrgMembers: orgImpl.listAdviserOrgMembers,
-  updateAdviserMemberPosition: orgImpl.updateAdviserMemberPosition,
-  removeAdviserMember: orgImpl.removeAdviserMember,
-  decideAdviserOrgRequest: orgImpl.decideAdviserOrgRequest,
-  listOrganizations: orgImpl.listOrganizations,
+  listAdviserOrgRequests: adviserApi.listAdviserOrgRequests,
+  listAdviserOrgMembers: adviserApi.listAdviserOrgMembers,
+  updateAdviserMemberPosition: adviserApi.updateAdviserMemberPosition,
+  removeAdviserMember: adviserApi.removeAdviserMember,
+  decideAdviserOrgRequest: adviserApi.decideAdviserOrgRequest,
+  listOrganizations,
   submitOrgAccessRequest,
-  getMyOrgAccessStatus: orgImpl.getMyOrgAccessStatus,
-  withdrawMyOrgRequest: orgImpl.withdrawMyOrgRequest,
+  getMyOrgAccessStatus,
+  withdrawMyOrgRequest,
   getOrgIdentity,
   listOrgSeminars,
   listOrgRoster,
   listLedger,
-  getOrgSeminarEvaluation: orgImpl.getOrgSeminarEvaluation,
-  getOrgSeminarCertificates: orgImpl.getOrgSeminarCertificates,
-  syncQueuedScans,
+  getOrgSeminarEvaluation,
+  getOrgSeminarCertificates: certificateApi.getOrgSeminarCertificates,
+  getOrgCertificate: certificateApi.getOrgCertificate,
   createOrgDraft,
   createOrgEditDraft,
   saveOrgDraft,
+  uploadOrgSeminarCover,
+  removeOrgSeminarCover,
   publishOrgDraft,
   recordOrgScan,
+  issueAttendanceChallenge,
+  recordOrgChallengeScan,
+  listWebinarProofs,
+  reviewWebinarProof,
 };
 
 export type * from './types';

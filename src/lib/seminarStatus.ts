@@ -1,21 +1,25 @@
 /**
  * Selectors that decide where a registered seminar belongs on the active lists.
- * My seminars uses these. Home and History keep their own rules for now.
+ * Home, My Seminars, and History use the same placement rule for finished seminars.
  *
- * Business rules (need confirmation):
- * - A finished seminar stays on the active lists for one hour, so a student can still show the QR
- *   code for the Time-Out scan. After that it moves to History.
- * - After that hour it stays only if its evaluation is due, because that needs an action.
+ * The one-hour cutoff is a locked project decision. My Seminars keeps an evaluation-due seminar visible
+ * after that cutoff so the student can still submit the evaluation.
  */
 import type { Seminar, SeminarListItem } from '../api/types';
-import { getLifecycle, isEvaluationDue } from '../features/seminars/status';
+import { isEvaluationDue } from '../features/seminars/status';
+import { getLifecycle } from './seminarLifecycle';
 
 export const RECENTLY_FINISHED_WINDOW_MS = 60 * 60 * 1000;
 
-/** True from the moment a seminar ends until one hour later. */
-export function isRecentlyFinished(seminar: Seminar, now: number): boolean {
+export type StudentSeminarPlacement = 'upcoming' | 'home' | 'history';
+
+/** One shared rule for where a seminar belongs as its end time moves through the one-hour window. */
+export function getStudentSeminarPlacement(seminar: Seminar, now: number): StudentSeminarPlacement {
+  const lifecycle = getLifecycle(seminar, now);
+  if (lifecycle === 'upcoming') return 'upcoming';
+  if (lifecycle === 'ongoing') return 'home';
   const endedAt = Date.parse(seminar.endsAt);
-  return now >= endedAt && now - endedAt < RECENTLY_FINISHED_WINDOW_MS;
+  return now >= endedAt && now - endedAt < RECENTLY_FINISHED_WINDOW_MS ? 'home' : 'history';
 }
 
 export type MySeminarGroup = 'ongoing' | 'upcoming' | 'evaluation';
@@ -33,7 +37,7 @@ export function getMySeminarGroup(item: SeminarListItem, now: number): MySeminar
   if (lifecycle === 'ongoing') return 'ongoing';
   if (lifecycle === 'upcoming') return 'upcoming';
   if (isEvaluationDue(item, now)) return 'evaluation';
-  return isRecentlyFinished(item.seminar, now) ? 'ongoing' : null;
+  return getStudentSeminarPlacement(item.seminar, now) === 'home' ? 'ongoing' : null;
 }
 
 export type MySeminarFilter = 'all' | 'ongoing' | 'upcoming';

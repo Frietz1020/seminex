@@ -7,9 +7,7 @@ import { Icon } from '../../../components/ui/Icon';
 import { ProgressBar } from '../../../components/ui/ProgressBar';
 import { LoadingRegion, RetryButton, Skeleton, StateMessage } from '../../../components/ui/StateMessage';
 import { useNow } from '../../../hooks/useNow';
-import { useOnlineStatus } from '../../../hooks/useOnlineStatus';
 import { useResource } from '../../../hooks/useResource';
-import { useUnsyncedScanCount } from '../../../hooks/useUnsyncedScanCount';
 import { useOrgIdentity } from '../../../session/OrgIdentityProvider';
 import { OrgStatusBadge } from '../components/OrgStatusBadge';
 import { getDraftReadiness } from '../readiness';
@@ -68,15 +66,14 @@ export default function OrgHomePage() {
   const navigate = useNavigate();
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState(false);
-  const [syncing, setSyncing] = useState(false);
-  const [syncError, setSyncError] = useState(false);
   const now = useNow();
-  const online = useOnlineStatus();
-  const pendingScans = useUnsyncedScanCount();
   const { state: identity } = useOrgIdentity();
-  const listing = useResource(() => api.listOrgSeminars(), 'org-home');
-  const seminars = listing.state.status === 'success' ? listing.state.data.seminars : [];
-  const drafts = listing.state.status === 'success' ? listing.state.data.drafts : [];
+  const listing = useResource(() => api.listOrgSeminars({ seminars: { pageSize: 999 }, drafts: { pageSize: 999 } }), 'org-home');
+  if (now === null) {
+    return <PageContainer><p role="status" className="font-body-sm text-body-sm text-text-secondary">Loading current seminar times…</p></PageContainer>;
+  }
+  const seminars = listing.state.status === 'success' ? listing.state.data.seminars.items : [];
+  const drafts = listing.state.status === 'success' ? listing.state.data.drafts.items : [];
   const active = seminars.filter((item) => ['upcoming', 'ongoing'].includes(getOrgLifecycle(item, now))).sort((a, b) => a.startsAt.localeCompare(b.startsAt));
   const ongoing = active.filter((item) => getOrgLifecycle(item, now) === 'ongoing');
   const recentlyFinished = seminars.filter((item) => isOrgRecentlyFinished(item, now)).sort((a, b) => b.endsAt.localeCompare(a.endsAt));
@@ -98,21 +95,8 @@ export default function OrgHomePage() {
     else setCreateError(true);
   }
 
-  async function syncScans() {
-    if (syncing || !online || pendingScans === 0) return;
-    setSyncing(true);
-    setSyncError(false);
-    const result = await api.syncQueuedScans();
-    setSyncing(false);
-    if (!result.ok) setSyncError(true);
-  }
-
   return (
     <PageContainer>
-      {pendingScans > 0 && <section role={syncError ? 'alert' : 'status'} aria-live="polite" className={`flex flex-col gap-space-sm rounded-xl border p-space-md shadow-card sm:flex-row sm:items-center sm:justify-between ${syncError ? 'border-danger-soft bg-danger-surface text-danger-ink' : 'border-outline-variant/50 bg-surface-container-highest text-on-surface-variant'}`}>
-        <div className="flex min-w-0 items-start gap-space-sm"><Icon name={online ? 'sync' : 'cloud_off'} size={20} className={`mt-0.5 shrink-0 ${online ? 'text-secondary' : 'text-status-ongoing'}`} /><div><p className="font-body-sm-medium text-body-sm-medium text-on-surface">{syncError ? 'Some attendance scans could not sync.' : `${pendingScans} ${pendingScans === 1 ? 'scan' : 'scans'} waiting to sync.`}</p><p className="mt-0.5 font-caption text-caption text-text-secondary">{online ? 'Scans recorded on this device will sync when the connection is ready.' : 'You are offline. Scans are saved on this device and will sync when you reconnect.'}</p></div></div>
-        <button type="button" onClick={() => void syncScans()} disabled={!online || syncing} className={`${actionTonal} shrink-0`}><Icon name="sync" size={16} />{syncing ? 'Syncing…' : online ? 'Sync now' : 'Offline'}</button>
-      </section>}
       <header className="flex flex-col justify-between gap-space-lg md:flex-row md:items-end">
         <div>
           <h1 className="font-headline-xl text-headline-xl-mobile tracking-tight text-on-surface md:text-headline-xl">Welcome back{identity.status === 'success' ? `, ${identity.data.firstName}` : ''}</h1>

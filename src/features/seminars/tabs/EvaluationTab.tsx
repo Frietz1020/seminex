@@ -11,7 +11,7 @@ export function EvaluationTab({ item, now }: { item: SeminarListItem; now: numbe
   const access = getEvaluationAccess(item, now);
 
   if (access.state === 'locked') {
-    return <EvaluationLocked reason={access.reason} endsAt={seminar.endsAt} />;
+    return <EvaluationLocked reason={access.reason} />;
   }
 
   if (access.state === 'submitted') {

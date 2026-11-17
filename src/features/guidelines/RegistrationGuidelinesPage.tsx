@@ -4,7 +4,6 @@ import { BackLink } from '../../components/ui/BackLink';
 import { Icon } from '../../components/ui/Icon';
 import type { IconName } from '../../components/ui/icons';
 import { PageContainer } from '../../components/shell/PageContainer';
-import { REQUIRED_ATTENDANCE_PERCENT } from '../../config';
 
 interface GuidelineCard {
   id: string;
@@ -31,7 +30,7 @@ const CARDS: readonly GuidelineCard[] = [
     id: 'certificate',
     icon: 'workspace_premium',
     title: 'How to get your certificate',
-    body: `You need all three: attend at least ${REQUIRED_ATTENDANCE_PERCENT}% of the seminar, have your Time-In and Time-Out validated, and submit the evaluation after the seminar finishes. When all three are met, Download certificate appears in History.`,
+    body: 'You need to meet the attendance requirement for the seminar, have your Time-In and Time-Out validated, and submit the evaluation after the seminar finishes. When all three are met, Download certificate appears in History.',
   },
   {
     id: 'cancel',

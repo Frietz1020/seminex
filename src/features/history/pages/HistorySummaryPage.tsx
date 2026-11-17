@@ -125,7 +125,7 @@ export default function HistorySummaryPage() {
   const [downloading, setDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
   const item = resource.state.status === 'success' ? resource.state.data : null;
-  const record = item ? (buildHistoryRecords([item], now)[0] ?? null) : null;
+  const record = item && now !== null ? (buildHistoryRecords([item], now)[0] ?? null) : null;
 
   useEffect(() => {
     document.title = record ? `${record.seminar.title} summary - Seminex` : 'History summary - Seminex';
@@ -179,6 +179,10 @@ export default function HistorySummaryPage() {
         </StateMessage>
       </PageContainer>
     );
+  }
+
+  if (now === null) {
+    return <PageContainer><StateMessage icon="schedule" title="Current seminar time is unavailable">Reconnect to load authoritative seminar time before calculating attendance and certificate eligibility.</StateMessage></PageContainer>;
   }
 
   if (!record) {

@@ -1,5 +1,6 @@
 import type { OrgSeminar } from '../../api/orgTypes';
 import { RECENTLY_FINISHED_WINDOW_MS } from '../../lib/seminarStatus';
+import { getLifecycle } from '../../lib/seminarLifecycle';
 
 export type OrgLifecycle = 'upcoming' | 'ongoing' | 'finished' | 'cancelled';
 
@@ -15,9 +16,7 @@ export function getEffectiveEnd(seminar: OrgSeminar): number {
  */
 export function getOrgLifecycle(seminar: OrgSeminar, now: number): OrgLifecycle {
   if (seminar.cancellation) return 'cancelled';
-  if (now >= getEffectiveEnd(seminar)) return 'finished';
-  if (now >= Date.parse(seminar.startsAt)) return 'ongoing';
-  return 'upcoming';
+  return getLifecycle(seminar, now, getEffectiveEnd(seminar));
 }
 
 /**

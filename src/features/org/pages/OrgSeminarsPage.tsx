@@ -11,11 +11,26 @@ import { getDraftReadiness } from '../readiness';
 import { getOrgLifecycle, isOrgRecentlyFinished } from '../seminarStatus';
 import { OrgStatusBadge } from '../components/OrgStatusBadge';
 import { ProgressBar } from '../../../components/ui/ProgressBar';
-import { useOnlineStatus } from '../../../hooks/useOnlineStatus';
-import { useUnsyncedScanCount } from '../../../hooks/useUnsyncedScanCount';
 
 type View = 'all' | 'ongoing' | 'upcoming' | 'drafts' | 'recent';
 type Sort = 'nearest' | 'az' | 'registrants';
+type ExtraPages = {
+  query: string;
+  seminars: OrgSeminar[];
+  drafts: SeminarDraft[];
+  seminarCursor: string | null;
+  draftCursor: string | null;
+  seminarsExhausted: boolean;
+  draftsExhausted: boolean;
+  loadingSeminars: boolean;
+  loadingDrafts: boolean;
+  error: boolean;
+};
+const emptyExtraPages = (query: string): ExtraPages => ({
+  query, seminars: [], drafts: [], seminarCursor: null, draftCursor: null,
+  seminarsExhausted: false, draftsExhausted: false,
+  loadingSeminars: false, loadingDrafts: false, error: false,
+});
 const FILTERS: Array<{ value: View; label: string }> = [
   { value: 'all', label: 'All' },
   { value: 'ongoing', label: 'Ongoing' },
@@ -98,8 +113,6 @@ function DraftCard({ draft }: { draft: SeminarDraft }) {
 
 export default function OrgSeminarsPage() {
   const now = useNow();
-  const online = useOnlineStatus();
-  const pendingScans = useUnsyncedScanCount();
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const [filter, setFilter] = useState<View>('all');
@@ -107,14 +120,21 @@ export default function OrgSeminarsPage() {
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState(false);
   const query = params.get('q') ?? '';
-  const listing = useResource(() => api.listOrgSeminars(), 'org-seminars');
-  const items = listing.state.status === 'success' ? listing.state.data.seminars : [];
-  const drafts = listing.state.status === 'success' ? listing.state.data.drafts : [];
+  const listing = useResource(() => api.listOrgSeminars({
+    seminars: { pageSize: 50, search: query },
+    drafts: { pageSize: 50, search: query },
+  }), `org-seminars:${query}`);
+  const [extraPages, setExtraPages] = useState(() => emptyExtraPages(query));
+  const pageState = useMemo(() => extraPages.query === query ? extraPages : emptyExtraPages(query), [extraPages, query]);
+  const seminarPage = listing.state.status === 'success' ? listing.state.data.seminars : null;
+  const draftPage = listing.state.status === 'success' ? listing.state.data.drafts : null;
+  const items = useMemo(() => seminarPage ? [...seminarPage.items, ...pageState.seminars] : [], [seminarPage, pageState.seminars]);
+  const drafts = useMemo(() => draftPage ? [...draftPage.items, ...pageState.drafts] : [], [draftPage, pageState.drafts]);
   const searched = useMemo(() => items.filter((item) => matchesQuery(item, query)), [items, query]);
-  const ongoing = searched.filter((item) => getOrgLifecycle(item, now) === 'ongoing').sort((a, b) => a.startsAt.localeCompare(b.startsAt));
-  const upcoming = searched.filter((item) => getOrgLifecycle(item, now) === 'upcoming').sort((a, b) => a.startsAt.localeCompare(b.startsAt));
-  const recentlyFinished = searched.filter((item) => isOrgRecentlyFinished(item, now)).sort((a, b) => b.endsAt.localeCompare(a.endsAt));
-  const cancelled = searched.filter((item) => getOrgLifecycle(item, now) === 'cancelled');
+  const ongoing = now === null ? [] : searched.filter((item) => getOrgLifecycle(item, now) === 'ongoing').sort((a, b) => a.startsAt.localeCompare(b.startsAt));
+  const upcoming = now === null ? [] : searched.filter((item) => getOrgLifecycle(item, now) === 'upcoming').sort((a, b) => a.startsAt.localeCompare(b.startsAt));
+  const recentlyFinished = now === null ? [] : searched.filter((item) => isOrgRecentlyFinished(item, now)).sort((a, b) => b.endsAt.localeCompare(a.endsAt));
+  const cancelled = now === null ? [] : searched.filter((item) => getOrgLifecycle(item, now) === 'cancelled');
   const visibleDrafts = drafts.filter((draft) => `${draft.details.title ?? ''} ${draft.details.venue ?? ''} ${draft.details.speakerName ?? ''}`.toLowerCase().includes(query.trim().toLowerCase()));
   const total = ongoing.length + upcoming.length + recentlyFinished.length + cancelled.length + visibleDrafts.length;
 
@@ -124,6 +144,60 @@ export default function OrgSeminarsPage() {
     if (sort === 'registrants') sorted.sort((a, b) => b.registeredCount - a.registeredCount);
     return sorted;
   }, [upcoming, sort]);
+
+  if (now === null) {
+    return <PageContainer><p role="status" className="font-body-sm text-body-sm text-text-secondary">Loading current seminar times…</p></PageContainer>;
+  }
+
+  async function loadMoreSeminars() {
+    const cursor = pageState.seminarCursor ?? seminarPage?.nextCursor;
+    if (!cursor || pageState.loadingSeminars || pageState.seminarsExhausted) return;
+    setExtraPages((current) => ({ ...(current.query === query ? current : emptyExtraPages(query)), loadingSeminars: true, error: false }));
+    const result = await api.listOrgSeminars({
+      seminars: { cursor, pageSize: 50, search: query },
+      drafts: { pageSize: 1 },
+    });
+    if (!result.ok) {
+      setExtraPages((current) => ({ ...(current.query === query ? current : emptyExtraPages(query)), loadingSeminars: false, error: true }));
+      return;
+    }
+    setExtraPages((current) => {
+      const base = current.query === query ? current : emptyExtraPages(query);
+      return {
+        ...base,
+        seminars: [...base.seminars, ...result.data.seminars.items],
+        seminarCursor: result.data.seminars.nextCursor,
+        seminarsExhausted: result.data.seminars.nextCursor === null,
+        loadingSeminars: false,
+        error: false,
+      };
+    });
+  }
+
+  async function loadMoreDrafts() {
+    const cursor = pageState.draftCursor ?? draftPage?.nextCursor;
+    if (!cursor || pageState.loadingDrafts || pageState.draftsExhausted) return;
+    setExtraPages((current) => ({ ...(current.query === query ? current : emptyExtraPages(query)), loadingDrafts: true, error: false }));
+    const result = await api.listOrgSeminars({
+      seminars: { pageSize: 1 },
+      drafts: { cursor, pageSize: 50, search: query },
+    });
+    if (!result.ok) {
+      setExtraPages((current) => ({ ...(current.query === query ? current : emptyExtraPages(query)), loadingDrafts: false, error: true }));
+      return;
+    }
+    setExtraPages((current) => {
+      const base = current.query === query ? current : emptyExtraPages(query);
+      return {
+        ...base,
+        drafts: [...base.drafts, ...result.data.drafts.items],
+        draftCursor: result.data.drafts.nextCursor,
+        draftsExhausted: result.data.drafts.nextCursor === null,
+        loadingDrafts: false,
+        error: false,
+      };
+    });
+  }
 
   async function createDraft() {
     if (creating) return;
@@ -137,7 +211,6 @@ export default function OrgSeminarsPage() {
 
   return (
     <PageContainer>
-      {(!online || pendingScans > 0) && <aside role="status" aria-live="polite" className="flex flex-col gap-space-sm rounded-xl border border-outline-variant/50 bg-surface-container-highest p-space-md shadow-sm sm:flex-row sm:items-center"><Icon name={online ? 'sync' : 'cloud_off'} size={20} className="shrink-0 text-secondary" /><div className="min-w-0"><p className="font-body-sm-medium text-body-sm-medium text-on-surface">{online ? `${pendingScans} attendance ${pendingScans === 1 ? 'scan' : 'scans'} waiting to sync` : 'You are offline'}</p><p className="font-caption text-caption text-text-secondary">{online ? 'Queued scans remain on this device until the server confirms them.' : 'Cached seminar information is available. Scans sync when a connection returns.'}</p></div></aside>}
       <header className="flex flex-col justify-between gap-space-md md:flex-row md:items-center">
         <div className="max-w-3xl"><h1 className="font-headline-xl text-headline-xl-mobile tracking-tight text-on-surface md:text-headline-xl">My Seminars</h1></div>
         <button type="button" onClick={() => void createDraft()} disabled={creating} className={actionPrimary}><Icon name="add" size={20} />{creating ? 'Creating draft…' : 'Create seminar'}</button>
@@ -149,7 +222,7 @@ export default function OrgSeminarsPage() {
         <div className="flex flex-col gap-space-md lg:flex-row lg:items-center lg:justify-between">
           <form role="search" onSubmit={(event) => event.preventDefault()} className="relative min-w-0 flex-1">
             <Icon name="search" size={18} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" />
-            <input aria-label="Search seminars by title, speaker, or venue" type="search" value={query} onChange={(event) => { const value = event.target.value; setParams((previous) => { const next = new URLSearchParams(previous); value ? next.set('q', value) : next.delete('q'); return next; }, { replace: true }); }} placeholder="Search seminar title, speaker, or venue…" className="h-12 w-full rounded-xl border border-outline-variant/60 bg-surface-container-lowest pl-10 pr-3 font-body-sm text-body-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20" />
+            <input aria-label="Search seminars by title, speaker, or venue" type="search" value={query} onChange={(event) => { const value = event.target.value; setParams((previous) => { const next = new URLSearchParams(previous); if (value) next.set('q', value); else next.delete('q'); return next; }, { replace: true }); }} placeholder="Search seminar title, speaker, or venue…" className="h-12 w-full rounded-xl border border-outline-variant/60 bg-surface-container-lowest pl-10 pr-3 font-body-sm text-body-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20" />
           </form>
           <div className="flex flex-wrap items-center gap-space-sm">
             <label htmlFor="seminar-sort" className="sr-only">Sort seminars</label><select id="seminar-sort" value={sort} onChange={(event) => setSort(event.target.value as Sort)} className="h-12 rounded-xl border border-outline-variant/60 bg-surface-container-lowest px-3 font-body-sm-medium text-body-sm-medium text-on-surface outline-none focus:border-primary"><option value="nearest">Nearest date</option><option value="az">Title (A–Z)</option><option value="registrants">Most registrants</option></select>
@@ -166,6 +239,7 @@ export default function OrgSeminarsPage() {
 
       {listing.state.status === 'loading' && <LoadingRegion label="Loading organization seminars" className="flex flex-col gap-space-xl"><Skeleton className="h-36 rounded-xl" /><div className="grid gap-space-md md:grid-cols-2 xl:grid-cols-3">{[0,1,2].map((key) => <Skeleton key={key} className="h-80 rounded-xl" />)}</div></LoadingRegion>}
       {listing.state.status === 'error' && <StateMessage role="alert" icon="info" title="Seminars could not be loaded" action={<RetryButton onClick={listing.reload} />}>Check your connection and try again.</StateMessage>}
+      {pageState.error && <p role="alert" className="rounded-lg border border-danger-soft bg-danger-surface p-space-md text-danger-ink">More results could not be loaded. Please try again.</p>}
       {listing.state.status === 'empty' && <StateMessage icon="event_note" title="No seminars or drafts yet" action={<button type="button" onClick={() => void createDraft()} className={actionPrimary}><Icon name="add" size={18} />Create a seminar</button>}>Start a seminar draft to add its details, certificate, and evaluation.</StateMessage>}
 
       {listing.state.status === 'success' && <div className="flex flex-col gap-space-xl">
@@ -173,11 +247,12 @@ export default function OrgSeminarsPage() {
 
         {(filter === 'all' || filter === 'upcoming') && <section className="flex flex-col gap-space-md" aria-labelledby="upcoming-heading"><div className="flex flex-wrap items-center justify-between gap-2"><div className="flex items-center gap-space-sm"><h2 id="upcoming-heading" className="font-title-lg text-title-lg text-on-surface">Upcoming seminars</h2><span className="rounded-full bg-surface-container-high px-2.5 py-1 font-caption text-caption text-text-secondary">{upcoming.length} scheduled</span></div></div>{orderedUpcoming.length ? <div className="grid gap-space-md md:grid-cols-2 xl:grid-cols-3">{orderedUpcoming.map((seminar) => <SeminarCard key={seminar.id} seminar={seminar} now={now} />)}</div> : <StateMessage icon="event_busy" title="No upcoming seminars">Create a draft when you are ready to plan your next session.</StateMessage>}</section>}
 
-        {(filter === 'all' || filter === 'drafts') && <section className="flex flex-col gap-space-md" aria-labelledby="drafts-heading"><div className="flex flex-wrap items-center justify-between gap-2"><div className="flex items-center gap-space-sm"><h2 id="drafts-heading" className="font-title-lg text-title-lg text-on-surface">Drafts</h2><span className="rounded-full bg-surface-container-high px-2.5 py-1 font-caption text-caption text-text-secondary">{visibleDrafts.length} in preparation</span></div><span className="font-caption text-caption text-text-secondary">Not published to the participant catalog</span></div>{visibleDrafts.length ? <div className="grid gap-space-md">{visibleDrafts.map((draft) => <DraftCard key={draft.id} draft={draft} />)}</div> : <StateMessage icon="draft" title="No drafts match your search">Create a seminar to begin a new draft.</StateMessage>}</section>}
+        {(filter === 'all' || filter === 'drafts') && <section className="flex flex-col gap-space-md" aria-labelledby="drafts-heading"><div className="flex flex-wrap items-center justify-between gap-2"><div className="flex items-center gap-space-sm"><h2 id="drafts-heading" className="font-title-lg text-title-lg text-on-surface">Drafts</h2><span className="rounded-full bg-surface-container-high px-2.5 py-1 font-caption text-caption text-text-secondary">{visibleDrafts.length} in preparation</span></div><span className="font-caption text-caption text-text-secondary">Not published to the participant catalog</span></div>{visibleDrafts.length ? <div className="grid gap-space-md">{visibleDrafts.map((draft) => <DraftCard key={draft.id} draft={draft} />)}</div> : <StateMessage icon="draft" title="No drafts match your search">Create a seminar to begin a new draft.</StateMessage>}{!pageState.draftsExhausted && (pageState.draftCursor ?? draftPage?.nextCursor) && <button type="button" onClick={() => void loadMoreDrafts()} disabled={pageState.loadingDrafts} className={actionTonal}>{pageState.loadingDrafts ? 'Loading drafts…' : 'Load more drafts'}</button>}</section>}
 
         {(filter === 'all' || filter === 'recent') && <section className="flex flex-col gap-space-md" aria-labelledby="recent-heading"><div className="flex items-center gap-space-sm"><h2 id="recent-heading" className="font-title-lg text-title-lg text-on-surface">Finished recently</h2><span className="rounded-full bg-surface-container-high px-2.5 py-1 font-caption text-caption text-text-secondary">{recentlyFinished.length}</span></div>{recentlyFinished.length ? <div className="grid gap-space-md md:grid-cols-2 xl:grid-cols-3">{recentlyFinished.map((seminar) => <SeminarCard key={seminar.id} seminar={seminar} now={now} />)}</div> : <StateMessage icon="history" title="No recently finished seminars">Completed seminars are available in History.</StateMessage>}</section>}
 
         {filter === 'all' && cancelled.length > 0 && <section className="flex flex-col gap-space-md" aria-labelledby="cancelled-heading"><h2 id="cancelled-heading" className="font-title-lg text-title-lg text-on-surface">Cancelled seminars</h2><div className="grid gap-space-md md:grid-cols-2 xl:grid-cols-3">{cancelled.map((seminar) => <SeminarCard key={seminar.id} seminar={seminar} now={now} />)}</div></section>}
+        {(filter === 'all' || filter === 'ongoing' || filter === 'upcoming' || filter === 'recent') && !pageState.seminarsExhausted && (pageState.seminarCursor ?? seminarPage?.nextCursor) && <button type="button" onClick={() => void loadMoreSeminars()} disabled={pageState.loadingSeminars} className={actionTonal}>{pageState.loadingSeminars ? 'Loading seminars…' : 'Load more seminars'}</button>}
       </div>}
     </PageContainer>
   );

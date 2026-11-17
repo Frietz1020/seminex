@@ -18,10 +18,10 @@ const dateTime = (value: string) => new Intl.DateTimeFormat(undefined, { dateSty
 const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join('').toUpperCase();
 
 async function loadAuditEvents(): Promise<ApiResult<AuditEvent[]>> {
-  const [requests, members, listing] = await Promise.all([api.listAdviserOrgRequests(), api.listAdviserOrgMembers(), api.listOrgSeminars()]);
+  const [requests, members, listing] = await Promise.all([api.listAdviserOrgRequests(), api.listAdviserOrgMembers(), api.listOrgSeminars({ seminars: { pageSize: 999 }, drafts: { pageSize: 999 } })]);
   for (const result of [requests, members, listing]) if (!result.ok) return result;
   if (!requests.ok || !members.ok || !listing.ok) return { ok: false, error: { code: 'network' } };
-  const seminarRecords = await Promise.all(listing.data.seminars.map(async (seminar) => {
+  const seminarRecords = await Promise.all(listing.data.seminars.items.map(async (seminar) => {
     const [ledger, roster] = await Promise.all([api.listLedger(seminar.id), api.listOrgRoster(seminar.id)]);
     if (!ledger.ok) return ledger;
     if (!roster.ok) return roster;
@@ -29,7 +29,7 @@ async function loadAuditEvents(): Promise<ApiResult<AuditEvent[]>> {
   }));
   for (const result of seminarRecords) if (!result.ok) return result;
   const events: AuditEvent[] = [];
-  const byId = new Map(listing.data.seminars.map((seminar) => [seminar.id, seminar]));
+  const byId = new Map(listing.data.seminars.items.map((seminar) => [seminar.id, seminar]));
   requests.data.forEach((request: OrgRequest) => {
     events.push({ id: `${request.id}:submitted`, at: request.requestedAt, actionKey: 'request', action: 'Access Request Submitted', actor: request.fullName, role: 'Organization applicant', target: request.position, targetId: request.studentId, context: byId.get(request.organizationId)?.title ?? request.organizationId, reason: request.statement ?? 'No statement provided.' });
     if (request.decidedAt && (request.status === 'approved' || request.status === 'rejected')) events.push({ id: `${request.id}:decision`, at: request.decidedAt, actionKey: request.status, action: request.status === 'approved' ? 'Approved Member' : 'Rejected Access', actor: 'Faculty adviser', role: 'Faculty adviser', target: request.fullName, targetId: request.studentId, context: request.position, reason: request.decisionNote ?? 'No decision note recorded.' });
@@ -37,11 +37,11 @@ async function loadAuditEvents(): Promise<ApiResult<AuditEvent[]>> {
   members.data.filter((member: AdviserDirectoryMember) => member.category === 'member').forEach((member) => {
     events.push({ id: `${member.id}:appointed`, at: member.appointedAt, actionKey: 'appointed', action: 'Officer Appointment Recorded', actor: 'Faculty adviser', role: 'Faculty adviser', target: member.fullName, targetId: member.studentId ?? member.email, context: member.position, reason: 'Appointment date recorded in the organization roster.' });
   });
-  listing.data.drafts.forEach((draft) => events.push({ id: `${draft.id}:created`, at: draft.createdAt, actionKey: 'draft', action: 'Seminar Draft Created', actor: draft.createdByOfficerId, role: 'Organization officer', target: draft.details.title || 'Untitled seminar', targetId: draft.id, context: 'Unpublished seminar draft', reason: 'Draft creation timestamp.' }));
+  listing.data.drafts.items.forEach((draft) => events.push({ id: `${draft.id}:created`, at: draft.createdAt, actionKey: 'draft', action: 'Seminar Draft Created', actor: draft.createdByOfficerId, role: 'Organization officer', target: draft.details.title || 'Untitled seminar', targetId: draft.id, context: 'Unpublished seminar draft', reason: 'Draft creation timestamp.' }));
   seminarRecords.forEach((result) => {
     if (!result.ok) return;
     const { seminar, ledger, roster } = result.data;
-    ledger.forEach((entry: ScanLedgerEntry) => events.push({ id: entry.id, at: entry.clientTimestamp, actionKey: entry.kind === 'correction' ? 'corrected' : 'request', action: entry.kind === 'correction' ? 'Corrected Attendance' : `Attendance ${entry.kind.replace('_', ' ')}`, actor: entry.officerName, role: 'Organization officer', target: entry.studentId, targetId: entry.studentId, context: seminar.title, reason: entry.reason ?? `${entry.method.toUpperCase()} scan${entry.synced ? '' : ' · Pending synchronization'}.` }));
+    ledger.forEach((entry: ScanLedgerEntry) => events.push({ id: entry.id, at: entry.clientTimestamp ?? entry.at, actionKey: entry.kind === 'correction' ? 'corrected' : 'request', action: entry.kind === 'correction' ? 'Corrected Attendance' : `Attendance ${entry.kind.replace('_', ' ')}`, actor: entry.officerName, role: 'Organization officer', target: entry.studentId, targetId: entry.studentId, context: seminar.title, reason: entry.reason ?? `${entry.method.toUpperCase()} scan.` }));
     roster.filter((registration) => registration.removal).forEach((registration) => {
       const removal = registration.removal!;
       events.push({ id: `${registration.id}:removed`, at: removal.at, actionKey: 'removed', action: 'Removed Attendee', actor: removal.officerName, role: 'Organization officer', target: `${registration.firstName} ${registration.lastName}`, targetId: registration.studentId, context: seminar.title, reason: removal.note || removal.reason });

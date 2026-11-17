@@ -7,6 +7,7 @@ import { ToastProvider } from '../ui/Toast';
 import { BottomNav } from './BottomNav';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
+import { AttendancePrompt } from './AttendancePrompt';
 
 /** Signed-in layout: sidebar and top bar on desktop, condensed top bar and bottom nav below lg. */
 export function AppShell() {
@@ -22,6 +23,7 @@ export function AppShell() {
   return (
     <ProfileProvider>
       <ToastProvider>
+        <AttendancePrompt />
         <div className="min-h-dvh bg-surface-light">
           <a
             href="#main"

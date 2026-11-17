@@ -28,7 +28,7 @@ async function loadOversightSummary(): Promise<ApiResult<OversightSummary>> {
   for (const result of [seminars, members, requests]) if (!result.ok) return result;
   if (!seminars.ok || !members.ok || !requests.ok) return { ok: false, error: { code: 'network' } };
   return { ok: true, data: {
-    seminarCount: seminars.data.seminars.length,
+    seminarCount: seminars.data.seminars.items.length,
     activeMembers: members.data.filter((member) => member.category === 'member' && member.status === 'active').length,
     decisions: requests.data.filter((request) => request.status === 'approved' || request.status === 'rejected').length,
   } };

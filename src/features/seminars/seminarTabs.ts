@@ -1,5 +1,5 @@
 import type { SeminarListItem } from '../../api/types';
-import { getLifecycle, isEvaluationDue } from './status';
+import { getAttendance, getLifecycle, isEvaluationDue } from './status';
 
 export const SEMINAR_TABS = ['details', 'ticket', 'evaluation'] as const;
 export type SeminarTab = (typeof SEMINAR_TABS)[number];
@@ -18,17 +18,18 @@ export function getDefaultTab(item: SeminarListItem, now: number): SeminarTab {
 export type EvaluationAccess =
   | { state: 'unlocked' }
   | { state: 'submitted'; submittedAt: string }
-  | { state: 'locked'; reason: 'upcoming' | 'ongoing' | 'no_time_out' | 'time_out_unvalidated' };
+  | { state: 'locked'; reason: 'no_time_out' | 'time_out_unvalidated' | 'insufficient_attendance' };
 
-/** Business rule (needs confirmation): open once finished and the Time-Out is validated. */
+/** Opens after a validated Time-Out and the seminar-specific attendance threshold are both met. */
 export function getEvaluationAccess(item: SeminarListItem, now: number): EvaluationAccess {
   const { seminar, registration } = item;
-  const lifecycle = getLifecycle(seminar, now);
-  if (lifecycle !== 'finished') return { state: 'locked', reason: lifecycle };
   if (registration?.evaluationSubmittedAt) {
     return { state: 'submitted', submittedAt: registration.evaluationSubmittedAt };
   }
   if (!registration?.timeOut) return { state: 'locked', reason: 'no_time_out' };
   if (!registration.timeOut.validated) return { state: 'locked', reason: 'time_out_unvalidated' };
+  if (!getAttendance(seminar, registration, now).satisfied) {
+    return { state: 'locked', reason: 'insufficient_attendance' };
+  }
   return { state: 'unlocked' };
 }

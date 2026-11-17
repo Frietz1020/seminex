@@ -1,7 +1,7 @@
 import type { SeminarListItem } from '../../../api/types';
 import type { ResourceState } from '../../../hooks/useResource';
 import { InlineError, LoadingRegion, Skeleton } from '../../../components/ui/StateMessage';
-import { getLifecycle } from '../../seminars/status';
+import { getStudentSeminarPlacement } from '../../../lib/seminarStatus';
 import { OngoingSeminarCard } from './OngoingSeminarCard';
 
 interface OngoingSectionProps {
@@ -11,7 +11,7 @@ interface OngoingSectionProps {
   onRetry: () => void;
 }
 
-/** Shown only while a registered seminar is ongoing. Nothing renders when there is none. */
+/** Shows ongoing and recently finished registered seminars while the ticket can still be scanned. */
 export function OngoingSection({ state, items, now, onRetry }: OngoingSectionProps) {
   if (state.status === 'loading') {
     return (
@@ -24,9 +24,7 @@ export function OngoingSection({ state, items, now, onRetry }: OngoingSectionPro
     return <InlineError onRetry={onRetry}>Your ongoing seminar could not be loaded.</InlineError>;
   }
 
-  const ongoing = (items ?? []).filter(
-    (item) => item.registration !== null && getLifecycle(item.seminar, now) === 'ongoing',
-  );
+  const ongoing = (items ?? []).filter((item) => item.registration !== null && getStudentSeminarPlacement(item.seminar, now) === 'home');
   if (ongoing.length === 0) return null;
 
   return (

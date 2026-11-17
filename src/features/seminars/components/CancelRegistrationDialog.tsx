@@ -50,7 +50,7 @@ export function CancelRegistrationDialog({ seminar, onClose, onCancelled }: Canc
     }
     setMessage(
       result.error.code === 'not_available'
-        ? 'This registration can no longer be cancelled. You can cancel only before the seminar starts.'
+        ? 'This registration can no longer be cancelled. Cancellation is available until Time-In is recorded.'
         : errorText(result.error.code),
     );
   }

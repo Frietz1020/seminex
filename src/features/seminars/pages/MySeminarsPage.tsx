@@ -12,7 +12,7 @@ import { useToast } from '../../../components/ui/Toast';
 import { useNow } from '../../../hooks/useNow';
 import { useResource } from '../../../hooks/useResource';
 import { formatDayLabel, formatTimeRange } from '../format';
-import { QrCode } from '../QrCode';
+import { AttendanceQr } from '../AttendanceQr';
 import { getLifecycle } from '../status';
 import {
   buildMySeminarView,
@@ -34,7 +34,7 @@ const CONTROL =
 export default function MySeminarsPage() {
   const now = useNow();
   const { showToast } = useToast();
-  const seminars = useResource(() => api.listSeminars(), 'my-seminars');
+  const seminars = useResource(() => api.listMySeminars({ pageSize: 999 }), 'my-seminars');
   const searchRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<MySeminarFilter>('all');
@@ -55,9 +55,9 @@ export default function MySeminarsPage() {
 
   // The list as the student sees it: cancelled registrations are already removed.
   const view =
-    seminars.state.status === 'success'
+    now !== null && seminars.state.status === 'success'
       ? buildMySeminarView(
-          seminars.state.data.filter((item) => !cancelledIds.includes(item.seminar.id)),
+          seminars.state.data.items.filter((item) => !cancelledIds.includes(item.seminar.id)),
           { query, filter, sort },
           now,
         )
@@ -65,13 +65,13 @@ export default function MySeminarsPage() {
 
   const registeredItems =
     seminars.state.status === 'success'
-      ? seminars.state.data.filter((item) => item.registration && !cancelledIds.includes(item.seminar.id))
+      ? seminars.state.data.items.filter((item) => item.registration && !cancelledIds.includes(item.seminar.id))
       : [];
-  const metricView = seminars.state.status === 'success'
+  const metricView = now !== null && seminars.state.status === 'success'
     ? buildMySeminarView(registeredItems, { query: '', filter: 'all', sort: 'nearest' }, now)
     : null;
-  const activeTicketItem = [...registeredItems]
-    .filter((item) => getLifecycle(item.seminar, now) !== 'finished')
+  const activeTicketItem = now === null ? null : [...registeredItems]
+    .filter((item) => getLifecycle(item.seminar, now) !== 'finished' && item.seminar.seminarType !== 'webinar' && item.registration?.status !== 'released' && item.registration?.status !== 'cancelled')
     .sort((a, b) => {
       const aOngoing = getLifecycle(a.seminar, now) === 'ongoing' ? 0 : 1;
       const bOngoing = getLifecycle(b.seminar, now) === 'ongoing' ? 0 : 1;
@@ -89,6 +89,7 @@ export default function MySeminarsPage() {
     metricView?.groups.find((entry) => entry.group === group)?.items.length ?? 0;
 
   function renderBody() {
+    if (now === null) return <p role="status" className="font-body-sm text-body-sm text-text-secondary">Loading current seminar times…</p>;
     if (seminars.state.status === 'loading') {
       return (
         <LoadingRegion label="Loading your seminars" className="flex flex-col gap-space-md">
@@ -201,6 +202,10 @@ export default function MySeminarsPage() {
 
   // Search and filters appear only when there are active seminars.
   const showControls = view !== null && view.activeCount > 0;
+
+  if (now === null) {
+    return <PageContainer><p role="status" className="font-body-sm text-body-sm text-text-secondary">Loading current seminar times…</p></PageContainer>;
+  }
 
   return (
     <PageContainer>
@@ -320,11 +325,7 @@ export default function MySeminarsPage() {
 
               {featuredTicket.state.status === 'success' && featuredTicket.state.data ? (
                 <div className="mx-auto rounded-xl border border-border-subtle bg-white p-space-sm shadow-card">
-                  <QrCode
-                    value={featuredTicket.state.data.token}
-                    size={176}
-                    label={`QR ticket for ${activeTicketItem.seminar.title}`}
-                  />
+                  <AttendanceQr seminarId={activeTicketItem.seminar.id} title={activeTicketItem.seminar.title} size={176} />
                 </div>
               ) : featuredTicket.state.status === 'loading' ? (
                 <Skeleton className="mx-auto h-48 w-48 rounded-xl" />

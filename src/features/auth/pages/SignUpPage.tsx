@@ -5,6 +5,7 @@ import { api, type ApiErrorCode, type Block, type Program, type YearLevel } from
 import { useOnlineStatus } from '../../../hooks/useOnlineStatus';
 import { AuthLayout } from '../../../components/auth/AuthLayout';
 import { PasswordRules } from '../../../components/auth/PasswordRules';
+import { OtpField } from '../../../components/auth/OtpField';
 import { StudentIdField } from '../../../components/auth/StudentIdField';
 import { Alert } from '../../../components/ui/Alert';
 import { Button } from '../../../components/ui/Button';
@@ -12,6 +13,7 @@ import { PasswordField } from '../../../components/ui/PasswordField';
 import { SelectField } from '../../../components/ui/SelectField';
 import { BLOCKS, PROGRAMS, YEAR_LEVELS } from '../../../data/academic';
 import { TextField } from '../../../components/ui/TextField';
+import { useSession } from '../../../session/useSession';
 import {
   sanitizeMiddleInitial,
   validateNewPassword,
@@ -104,17 +106,23 @@ function Section({
 
 export default function SignUpPage() {
   const navigate = useNavigate();
+  const session = useSession();
   const online = useOnlineStatus();
+  const resumeSignup = session?.onboardingComplete === false;
 
   const fieldRefs = useRef<Partial<Record<FieldName, HTMLInputElement | HTMLSelectElement | null>>>({});
   const stepBadgeRef = useRef<HTMLParagraphElement>(null);
   const offlineRef = useRef<HTMLDivElement>(null);
 
   const [step, setStep] = useState<Step>(1);
-  const [values, setValues] = useState<FormValues>(INITIAL_VALUES);
+  const [values, setValues] = useState<FormValues>(() => ({
+    ...INITIAL_VALUES,
+    studentId: resumeSignup ? session.studentId : '',
+  }));
   const [errors, setErrors] = useState<FieldErrors>({});
   const [pending, setPending] = useState<Pending>(null);
   const [failure, setFailure] = useState<ApiErrorCode | null>(null);
+  const [otpVerified, setOtpVerified] = useState(resumeSignup);
   const [focusTarget, setFocusTarget] = useState<FieldName | 'step' | null>(null);
 
   useEffect(() => {
@@ -140,6 +148,10 @@ export default function SignUpPage() {
   function setField(field: keyof FormValues, value: string) {
     const next = { ...values, [field]: value };
     setValues(next);
+    if (field === 'studentId' && value !== values.studentId) {
+      setOtpVerified(false);
+      if (failure === 'not_available') setFailure(null);
+    }
     // Once a field shows an error, re-validate as the person types.
     if (field !== 'middleInitial' && errors[field]) {
       setErrors((current) => ({ ...current, [field]: validateField(field, next) }));
@@ -173,6 +185,12 @@ export default function SignUpPage() {
       requestFocus(firstInvalid);
       return;
     }
+    if (!otpVerified) {
+      setFailure('not_available');
+      setFocusTarget('step');
+      return;
+    }
+    setFailure(null);
     goToStep(2);
   }
 
@@ -209,7 +227,7 @@ export default function SignUpPage() {
     setPending(null);
 
     if (result.ok) {
-      navigate('/verify-email', { replace: true, state: { email: result.data.email } });
+      navigate('/sign-in', { replace: true });
       return;
     }
     if (result.error.code === 'student_id_taken') {
@@ -333,7 +351,7 @@ export default function SignUpPage() {
               id="student-id"
               value={values.studentId}
               error={errors.studentId}
-              readOnly={locked}
+              readOnly={locked || resumeSignup}
               onChange={(value) => setField('studentId', value)}
               onBlur={() => handleBlur('studentId')}
             />
@@ -354,6 +372,12 @@ export default function SignUpPage() {
               />
               <PasswordRules password={values.password} />
             </div>
+            {resumeSignup ? (
+              <p role="status" className="text-sm text-charcoal-700">Your email is verified. Re-enter your password, then finish your profile.</p>
+            ) : (
+              <OtpField key={values.studentId} id="signup-otp" studentId={values.studentId} password={values.password} verified={otpVerified} onVerifiedChange={(verified) => { setOtpVerified(verified); if (verified) setFailure(null); }} />
+            )}
+            {!otpVerified && failure === 'not_available' && <p role="alert" className="text-sm font-medium text-danger-ink">Send and verify an OTP before continuing.</p>}
           </Section>
         )}
 

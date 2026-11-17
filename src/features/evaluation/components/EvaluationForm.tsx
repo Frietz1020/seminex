@@ -88,7 +88,7 @@ export function EvaluationForm({ item, survey, onSubmitted }: EvaluationFormProp
 
     setSubmitting(true);
     setSubmitError(null);
-    const result = await api.submitEvaluation(seminar.id, survey.id, answers);
+    const result = await api.submitEvaluation(seminar.id, survey.id, survey.version, answers);
     setSubmitting(false);
 
     if (!result.ok) {

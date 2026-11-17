@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { api } from '../../../api/client';
 import { PageContainer } from '../../../components/shell/PageContainer';
@@ -15,11 +15,14 @@ import { getPrimaryStatus } from '../status';
 import { DetailsTab } from '../tabs/DetailsTab';
 import { EvaluationTab } from '../tabs/EvaluationTab';
 import { TicketTab } from '../tabs/TicketTab';
+import { actionTonal } from '../../../components/ui/actionStyles';
 
 export default function SeminarPage() {
   const { id = '' } = useParams();
-  const now = useNow();
+  const now = useNow(1000);
   const [params, setParams] = useSearchParams();
+  const [confirmMessage, setConfirmMessage] = useState<string | null>(null);
+  const [confirmPending, setConfirmPending] = useState(false);
   const requested = params.get('tab');
 
   const seminar = useResource(() => api.getSeminar(id), `seminar-${id}`);
@@ -29,8 +32,8 @@ export default function SeminarPage() {
     document.title = item ? `${item.seminar.title} - Seminex` : 'Seminar - Seminex';
   }, [item]);
 
-  const defaultTab: SeminarTab | null = item ? getDefaultTab(item, now) : null;
-  const selected: SeminarTab = isSeminarTab(requested) ? requested : (defaultTab ?? 'details');
+  const defaultTab: SeminarTab | null = item && now !== null ? getDefaultTab(item, now) : null;
+  const selected: SeminarTab = item?.registration?.status === 'released' ? 'details' : isSeminarTab(requested) ? requested : (defaultTab ?? 'details');
 
   // Pin the default tab into the address so a reload or shared link opens the same tab.
   const itemId = item?.seminar.id;
@@ -110,12 +113,35 @@ export default function SeminarPage() {
     );
   }
 
+  if (now === null) {
+    return <PageContainer><StateMessage icon="schedule" title="Current seminar time is unavailable">Reconnect to check attendance and evaluation eligibility.</StateMessage></PageContainer>;
+  }
+
   const { seminar: details, registration } = item;
+  const opensAt = Date.parse(details.startsAt) - (details.confirmationOpensHoursBefore ?? 24) * 60 * 60_000;
+  const closesAt = Date.parse(details.startsAt) - (details.confirmationClosesHoursBefore ?? 1) * 60 * 60_000;
+  const confirmationOpen = now >= opensAt && now < closesAt;
+  const countdown = (target: number) => {
+    const seconds = Math.max(0, Math.floor((target - now) / 1000));
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const remainder = seconds % 60;
+    return `${hours}h ${minutes}m ${remainder}s`;
+  };
+  const released = registration.status === 'released';
+  async function confirmAttendance() {
+    if (confirmPending) return;
+    setConfirmPending(true);
+    const result = await api.confirmRegistration(details.id);
+    setConfirmPending(false);
+    if (result.ok) { setConfirmMessage('Your place is confirmed.'); seminar.reload(); }
+    else setConfirmMessage(result.error.code === 'network' ? 'Connect to the internet to confirm your place.' : errorText(result.error.code));
+  }
   const access = getEvaluationAccess(item, now);
   const locked = access.state === 'locked';
   const tabs: TabItem[] = [
     { id: 'details', label: 'Details', icon: 'info' },
-    { id: 'ticket', label: 'Attendance & ticket', icon: 'how_to_reg' },
+    ...(registration.status === 'released' ? [] : [{ id: 'ticket', label: 'Attendance & ticket', icon: 'how_to_reg' as const }]),
     {
       id: 'evaluation',
       label: 'Evaluation',
@@ -127,6 +153,12 @@ export default function SeminarPage() {
   return (
     <PageContainer>
       <SeminarHeader seminar={details} registration={registration} primaryStatus={getPrimaryStatus(item, now)} />
+
+      {released && <p role="status" className="rounded-lg border border-danger-soft bg-danger-surface p-space-md font-body-sm text-body-sm text-danger-ink">Your registration was released because it was not confirmed before the confirmation window closed. Your ticket is no longer valid.</p>}
+      {!released && registration.status === 'registered' && <section aria-live="polite" className="flex flex-col gap-space-sm rounded-xl border border-border-subtle bg-surface-card p-space-md shadow-card"><h2 className="font-body-sm-medium text-body-sm-medium text-on-surface">Confirm your place</h2>{now < opensAt ? <p className="font-body-sm text-body-sm text-text-secondary">Confirmation opens in {countdown(opensAt)}.</p> : confirmationOpen ? <><p className="font-body-sm text-body-sm text-text-secondary">The confirmation window is open. It closes in {countdown(closesAt)}.</p><button type="button" disabled={confirmPending} onClick={() => void confirmAttendance()} className={actionPrimary}>{confirmPending ? 'Confirming…' : 'Confirm attendance'}</button></> : <p className="font-body-sm text-body-sm text-text-secondary">The confirmation window has closed.</p>}{confirmMessage && <p role="status" className="font-caption text-caption text-text-secondary">{confirmMessage}</p>}</section>}
+      {registration.status === 'confirmed' && <p role="status" className="font-body-sm text-body-sm text-status-available">Your place is confirmed.</p>}
+      {details.seminarType === 'webinar' && <span className="w-fit rounded-full bg-surface-container-low px-3 py-1 font-label-sm text-label-sm text-primary">Webinar</span>}
+      {details.seminarType === 'webinar' && registration.status === 'confirmed' && now >= Date.parse(details.startsAt) - 60 * 60_000 && now <= Date.parse(details.endsAt) && details.joinUrl && <a href={details.joinUrl} target="_blank" rel="noreferrer" className={actionTonal}>Join webinar</a>}
 
       {seminar.state.status === 'success' && seminar.state.fromCache && (
         <p

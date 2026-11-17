@@ -80,14 +80,14 @@ function ArchiveCard({ seminar, now, onCancellation }: { seminar: OrgSeminar; no
 export default function OrgHistoryPage() {
   const now = useNow();
   const online = useOnlineStatus();
-  const { state, reload } = useResource(() => api.listOrgSeminars(), 'org-history');
+  const { state, reload } = useResource(() => api.listOrgSeminars({ seminars: { pageSize: 999 }, drafts: { pageSize: 1 } }), 'org-history');
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<ArchiveFilter>('all');
   const [year, setYear] = useState('all');
   const [cancellationNotice, setCancellationNotice] = useState<OrgSeminar | null>(null);
   useEffect(() => { document.title = 'Organization history - Seminex'; }, []);
 
-  const all = state.status === 'success' ? state.data.seminars.filter((item) => ['finished', 'cancelled'].includes(getOrgLifecycle(item, now))) : [];
+  const all = state.status === 'success' && now !== null ? state.data.seminars.items.filter((item) => ['finished', 'cancelled'].includes(getOrgLifecycle(item, now))) : [];
   const years = [...new Set(all.map((item) => academicYear(item.startsAt)))].sort((a, b) => b.localeCompare(a));
   const visible = useMemo(() => all.filter((item) => {
     const isCancelled = Boolean(item.cancellation);
@@ -107,6 +107,10 @@ export default function OrgHistoryPage() {
     { label: 'Registrations archived', value: archivedRegistrations, icon: 'group' },
     { label: 'Seats in finished seminars', value: archivedCapacity, icon: 'confirmation_number' },
   ] as const;
+
+  if (now === null) {
+    return <PageContainer><p role="status" className="font-body-sm text-body-sm text-text-secondary">Loading current seminar times…</p></PageContainer>;
+  }
 
   return <PageContainer>
     {!online && <aside role="status" className="flex items-start gap-space-sm rounded-xl border border-outline-variant/50 bg-surface-container-highest p-space-md"><Icon name="cloud_off" size={20} className="mt-0.5 shrink-0 text-secondary" /><div><p className="font-body-sm-medium text-body-sm-medium text-on-surface">Offline archive view</p><p className="font-caption text-caption text-text-secondary">Showing saved organization records from this device. Reconnect to refresh the archive.</p></div></aside>}

@@ -11,7 +11,7 @@ import { buildHistoryRecords, summarizeHistory } from '../../history/records';
 /** Counts come from the same history records as the History page, so the numbers always match. */
 export function ActivityCard() {
   const now = useNow();
-  const history = useResource(() => api.listHistory(), 'profile-history');
+  const history = useResource(() => api.listHistory({ pageSize: 999 }), 'profile-history');
 
   return (
     <section aria-labelledby="activity-heading" className="flex flex-col gap-space-md rounded-xl border border-border-subtle bg-surface-card p-space-lg shadow-card">
@@ -31,8 +31,10 @@ export function ActivityCard() {
         <InlineError onRetry={history.reload}>
           Your academic activity could not be loaded. {errorText(history.state.code)}
         </InlineError>
+      ) : now === null ? (
+        <p role="status" className="font-body-sm text-body-sm text-text-secondary">Activity counts will load when current seminar times are available.</p>
       ) : (
-        <ActivityCounts records={history.state.status === 'success' ? history.state.data : []} now={now} />
+        <ActivityCounts records={history.state.status === 'success' ? history.state.data.items : []} now={now} />
       )}
     </section>
   );

@@ -103,11 +103,11 @@ export default function EvaluationPage() {
   }, []);
 
   const item = seminar.state.status === 'success' ? seminar.state.data : null;
-  const record = item ? (buildHistoryRecords([item], now)[0] ?? null) : null;
-  const access = item ? getEvaluationAccess(item, now) : null;
+  const record = item && now !== null ? (buildHistoryRecords([item], now)[0] ?? null) : null;
+  const access = item && now !== null ? getEvaluationAccess(item, now) : null;
 
   function handleSubmitted(result: SubmitEvaluationResult) {
-    setSubmitted({ at: new Date().toISOString(), result });
+    setSubmitted({ at: result.submittedAt ?? new Date().toISOString(), result });
     setDialogOpen(true);
   }
 
@@ -168,6 +168,8 @@ export default function EvaluationPage() {
         </StateMessage>
       )}
 
+      {now === null && <StateMessage icon="schedule" title="Current seminar time is unavailable">Reconnect to load authoritative seminar time before checking evaluation eligibility.</StateMessage>}
+
       {item && !item.registration && (
         <StateMessage
           icon="info"
@@ -192,7 +194,7 @@ export default function EvaluationPage() {
           ) : access.state === 'locked' ? (
             <>
               <SeminarContextCard item={item} record={record} headingRef={headingRef} />
-              <EvaluationLocked reason={access.reason} endsAt={item.seminar.endsAt} />
+              <EvaluationLocked reason={access.reason} />
             </>
           ) : access.state === 'submitted' ? (
             <>

@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { api, type Registration, type Seminar } from '../../../api/client';
+import { api, type AttendanceProof, type Registration, type Seminar } from '../../../api/client';
+import { WEBINAR_TIME_IN_START_OFFSET_MINUTES, WEBINAR_TIME_OUT_END_OFFSET_MINUTES, WEBINAR_TIME_OUT_START_OFFSET_MINUTES } from '../../../config';
 import { actionPrimary, actionTonal } from '../../../components/ui/actionStyles';
 import { cx } from '../../../components/ui/cx';
 import { Icon } from '../../../components/ui/Icon';
@@ -17,8 +18,9 @@ import {
   formatFullName,
   programName,
 } from '../format';
-import { QrCode } from '../QrCode';
+import { AttendanceQr } from '../AttendanceQr';
 import { getAttendance, getLifecycle } from '../status';
+import { useOnlineStatus } from '../../../hooks/useOnlineStatus';
 
 const YEAR_ORDINALS = ['1st', '2nd', '3rd', '4th'];
 
@@ -91,6 +93,9 @@ export function TicketTab({ seminar, registration, now }: TicketTabProps) {
   const { state: profileState, reload: reloadProfile } = useProfile();
   const ticket = useResource(() => api.getTicket(seminar.id), `ticket-${seminar.id}`);
   const [qrOpen, setQrOpen] = useState(false);
+  const [proofMessage, setProofMessage] = useState<string | null>(null);
+  const online = useOnlineStatus();
+  const proofResource = useResource(() => api.listMyWebinarProofs(seminar.id), `my-webinar-proofs-${seminar.id}`);
 
   const lifecycle = getLifecycle(seminar, now);
   const finished = lifecycle === 'finished';
@@ -98,6 +103,12 @@ export function TicketTab({ seminar, registration, now }: TicketTabProps) {
   const profile = profileState.status === 'success' ? profileState.data : null;
   const ticketData = ticket.state.status === 'success' ? ticket.state.data : null;
   const fromCache = ticket.state.status === 'success' && ticket.state.fromCache;
+  const proofs = proofResource.state.status === 'success'
+    ? proofResource.state.data.reduce<Partial<Record<'time_in' | 'time_out', AttendanceProof>>>((latest, proof) => {
+        latest[proof.kind] = proof;
+        return latest;
+      }, {})
+    : {};
 
   const timeInState = checkpointState(attendance.timeInRecorded, finished);
   const timeOutState = checkpointState(attendance.timeOutRecorded, finished);
@@ -111,6 +122,18 @@ export function TicketTab({ seminar, registration, now }: TicketTabProps) {
       : attendance.timeInRecorded
         ? `${formatDuration(attendance.attendedMinutes)} so far`
         : 'No Time-In recorded yet';
+
+  async function submitProof(kind: 'time_in' | 'time_out', file: File | undefined) {
+    if (!file) return;
+    if (!online) { setProofMessage('Connect to the internet before uploading attendance proof.'); return; }
+    if (!['image/png', 'image/jpeg'].includes(file.type) || file.size > 5 * 1024 * 1024) {
+      setProofMessage('Choose a PNG or JPG image no larger than 5 MB.');
+      return;
+    }
+    const result = await api.uploadWebinarProof(seminar.id, kind, file);
+    if (result.ok) { proofResource.reload(); setProofMessage(null); }
+    else setProofMessage(result.error.code === 'network' ? 'Connect to the internet before uploading attendance proof.' : errorText(result.error.code));
+  }
 
   return (
     <div className="grid grid-cols-1 items-start gap-space-lg lg:grid-cols-12">
@@ -139,7 +162,7 @@ export function TicketTab({ seminar, registration, now }: TicketTabProps) {
               <div className="flex flex-col sm:items-end">
                 <span className="font-caption text-caption text-text-subtle">Student ID</span>
                 <span className="font-mono text-headline-sm font-semibold text-primary">{profile.studentId}</span>
-                <span className="font-caption text-caption text-status-available">Registration confirmed</span>
+                <span className="font-caption text-caption text-status-available">{registration.status === 'released' ? 'Registration released' : registration.status === 'confirmed' || registration.confirmedAt ? 'Registration confirmed' : 'Awaiting confirmation'}</span>
               </div>
             </>
           ) : profileState.status === 'loading' ? (
@@ -153,6 +176,20 @@ export function TicketTab({ seminar, registration, now }: TicketTabProps) {
           )}
         </div>
 
+        {seminar.seminarType === 'webinar' ? (
+          <div className="w-full rounded-xl border border-border-subtle bg-surface-container-low p-space-md">
+            <h3 className="font-title-md text-title-md text-on-surface">Attendance proof</h3>
+            <p className="mt-1 font-body-sm text-body-sm text-text-secondary">Upload a screenshot that shows your name. PNG or JPG, up to 5 MB. An organization officer reviews each image.</p>
+            <div className="mt-space-md grid gap-space-md sm:grid-cols-2">
+              {([
+                { kind: 'time_in' as const, label: 'Time-In proof', open: now >= Date.parse(seminar.startsAt) + WEBINAR_TIME_IN_START_OFFSET_MINUTES * 60_000 && now <= Date.parse(seminar.endsAt) && !registration.timeIn },
+                { kind: 'time_out' as const, label: 'Time-Out proof', open: now >= Date.parse(seminar.endsAt) - WEBINAR_TIME_OUT_START_OFFSET_MINUTES * 60_000 && now <= Date.parse(seminar.endsAt) + WEBINAR_TIME_OUT_END_OFFSET_MINUTES * 60_000 && !registration.timeOut },
+              ]).map(({ kind, label, open }) => <div key={kind} className="flex flex-col gap-space-sm rounded-lg border border-border-subtle bg-surface-card p-space-md"><h4 className="font-body-sm-medium text-body-sm-medium text-on-surface">{label}</h4>{proofResource.state.status === 'loading' ? <p role="status" className="font-caption text-caption text-text-secondary">Loading proof status.</p> : proofs[kind] && proofs[kind]?.status !== 'rejected' ? <p role="status" className="font-caption text-caption text-text-secondary">Proof submitted. Review status: {proofs[kind]?.status}.</p> : <>{proofs[kind]?.rejectionReason && <p role="status" className="font-caption text-caption text-danger">Proof rejected: {proofs[kind]?.rejectionReason}</p>}{open && proofResource.state.status === 'success' && registration.status === 'confirmed' && online ? <label className="flex min-h-11 cursor-pointer items-center justify-center rounded-lg border border-outline-variant px-space-md font-body-sm-medium text-body-sm-medium text-primary">Upload screenshot<input type="file" accept="image/png,image/jpeg" onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ''; void submitProof(kind, file); }} className="sr-only" /></label> : <p className="font-caption text-caption text-text-secondary">{!online ? 'Connect to upload proof.' : 'This upload window is closed.'}</p>}</>}</div>)}
+            </div>
+            {proofResource.state.status === 'error' && <p role="alert" className="mt-space-sm font-caption text-caption text-danger">Proof status could not be loaded. <button type="button" onClick={proofResource.reload} className="underline">Retry</button></p>}
+            {proofMessage && <p role="alert" className="mt-space-sm font-caption text-caption text-danger">{proofMessage}</p>}
+          </div>
+        ) : <>
         {ticket.state.status === 'loading' && (
           <LoadingRegion label="Loading your QR code">
             <Skeleton className="h-60 w-60 max-w-full" />
@@ -171,7 +208,7 @@ export function TicketTab({ seminar, registration, now }: TicketTabProps) {
         {ticketData && (
           <>
             <div className="aspect-square w-full max-w-60 rounded-xl bg-white p-space-md shadow-card [&>div]:block [&>div]:h-full [&>div]:w-full [&_svg]:h-full [&_svg]:w-full">
-              <QrCode value={ticketData.token} size={240} label={`QR code ticket for ${seminar.title}`} />
+              <AttendanceQr seminarId={seminar.id} title={seminar.title} size={240} />
             </div>
 
             <p className="mt-space-md max-w-sm text-center font-body-sm text-body-sm text-text-secondary">
@@ -197,6 +234,7 @@ export function TicketTab({ seminar, registration, now }: TicketTabProps) {
             </button>
           </>
         )}
+        </>}
       </section>
 
       <div className="flex flex-col gap-space-lg lg:col-span-7">
@@ -223,7 +261,7 @@ export function TicketTab({ seminar, registration, now }: TicketTabProps) {
           </div>
 
           <p className="font-body-sm text-body-sm text-text-secondary">
-            Marshals scan you in and out at the venue. Both scans are required for your certificate.
+            {seminar.seminarType === 'webinar' ? 'Attendance is recorded after an officer reviews your time-in and time-out proof.' : 'Marshals scan you in and out at the venue. Both scans are required for your certificate.'}
           </p>
 
           <div className="flex flex-col gap-space-sm">
@@ -313,7 +351,7 @@ export function TicketTab({ seminar, registration, now }: TicketTabProps) {
         </p>
         {ticketData && (
           <div className="mx-auto my-space-lg aspect-square w-full max-w-[300px] rounded-xl border border-border-subtle bg-white p-space-sm [&>div]:block [&>div]:h-full [&>div]:w-full [&_svg]:h-full [&_svg]:w-full">
-            <QrCode value={ticketData.token} size={300} label={`Large QR code ticket for ${seminar.title}`} />
+            <AttendanceQr seminarId={seminar.id} title={seminar.title} size={300} />
           </div>
         )}
         {profile && (

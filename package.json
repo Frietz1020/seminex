@@ -6,11 +6,15 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
+    "lint": "eslint src",
+    "test": "vitest run",
     "preview": "vite preview"
   },
   "dependencies": {
     "@fontsource/dm-sans": "^5.3.0",
     "@fontsource/outfit": "^5.3.0",
+    "@supabase/supabase-js": "2.119.0",
+    "jspdf": "^4.2.1",
     "lucide-react": "^1.52.0",
     "qrcode.react": "^4.2.0",
     "react": "^19.3.0",
@@ -20,12 +24,21 @@
   "devDependencies": {
     "@material-symbols/svg-400": "0.47.6",
     "@tailwindcss/vite": "^4.3.3",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.8",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.2",
+    "eslint": "^10.14.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "jsdom": "^29.1.1",
+    "jsqr": "^1.4.0",
+    "supabase": "3.0.0",
     "tailwindcss": "^4.3.3",
-    "typescript": "^7.0.2",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.72.1",
     "vite": "^8.3.3",
-    "vite-plugin-pwa": "^2.0.0"
+    "vite-plugin-pwa": "^2.0.0",
+    "vitest": "^5.1.0"
   }
 }

@@ -55,13 +55,6 @@ export default function OrganizationSignInPage() {
   const offlineRef = useRef<HTMLDivElement>(null);
   const noAccessRef = useRef<HTMLDivElement>(null);
 
-  function useSampleAccount() {
-    setValues({ identifier: '202110482', password: 'seminex-demo' });
-    setErrors({});
-    setFailure(null);
-    setNoAccess(null);
-  }
-
   useEffect(() => {
     document.title = 'Organization sign in - Seminex';
   }, []);
@@ -118,17 +111,6 @@ export default function OrganizationSignInPage() {
         Create and streamline your organization's seminars, coordinate events, and support student participation with Seminex.
       </p>
 
-      <aside className="mt-5 rounded-xl border border-border-subtle bg-surface-light p-4" aria-label="Sample organization account">
-        <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-          <div>
-            <p className="font-body-sm-medium text-body-sm-medium text-on-surface">Sample organization account</p>
-            <p className="mt-1 font-caption text-caption text-text-secondary">Student ID: 202110482 · Password: seminex-demo</p>
-            <p className="mt-1 font-caption text-caption text-text-subtle">Demo credentials for the local mock portal.</p>
-          </div>
-          <Button type="button" variant="secondary" onClick={useSampleAccount}>Use sample account</Button>
-        </div>
-      </aside>
-
       <div className="my-6 space-y-3">
         {!online && (
           <Alert ref={offlineRef} variant="neutral" role="status" icon={WifiOff} title="You are offline">
@@ -145,7 +127,12 @@ export default function OrganizationSignInPage() {
             Seminex could not be reached. Check your connection and try again.
           </Alert>
         )}
-        {failure !== null && failure !== 'invalid_credentials' && failure !== 'network' && (
+        {failure === 'configuration_error' && (
+          <Alert variant="error" icon={TriangleAlert} title="Sign in is not configured">
+            Set the Supabase project URL and publishable key in the app environment, then reload.
+          </Alert>
+        )}
+        {failure !== null && failure !== 'invalid_credentials' && failure !== 'network' && failure !== 'configuration_error' && (
           <Alert variant="error" icon={TriangleAlert} title="Sign in failed">
             Something went wrong. Try again.
           </Alert>
@@ -171,7 +158,7 @@ export default function OrganizationSignInPage() {
           autoComplete="username"
           autoCapitalize="none"
           spellCheck={false}
-          placeholder="202110482"
+          placeholder="Student ID"
           value={values.identifier}
           error={errors.identifier}
           readOnly={pending}

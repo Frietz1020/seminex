@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api, type Registration, type Seminar } from '../../../api/client';
+import { ticketPdfFilename } from '../../../api/ticketPdf';
 import { actionTonal } from '../../../components/ui/actionStyles';
 import { cx } from '../../../components/ui/cx';
 import { errorText } from '../../../components/ui/errorText';
@@ -8,6 +9,7 @@ import { Icon } from '../../../components/ui/Icon';
 import { Spinner } from '../../../components/ui/Spinner';
 import { StatusBadge } from '../../../components/ui/StatusBadge';
 import { expireSession } from '../../../session/storage';
+import { saveBlob } from '../../history/saveBlob';
 import { formatDate, formatTimeRange } from '../format';
 import type { SeminarStatus } from '../status';
 
@@ -25,16 +27,26 @@ export function SeminarHeader({ seminar, registration, primaryStatus }: SeminarH
     if (downloading) return;
     setMessage(null);
     setDownloading(true);
-    const result = await api.getTicketPdf(seminar.id);
+    let result;
+    try {
+      result = await api.getTicketPdf(seminar.id);
+    } catch {
+      setMessage(errorText('network'));
+      setDownloading(false);
+      return;
+    }
     setDownloading(false);
-    if (result.ok) return; // No success path yet: getTicketPdf has no real implementation.
+    if (result.ok) {
+      saveBlob(result.data, ticketPdfFilename(seminar.reference));
+      return;
+    }
     if (result.error.code === 'session_expired') {
       expireSession();
       return;
     }
     setMessage(
       result.error.code === 'not_available'
-        ? 'The ticket PDF is not available yet. Use the QR code on the QR ticket tab instead.'
+        ? 'PDF could not be generated. Use the QR code on the QR ticket tab instead.'
         : errorText(result.error.code),
     );
   }
