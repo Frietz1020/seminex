@@ -74,23 +74,91 @@ describe('Supabase attendance adapter', () => {
     expect(client.rpc).toHaveBeenCalledWith('issue_attendance_challenge', { p_seminar_id: 'seminar-1' });
   });
 
-  it('sends only an opaque challenge and seminar context to the challenge scan RPC', async () => {
+  it('maps an expired seminar QR issue request to its stable attendance error', async () => {
+    const client = { rpc: vi.fn().mockResolvedValue({
+      data: null,
+      error: { code: 'P0001', message: 'attendance_qr_expired', details: 'sensitive db detail', hint: 'internal hint' },
+    }) };
+    mocks.getSupabaseClient.mockReturnValue(client);
+
+    await expect(issueAttendanceChallenge('seminar-1')).resolves.toEqual({
+      ok: false,
+      error: { code: 'attendance_qr_expired' },
+    });
+  });
+
+  it('sends only an opaque challenge, seminar context, and selected scan mode to the challenge scan RPC', async () => {
     const eventAt = '2026-11-06T08:00:00.000Z';
     const client = { rpc: vi.fn().mockResolvedValue({ data: {
       entry: { id: 'ledger-2', seminar_id: 'seminar-1', student_user_id: 'student-1', kind: 'time_in', event_at: eventAt, method: 'qr', officer_user_id: 'officer-1', officer_name: 'Officer One', reason: null },
       student: { studentId: '207000711', firstName: 'Attendee', lastName: 'Student', middleInitial: '', program: 'IT', yearLevel: 3, block: 'A' },
     }, error: null }) };
     mocks.getSupabaseClient.mockReturnValue(client);
-    const result = await recordOrgChallengeScan({ seminarId: 'seminar-1', challenge: 'b'.repeat(64), idempotencyKey: 'request-2' });
-    expect(client.rpc).toHaveBeenCalledWith('record_org_challenge_scan', { p_seminar_id: 'seminar-1', p_challenge: 'b'.repeat(64), p_idempotency_key: 'request-2' });
+    const input = { seminarId: 'seminar-1', challenge: 'b'.repeat(64), idempotencyKey: 'request-2', kind: 'time_out' as const };
+    const result = await recordOrgChallengeScan(input);
+    expect(client.rpc).toHaveBeenCalledWith('record_org_challenge_scan', {
+      p_seminar_id: input.seminarId,
+      p_challenge: input.challenge,
+      p_idempotency_key: input.idempotencyKey,
+      p_kind: input.kind,
+    });
     expect(JSON.stringify(client.rpc.mock.calls[0])).not.toContain('207000711');
     expect(result).toMatchObject({ ok: true, data: { entry: { kind: 'time_in' }, student: { studentId: '207000711' } } });
+  });
+
+  it.each([
+    ['attendance_already_recorded', 'attendance_already_recorded'],
+    ['challenge_expired', 'challenge_expired'],
+    ['outside_scan_window', 'outside_scan_window'],
+    ['wrong_attendance_step', 'wrong_attendance_step'],
+    ['attendance_already_complete', 'attendance_already_complete'],
+    ['challenge_replayed', 'challenge_replayed'],
+    ['unexpected database detail mentioning conflict', 'server_error'],
+  ] as const)('maps scan RPC message %s to the exact API code', async (message, code) => {
+    const client = { rpc: vi.fn().mockResolvedValue({
+      data: null,
+      error: { code: 'P0001', message, details: 'private student information', hint: 'internal database detail' },
+    }) };
+    mocks.getSupabaseClient.mockReturnValue(client);
+
+    await expect(recordOrgChallengeScan({
+      seminarId: 'seminar-1', challenge: 'b'.repeat(64), idempotencyKey: 'request-5', kind: 'time_in',
+    })).resolves.toEqual({ ok: false, error: { code } });
+  });
+
+  it('keeps connection-class SQLSTATE errors retryable as network failures', async () => {
+    const client = { rpc: vi.fn().mockResolvedValue({
+      data: null,
+      error: { code: '08006', message: 'connection failure' },
+    }) };
+    mocks.getSupabaseClient.mockReturnValue(client);
+
+    await expect(recordOrgChallengeScan({
+      seminarId: 'seminar-1', challenge: 'b'.repeat(64), idempotencyKey: 'request-network', kind: 'time_in',
+    })).resolves.toEqual({ ok: false, error: { code: 'network' } });
+  });
+
+  it('maps a rejected scan transport request to a retryable network error', async () => {
+    mocks.getSupabaseClient.mockReturnValue({ rpc: vi.fn().mockRejectedValue(new Error('offline')) });
+
+    await expect(recordOrgChallengeScan({
+      seminarId: 'seminar-1', challenge: 'b'.repeat(64), idempotencyKey: 'request-network', kind: 'time_in',
+    })).resolves.toEqual({ ok: false, error: { code: 'network' } });
+  });
+
+  it('sends a null reason for manual scans when the optional reason is omitted', async () => {
+    const client = { rpc: vi.fn().mockResolvedValue({ data: null, error: { code: 'P0001', message: 'not_found' } }) };
+    mocks.getSupabaseClient.mockReturnValue(client);
+
+    await recordOrgScan({ seminarId: 'seminar-1', studentId: '207000711', method: 'manual', idempotencyKey: 'request-4' });
+
+    expect(client.rpc).toHaveBeenCalledWith('record_org_scan', expect.objectContaining({ p_reason: null }));
   });
 
   it('rejects malformed challenge input before calling Supabase', async () => {
     const client = { rpc: vi.fn() };
     mocks.getSupabaseClient.mockReturnValue(client);
-    await expect(recordOrgChallengeScan({ seminarId: 'seminar-1', challenge: '202410770', idempotencyKey: 'request-3' })).resolves.toEqual({ ok: false, error: { code: 'validation_failed' } });
+    await expect(recordOrgChallengeScan({ seminarId: 'seminar-1', challenge: '202410770', idempotencyKey: 'request-3', kind: 'time_in' })).resolves.toEqual({ ok: false, error: { code: 'validation_failed' } });
     expect(client.rpc).not.toHaveBeenCalled();
   });
 

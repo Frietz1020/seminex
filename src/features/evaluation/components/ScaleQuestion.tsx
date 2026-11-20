@@ -17,6 +17,10 @@ export function ScaleQuestion({ question, value, onChange }: ScaleQuestionProps)
 
   return (
     <div className="flex max-w-xl flex-col gap-space-xs">
+      <div className="flex justify-between gap-space-sm px-1 font-caption text-caption text-text-secondary">
+        <span id={startId}>{question.startLabel}</span>
+        <span id={endId} className="text-right">{question.endLabel}</span>
+      </div>
       <div className="grid gap-space-xs sm:gap-space-sm" style={{ gridTemplateColumns: `repeat(${numbers.length}, minmax(0, 1fr))` }}>
         {numbers.map((number) => (
           <label key={number} className="cursor-pointer">
@@ -34,12 +38,6 @@ export function ScaleQuestion({ question, value, onChange }: ScaleQuestionProps)
             </span>
           </label>
         ))}
-      </div>
-      <div className="flex justify-between gap-space-sm px-1 font-caption text-caption text-text-secondary">
-        <span id={startId}>{question.startLabel}</span>
-        <span id={endId} className="text-right">
-          {question.endLabel}
-        </span>
       </div>
     </div>
   );

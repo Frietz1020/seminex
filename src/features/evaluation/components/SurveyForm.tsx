@@ -53,7 +53,7 @@ export function SurveyForm({ survey, speaker, answers, errors, onAnswer }: Surve
                 questionId={question.id}
                 number={numbers.get(question.id) ?? 0}
                 prompt={<FormattedText text={question.prompt} />}
-                help={question.help}
+                help={question.description || question.help}
                 required={question.required}
                 error={error}
               >

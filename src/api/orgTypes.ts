@@ -138,8 +138,9 @@ export interface OrgSeminarFields {
   /** Set by "End now". The seminar counts as ended from this time instead of endsAt. */
   endedEarlyAt: string | null;
   cancellation: CancellationRecord | null;
-  confirmationOpensHoursBefore?: number;
-  confirmationClosesHoursBefore?: number;
+  publicationStatus?: 'published' | 'cancelled' | 'archived';
+  confirmationOpensMinutesBefore?: number;
+  confirmationClosesMinutesBefore?: number;
   joinUrl?: string;
 }
 
@@ -159,8 +160,8 @@ export interface SeminarDetailsDraft {
   capacity?: number;
   requiredAttendancePercent?: number;
   coverImageUrl?: string;
-  confirmationOpensHoursBefore?: number;
-  confirmationClosesHoursBefore?: number;
+  confirmationOpensMinutesBefore?: number;
+  confirmationClosesMinutesBefore?: number;
   joinUrl?: string;
 }
 
@@ -175,6 +176,8 @@ export interface SeminarDraft {
   survey: AuthoredSurvey | null;
   /** When present, publishing updates this seminar instead of creating a new listing. */
   editingSeminarId?: string;
+  /** Set by the server while a claimed draft is waiting for owned cover cleanup. */
+  deletionRequestedAt?: string;
 }
 
 export type ReadinessItemId = 'details' | 'certificate' | 'survey';
@@ -246,6 +249,7 @@ export interface RecordOrgChallengeScanInput {
   seminarId: string;
   challenge: string;
   idempotencyKey: string;
+  kind: 'time_in' | 'time_out';
 }
 
 export interface ScannedStudentIdentity {
@@ -294,6 +298,7 @@ export const CERTIFICATE_CANVAS_WIDTH = 1920;
 export const CERTIFICATE_CANVAS_HEIGHT = 1080;
 
 export type NameBoxAlign = 'left' | 'center' | 'right';
+export type NameTextTransform = 'sentence' | 'lowercase' | 'uppercase' | 'capitalize';
 
 /** Position and size are pixels on a 1920 by 1080 canvas. */
 export interface NameBox {
@@ -306,6 +311,10 @@ export interface NameBox {
     /** Optional line height in canvas pixels. */
     lineHeight?: number;
   fontWeight: 400 | 700;
+  italic?: boolean;
+  underline?: boolean;
+  opacity?: number;
+  textTransform?: NameTextTransform;
   align: NameBoxAlign;
   /** Six digit hex with a leading hash, for example #1B365D. */
   color: string;
@@ -318,10 +327,6 @@ export interface CertificateTemplate {
   /** Custom pixel dimensions for the certificate canvas. */
   canvasWidth?: number;
   canvasHeight?: number;
-  /** Optional organization e-signature image and placement on the certificate canvas. */
-  signatureBox?: Pick<NameBox, 'x' | 'y' | 'width' | 'height'> & { imageUrl: string };
-  /** Multiple independently positioned signature images. */
-  signatureBoxes?: Array<Pick<NameBox, 'x' | 'y' | 'width' | 'height'> & { id: string; imageUrl: string; imageName: string }>;
   /** Optional, movable certificate QR code placement. */
   qrCodeBox?: Pick<NameBox, 'x' | 'y' | 'width' | 'height'>;
   updatedAt: string;

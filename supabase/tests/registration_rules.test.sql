@@ -1,6 +1,6 @@
 begin;
 
-select plan(72);
+select plan(101);
 
 insert into auth.users (
   id, instance_id, aud, role, email, encrypted_password,
@@ -10,7 +10,8 @@ values
   ('00000000-0000-4000-8000-000000000611', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', '205000611@gordoncollege.edu.ph', '', now(), '{}', '{}', now(), now()),
   ('00000000-0000-4000-8000-000000000612', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', '205000612@gordoncollege.edu.ph', '', now(), '{}', '{}', now(), now()),
   ('00000000-0000-4000-8000-000000000613', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', '205000613@gordoncollege.edu.ph', '', now(), '{}', '{}', now(), now()),
-  ('00000000-0000-4000-8000-000000000614', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', '205000614@gordoncollege.edu.ph', '', now(), '{}', '{}', now(), now());
+  ('00000000-0000-4000-8000-000000000614', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', '205000614@gordoncollege.edu.ph', '', now(), '{}', '{}', now(), now()),
+  ('00000000-0000-4000-8000-000000000615', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', '205000615@gordoncollege.edu.ph', '', now(), '{}', '{}', now(), now());
 
 insert into public.organizations (id, slug, name)
 values ('00000000-0000-4000-8000-000000000621', 'registration-rules-org', 'Registration Rules Organization');
@@ -31,7 +32,12 @@ values
   ('00000000-0000-4000-8000-000000000634', '00000000-0000-4000-8000-000000000621', 'RULES-EXPIRED', 'Expired Seminar', 'Registration rules', 'seminar', 'Speaker', 'Hall', 'CCS', now() + interval '30 minutes', now() + interval '2 hours', 1, 'published', now(), '00000000-0000-4000-8000-000000000613', null),
   ('00000000-0000-4000-8000-000000000635', '00000000-0000-4000-8000-000000000621', 'RULES-TIME-IN', 'Already Checked In', 'Registration rules', 'seminar', 'Speaker', 'Hall', 'CCS', now() + interval '12 hours', now() + interval '14 hours', 3, 'published', now(), '00000000-0000-4000-8000-000000000613', null),
   ('00000000-0000-4000-8000-000000000636', '00000000-0000-4000-8000-000000000621', 'RULES-CANCELLED', 'Cancelled Seminar', 'Registration rules', 'seminar', 'Speaker', 'Hall', 'CCS', now() + interval '12 hours', now() + interval '14 hours', 3, 'cancelled', now(), '00000000-0000-4000-8000-000000000613', null),
-  ('00000000-0000-4000-8000-000000000637', '00000000-0000-4000-8000-000000000621', 'RULES-WEBINAR', 'Gated Webinar', 'Webinar access rules', 'webinar', 'Speaker', '', 'CCS', now() + interval '30 minutes', now() + interval '2 hours', 3, 'published', now(), '00000000-0000-4000-8000-000000000613', 'https://meet.example.test/private-session');
+  ('00000000-0000-4000-8000-000000000637', '00000000-0000-4000-8000-000000000621', 'RULES-WEBINAR', 'Gated Webinar', 'Webinar access rules', 'webinar', 'Speaker', '', 'CCS', now() + interval '30 minutes', now() + interval '2 hours', 3, 'published', now(), '00000000-0000-4000-8000-000000000613', 'https://meet.example.test/private-session'),
+  ('00000000-0000-4000-8000-000000000638', '00000000-0000-4000-8000-000000000621', 'RULES-LATE-SIGNUP', 'Late Signup Seminar', 'Late registration rules', 'seminar', 'Speaker', 'Hall', 'CCS', now() + interval '3 hours', now() + interval '5 hours', 1, 'published', now(), '00000000-0000-4000-8000-000000000613', null),
+  ('00000000-0000-4000-8000-000000000639', '00000000-0000-4000-8000-000000000621', 'RULES-ENDED', 'Ended Seminar', 'Closed registration rules', 'seminar', 'Speaker', 'Hall', 'CCS', now() - interval '2 hours', now() - interval '1 minute', 1, 'published', now(), '00000000-0000-4000-8000-000000000613', null);
+
+update public.seminars set confirmation_closes_minutes_before = 240
+where id = '00000000-0000-4000-8000-000000000638';
 
 insert into public.registrations (id, seminar_id, student_user_id, status, registered_at)
 values (
@@ -124,13 +130,19 @@ select has_function('public', 'confirm_registration', ARRAY['uuid'], 'student co
 select has_function('public', 'cancel_registration', ARRAY['uuid'], 'cancellation uses a server function');
 select has_function('public', 'publish_seminar', ARRAY['uuid'], 'seminar publication uses a server function');
 select has_column('public', 'seminar_drafts', 'published_seminar_id', 'published authoring metadata remains linked to its seminar');
+select has_column('public', 'seminars', 'confirmation_opens_minutes_before', 'confirmation opening is persisted in minutes');
+select has_column('public', 'seminars', 'confirmation_closes_minutes_before', 'confirmation closing is persisted in minutes');
+select has_function('public', 'archive_org_seminar', ARRAY['uuid'], 'published seminar removal uses an ownership-checked archive function');
+select ok(has_function_privilege('anon', 'public.archive_org_seminar(uuid)', 'EXECUTE') is false, 'anonymous users cannot archive seminars');
+select has_function('public', 'begin_org_draft_deletion', ARRAY['uuid'], 'draft deletion begins through an ownership-checked function');
+select ok(has_function_privilege('anon', 'public.begin_org_draft_deletion(uuid)', 'EXECUTE') is false, 'anonymous users cannot begin draft deletion');
 select has_column('public', 'registration_read_model', 'seminar_ends_at', 'Student history can filter finished seminars before paging');
 select has_function('public', 'create_org_edit_draft', ARRAY['uuid'], 'organization edit drafts are created by an access-checked function');
 select has_function('public', 'get_webinar_join_url', ARRAY['uuid'], 'webinar links are read through an eligibility-checked function');
 select ok(has_function_privilege('anon', 'public.register_for_seminar(uuid)', 'EXECUTE') is false, 'anonymous users cannot register through the server function');
 select is((select count(*)::integer from cron.job where jobname = 'seminex-release-expired-registrations'), 1, 'expired registrations have one scheduled release job');
-select is((select confirmation_opens_hours_before from public.seminars where id = '00000000-0000-4000-8000-000000000631'), 24, 'default confirmation opening offset is 24 hours');
-select is((select confirmation_closes_hours_before from public.seminars where id = '00000000-0000-4000-8000-000000000631'), 1, 'default confirmation closing offset is one hour');
+select is((select confirmation_opens_minutes_before from public.seminars where id = '00000000-0000-4000-8000-000000000631'), 1440, 'default confirmation opening offset remains 24 hours expressed in minutes');
+select is((select confirmation_closes_minutes_before from public.seminars where id = '00000000-0000-4000-8000-000000000631'), 60, 'default confirmation closing offset remains one hour expressed in minutes');
 savepoint immutable_registration_seminar;
 select throws_ok($$update public.registrations set seminar_id = '00000000-0000-4000-8000-000000000631' where id = '00000000-0000-4000-8000-000000000641'$$, 'P0001', 'registration_seminar_immutable', 'registration cannot be reassigned to another seminar');
 rollback to savepoint immutable_registration_seminar;
@@ -163,7 +175,25 @@ select is((select status from public.registrations where id = '00000000-0000-400
 select is((select status from public.registration_read_model where id = '00000000-0000-4000-8000-000000000641'), 'released', 'read model shows overdue registration as released immediately');
 select is((select count(*)::integer from public.registrations where seminar_id = '00000000-0000-4000-8000-000000000634' and status in ('registered', 'confirmed')), 0, 'released registration no longer consumes an active slot');
 select is((select registered_count from public.seminars where id = '00000000-0000-4000-8000-000000000634'), 0, 'release decrements the seminar count');
-select is((public.register_for_seminar('00000000-0000-4000-8000-000000000634')).status, 'released', 'registration after the confirmation close is immediately released');
+select is((public.register_for_seminar('00000000-0000-4000-8000-000000000634')).status, 'confirmed', 're-registration after the confirmation close is auto-confirmed');
+select ok((select confirmed_at is not null from public.registrations where id = '00000000-0000-4000-8000-000000000641'), 'late re-registration receives a server confirmation timestamp');
+reset role;
+
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-000000000615","role":"authenticated"}', true);
+set local role authenticated;
+select is((public.register_for_seminar('00000000-0000-4000-8000-000000000638')).status, 'confirmed', 'new registration after cutoff but before seminar end is auto-confirmed');
+select ok((select confirmed_at is not null and attendance_ack_at is null from public.registrations where seminar_id = '00000000-0000-4000-8000-000000000638' and student_user_id = auth.uid()), 'late registration is confirmed but still requires attendance acknowledgement');
+select is((select registered_count from public.seminars where id = '00000000-0000-4000-8000-000000000638'), 1, 'late registration consumes one active seat');
+select is((public.register_for_seminar('00000000-0000-4000-8000-000000000638')).id, (select id from public.registrations where seminar_id = '00000000-0000-4000-8000-000000000638' and student_user_id = auth.uid()), 'retrying a late registration returns the same row');
+select is((select count(*)::integer from public.registrations where seminar_id = '00000000-0000-4000-8000-000000000638' and status in ('registered', 'confirmed')), 1, 'late registration retry does not create another active row');
+select lives_ok($$select public.acknowledge_attendance('00000000-0000-4000-8000-000000000638')$$, 'late registrant can acknowledge before the ordinary one-hour prompt window');
+select ok((select attendance_ack_at is not null from public.registrations where seminar_id = '00000000-0000-4000-8000-000000000638' and student_user_id = auth.uid()), 'late acknowledgement is persisted by the server');
+reset role;
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-000000000611","role":"authenticated"}', true);
+set local role authenticated;
+select throws_ok($$select public.register_for_seminar('00000000-0000-4000-8000-000000000638')$$, 'P0001', 'seminar_full', 'late registration still respects seminar capacity');
+select throws_ok($$select public.register_for_seminar('00000000-0000-4000-8000-000000000639')$$, 'P0001', 'not_available', 'registration at or after seminar end is rejected');
+select is((select count(*)::integer from public.registrations where seminar_id = '00000000-0000-4000-8000-000000000639'), 0, 'rejected post-seminar signup creates no registration');
 reset role;
 
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-000000000612","role":"authenticated"}', true);
@@ -173,8 +203,8 @@ reset role;
 update public.seminars
 set starts_at = now() + interval '12 hours',
     ends_at = now() + interval '14 hours',
-    confirmation_opens_hours_before = 36,
-    confirmation_closes_hours_before = 2
+    confirmation_opens_minutes_before = 2160,
+    confirmation_closes_minutes_before = 120
 where id = '00000000-0000-4000-8000-000000000633';
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-000000000612","role":"authenticated"}', true);
 set local role authenticated;
@@ -192,11 +222,25 @@ select is((select published_seminar_id from public.seminar_drafts where id = '00
 select is((select required_attendance_percent from public.seminars where reference is not null and title = 'Ready seminar'), 60, 'new seminar uses the confirmed default attendance threshold');
 select is((public.create_org_edit_draft((select id from public.seminars where title = 'Ready seminar'))).certificate_template ->> 'backgroundUrl', 'private/template.png', 'authorized seminar edit draft clones its certificate template');
 select is((public.create_org_edit_draft((select id from public.seminars where title = 'Ready seminar'))).survey_definition #>> '{sections,0,questions,0,id}', 'q1', 'authorized seminar edit draft clones its survey definition');
+select lives_ok($$select public.publish_seminar((select id from public.seminar_drafts where editing_seminar_id = (select id from public.seminars where title = 'Ready seminar') and published_seminar_id is null order by id desc limit 1))$$, 'organization member can republish an edited seminar');
+select is((select count(*)::integer from public.seminar_drafts where published_seminar_id = (select id from public.seminars where title = 'Ready seminar')), 1, 'republishing replaces only the previous published draft snapshot');
 select throws_ok($$select public.publish_seminar('00000000-0000-4000-8000-000000000652')$$, 'P0001', 'validation_failed', 'draft topics must be a JSON array');
 select throws_ok($$select public.publish_seminar('00000000-0000-4000-8000-000000000653')$$, 'P0001', 'validation_failed', 'webinar publication requires an HTTPS join URL');
 select throws_ok($$select public.publish_seminar('00000000-0000-4000-8000-000000000654')$$, 'P0001', 'validation_failed', 'seminar capacity cannot be reduced below active registrations');
 select throws_ok($$select public.publish_seminar('00000000-0000-4000-8000-000000000655')$$, 'P0001', 'not_found', 'missing draft cannot be published');
 select throws_ok($$select public.create_org_edit_draft('00000000-0000-4000-8000-000000000632')$$, 'P0001', 'not_found', 'organization user cannot create an edit draft outside its organization');
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-000000000612","role":"authenticated"}', true);
+select throws_ok($$select public.archive_org_seminar('00000000-0000-4000-8000-000000000631')$$, 'P0001', 'not_found', 'another organization cannot archive this seminar');
+select throws_ok($$select public.begin_org_draft_deletion('00000000-0000-4000-8000-000000000652')$$, 'P0001', 'not_found', 'another organization cannot begin draft deletion');
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-000000000613","role":"authenticated"}', true);
+select is(public.begin_org_draft_deletion('00000000-0000-4000-8000-000000000652'), '00000000-0000-4000-8000-000000000621'::uuid, 'organization member can claim an unpublished draft for deletion');
+select ok((select deletion_requested_at is not null from public.seminar_drafts where id = '00000000-0000-4000-8000-000000000652'), 'draft is protected from edits and publishing while its covers are cleaned');
+reset role;
+select throws_ok($$update public.seminar_drafts set published_seminar_id = '00000000-0000-4000-8000-000000000631' where id = '00000000-0000-4000-8000-000000000652'$$, 'P0001', 'draft_deletion_in_progress', 'claimed draft cannot be published during cover cleanup');
+set local role authenticated;
+select lives_ok($$select public.archive_org_seminar('00000000-0000-4000-8000-000000000631')$$, 'organization owner archives a published seminar');
+select is((select publication_status from public.seminars where id = '00000000-0000-4000-8000-000000000631'), 'archived', 'archiving removes the seminar from the published catalog');
+select is((select count(*)::integer from public.registrations where seminar_id = '00000000-0000-4000-8000-000000000631'), 1, 'archiving preserves the seminar registration record');
 reset role;
 
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-000000000614","role":"authenticated"}', true);
@@ -238,14 +282,16 @@ update public.seminars set starts_at = now() - interval '30 minutes', ends_at = 
 where id = '00000000-0000-4000-8000-000000000632';
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-000000000612","role":"authenticated"}', true);
 set local role authenticated;
+select throws_ok($$select public.issue_attendance_challenge('00000000-0000-4000-8000-000000000632')$$, 'P0001', 'not_available', 'challenge issuance requires a persisted attendance acknowledgement');
 select lives_ok($$select public.acknowledge_attendance('00000000-0000-4000-8000-000000000632')$$, 'confirmed student can acknowledge their attendance inside the prompt window');
 select ok((select attendance_ack_at is not null from public.registrations where id = '00000000-0000-4000-8000-000000000643'), 'acknowledgement timestamp is persisted on the registration');
+select lives_ok($$select public.issue_attendance_challenge('00000000-0000-4000-8000-000000000632')$$, 'acknowledged registration can request a Time-In QR in the scan window');
 reset role;
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-000000000613","role":"authenticated"}', true);
 set local role authenticated;
 select throws_ok($$select public.acknowledge_attendance('00000000-0000-4000-8000-000000000632')$$, 'P0001', 'not_found', 'another student cannot acknowledge a registration they do not own');
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-000000000611","role":"authenticated"}', true);
-select throws_ok($$select public.acknowledge_attendance('00000000-0000-4000-8000-000000000634')$$, 'P0001', 'not_available', 'unconfirmed registration cannot acknowledge attendance');
+select throws_ok($$select public.acknowledge_attendance('00000000-0000-4000-8000-000000000631')$$, 'P0001', 'not_available', 'unconfirmed registration cannot acknowledge attendance');
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-000000000612","role":"authenticated"}', true);
 reset role;
 set local role authenticated;

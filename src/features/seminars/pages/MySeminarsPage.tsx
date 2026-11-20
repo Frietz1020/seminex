@@ -47,6 +47,12 @@ export default function MySeminarsPage() {
     document.title = 'My seminars - Seminex';
   }, []);
 
+  useEffect(() => {
+    const refreshRegistrations = () => seminars.reload();
+    window.addEventListener('seminex:registrations-changed', refreshRegistrations);
+    return () => window.removeEventListener('seminex:registrations-changed', refreshRegistrations);
+  }, [seminars.reload]);
+
   function handleCancelled(seminar: Seminar) {
     setCancelledIds((ids) => [...ids, seminar.id]);
     setCancelling(null);
@@ -325,7 +331,14 @@ export default function MySeminarsPage() {
 
               {featuredTicket.state.status === 'success' && featuredTicket.state.data ? (
                 <div className="mx-auto rounded-xl border border-border-subtle bg-white p-space-sm shadow-card">
-                  <AttendanceQr seminarId={activeTicketItem.seminar.id} title={activeTicketItem.seminar.title} size={176} />
+                  <AttendanceQr
+                    seminarId={activeTicketItem.seminar.id}
+                    title={activeTicketItem.seminar.title}
+                    size={176}
+                    acknowledged={Boolean(activeTicketItem.registration?.attendanceAckAt)}
+                    endsAt={activeTicketItem.seminar.endsAt}
+                    serverNow={now}
+                  />
                 </div>
               ) : featuredTicket.state.status === 'loading' ? (
                 <Skeleton className="mx-auto h-48 w-48 rounded-xl" />

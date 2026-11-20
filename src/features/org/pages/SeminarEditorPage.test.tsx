@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import type { SeminarDraft } from '../../../api/orgTypes';
 
@@ -118,6 +119,69 @@ describe('SeminarEditorPage cover persistence', () => {
     expect(mocks.removeCover).not.toHaveBeenCalled();
     expect(mocks.publishDraft).not.toHaveBeenCalled();
     expect(screen.getByAltText('Seminar cover preview').getAttribute('src')).toBe(legacyCover);
+  });
+
+  it('keeps spaces and punctuation typed into an evaluation option', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(await screen.findByRole('button', { name: /Evaluation/ }));
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Question type' }), 'choice');
+    const option = screen.getByRole('textbox', { name: 'Option 1' });
+    await user.clear(option);
+    await user.type(option, 'Strongly agree, mostly');
+    (option as HTMLInputElement).setSelectionRange(8, 8);
+    await user.keyboard(' very');
+
+    expect((option as HTMLInputElement).value).toBe('Strongly very agree, mostly');
+    await user.click(screen.getByRole('button', { name: 'Save draft' }));
+    await waitFor(() => expect(mocks.saveDraft).toHaveBeenCalled());
+    const saved = mocks.saveDraft.mock.calls.at(-1)?.[0] as SeminarDraft;
+    const question = saved.survey?.sections[0]?.questions[0];
+    expect(question?.type).toBe('choice');
+    if (question?.type === 'choice') {
+      expect(question.options[0]).toMatchObject({ value: expect.stringMatching(/^option-/), label: 'Strongly very agree, mostly' });
+      expect(question.options[0]?.value).not.toBe(question.options[0]?.label);
+    }
+    await user.click(screen.getByRole('button', { name: 'Add option' }));
+    expect(screen.getByRole('textbox', { name: 'Option 3' })).not.toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Remove option 3' }));
+    expect(screen.queryByRole('textbox', { name: 'Option 3' })).toBeNull();
+  });
+
+  it('authors minute-based confirmation windows with equivalent defaults', async () => {
+    renderPage();
+    expect((screen.getByLabelText('Confirmation opens (minutes before start)') as HTMLInputElement).value).toBe('1440');
+    expect((screen.getByLabelText('Confirmation closes (minutes before start)') as HTMLInputElement).value).toBe('60');
+  });
+
+  it('accepts typed local date and time and saves the corresponding instant', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    const start = screen.getByLabelText('Start date and time');
+    await user.clear(start);
+    await user.type(start, '2030-06-02T09:30');
+    await user.click(screen.getByRole('button', { name: 'Save draft' }));
+
+    await waitFor(() => expect(mocks.saveDraft).toHaveBeenCalled());
+    const saved = mocks.saveDraft.mock.calls.at(-1)?.[0] as SeminarDraft;
+    expect(saved.details.startsAt).toBe(new Date(2030, 5, 2, 9, 30).toISOString());
+    expect(screen.queryByText('Enter a complete date and time.')).toBeNull();
+  });
+
+  it('persists configurable scale bounds and the respondent description', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(await screen.findByRole('button', { name: /Evaluation/ }));
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Question type' }), 'scale');
+    await user.clear(screen.getByRole('textbox', { name: 'Question description' }));
+    await user.type(screen.getByRole('textbox', { name: 'Question description' }), 'Rate the practical value.');
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Scale minimum' }), { target: { value: '0' } });
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Scale maximum' }), { target: { value: '10' } });
+    await user.click(screen.getByRole('button', { name: 'Save draft' }));
+
+    await waitFor(() => expect(mocks.saveDraft).toHaveBeenCalled());
+    const saved = mocks.saveDraft.mock.calls.at(-1)?.[0] as SeminarDraft;
+    expect(saved.survey?.sections[0]?.questions[0]).toMatchObject({ type: 'scale', min: 0, max: 10, description: 'Rate the practical value.' });
   });
 
   it('removes the superseded cover only after the replacement draft saves', async () => {

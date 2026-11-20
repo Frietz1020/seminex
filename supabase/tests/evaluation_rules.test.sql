@@ -1,6 +1,6 @@
 begin;
 
-select plan(55);
+select plan(60);
 
 select has_table('public', 'seminar_survey_versions', 'published evaluation surveys have immutable versions');
 select has_table('public', 'evaluation_responses', 'student evaluation responses have a dedicated table');
@@ -9,6 +9,9 @@ select has_function('public', 'list_evaluations_due', ARRAY[]::text[], 'students
 select has_function('public', 'get_evaluation_survey', ARRAY['uuid'], 'eligible students can read a published survey snapshot');
 select has_function('public', 'submit_evaluation', ARRAY['uuid', 'text', 'integer', 'jsonb'], 'students submit answers through a validating database function');
 select has_function('public', 'get_org_seminar_evaluation', ARRAY['uuid', 'jsonb', 'integer'], 'organizations read anonymized, paginated evaluation data');
+select ok(private.valid_survey_definition('{"sections":[{"questions":[{"id":"scale","type":"scale","required":false,"prompt":"Rate","min":0,"max":10}]}]}'::jsonb), 'linear scale accepts the configured zero-to-ten range');
+select ok(not private.valid_survey_definition('{"sections":[{"questions":[{"id":"scale","type":"scale","required":false,"prompt":"Rate","min":-1,"max":10}]}]}'::jsonb), 'linear scale rejects a negative minimum');
+select ok(not private.valid_survey_definition('{"sections":[{"questions":[{"id":"scale","type":"scale","required":false,"prompt":"Rate","min":0,"max":11}]}]}'::jsonb), 'linear scale rejects a maximum above ten');
 select ok(not coalesce(has_function_privilege('authenticated', to_regprocedure('private.is_evaluation_eligible(uuid,timestamp with time zone)'), 'EXECUTE'), false), 'authenticated users cannot execute the private eligibility helper');
 select ok(not coalesce(has_function_privilege('anon', to_regprocedure('public.submit_evaluation(uuid,text,integer,jsonb)'), 'EXECUTE'), false), 'anonymous users cannot submit evaluations');
 select ok(not coalesce(has_table_privilege('authenticated', to_regclass('public.evaluation_responses'), 'INSERT'), false), 'students cannot write directly to evaluation response rows');
@@ -64,7 +67,7 @@ values (
   '00000000-0000-4000-8000-000000000921',
   1,
   'evaluation-survey-1',
-  '{"id":"evaluation-survey-1","version":1,"seminarId":"00000000-0000-4000-8000-000000000921","title":"Evaluation","instructions":"","sections":[{"id":"main","title":"Evaluation","questions":[{"id":"scale","type":"scale","required":true,"prompt":"Rate the session","min":1,"max":5,"startLabel":"Low","endLabel":"High"},{"id":"choice","type":"choice","required":false,"prompt":"Choose one","options":[{"value":"good","label":"Good"},{"value":"fair","label":"Fair"}]},{"id":"checks","type":"checkbox","required":false,"prompt":"Choose many","options":[{"value":"a","label":"A"},{"value":"b","label":"B"}]},{"id":"paragraph","type":"paragraph","required":false,"prompt":"Comment","maxLength":10}]}]}',
+  '{"id":"evaluation-survey-1","version":1,"seminarId":"00000000-0000-4000-8000-000000000921","title":"Evaluation","instructions":"","sections":[{"id":"main","title":"Evaluation","questions":[{"id":"scale","type":"scale","required":true,"prompt":"Rate the session","description":"Choose a value from zero to ten.","min":0,"max":10,"startLabel":"Low","endLabel":"High"},{"id":"choice","type":"choice","required":false,"prompt":"Choose one","options":[{"value":"good","label":"Good"},{"value":"fair","label":"Fair"}]},{"id":"checks","type":"checkbox","required":false,"prompt":"Choose many","options":[{"value":"a","label":"A"},{"value":"b","label":"B"}]},{"id":"paragraph","type":"paragraph","required":false,"prompt":"Comment","maxLength":10}]}]}',
   '00000000-0000-4000-8000-000000000905'
 );
 
@@ -91,7 +94,8 @@ set local role authenticated;
 
 select is((select count(*)::integer from public.list_evaluations_due() where seminar_id = '00000000-0000-4000-8000-000000000921'), 1, 'eligible evaluation is due before the scheduled seminar end');
 select is(public.get_evaluation_survey('00000000-0000-4000-8000-000000000921')->>'id', 'evaluation-survey-1', 'eligible student reads the published survey snapshot');
-select throws_ok($$select public.submit_evaluation('00000000-0000-4000-8000-000000000921', 'evaluation-survey-1', 1, '{"scale":"9"}')$$, 'P0001', 'validation_failed', 'out-of-range scale answer is rejected');
+select is(public.get_evaluation_survey('00000000-0000-4000-8000-000000000921')->'sections'->0->'questions'->0->>'description', 'Choose a value from zero to ten.', 'custom scale description is returned to respondents');
+select throws_ok($$select public.submit_evaluation('00000000-0000-4000-8000-000000000921', 'evaluation-survey-1', 1, '{"scale":"11"}')$$, 'P0001', 'validation_failed', 'scale answer above the configured maximum is rejected');
 select throws_ok($$select public.submit_evaluation('00000000-0000-4000-8000-000000000921', 'evaluation-survey-1', 1, '{"choice":"invalid"}')$$, 'P0001', 'validation_failed', 'answer outside choice options is rejected');
 select throws_ok($$select public.submit_evaluation('00000000-0000-4000-8000-000000000921', 'evaluation-survey-1', 1, '{"scale":"4","checks":"not-json"}')$$, 'P0001', 'validation_failed', 'malformed checkbox answer is rejected');
 select throws_ok($$select public.submit_evaluation('00000000-0000-4000-8000-000000000921', 'evaluation-survey-1', 1, '{"scale":"4","paragraph":"01234567890"}')$$, 'P0001', 'validation_failed', 'paragraph answer exceeding its question limit is rejected');
@@ -129,6 +133,7 @@ select ok(not ((public.get_org_seminar_evaluation('00000000-0000-4000-8000-00000
 select ok((public.get_org_seminar_evaluation('00000000-0000-4000-8000-000000000921', public.get_org_seminar_evaluation('00000000-0000-4000-8000-000000000921', null, 1)->'responses'->'nextCursor', 1)->'responses'->'items'->0->>'id') is not null, 'cursor returns the next response by opaque UUID order');
 select is(public.get_org_seminar_evaluation('00000000-0000-4000-8000-000000000921', public.get_org_seminar_evaluation('00000000-0000-4000-8000-000000000921', null, 1)->'responses'->'nextCursor', 1)->'aggregates'->0->>'responseCount', '2', 'aggregate totals remain full-set values on later pages');
 select is(public.get_org_seminar_evaluation('00000000-0000-4000-8000-000000000921', null, 1)->'aggregates'->0->'questions'->0->>'mean', '4.00', 'scale aggregate includes the mean across all submitted answers');
+select is(public.get_org_seminar_evaluation('00000000-0000-4000-8000-000000000921', null, 1)->'aggregates'->0->'questions'->0->'distribution'->0->>'value', '0', 'scale analytics include the configured minimum value');
 select is(public.get_org_seminar_evaluation('00000000-0000-4000-8000-000000000921', null, 1)->'aggregates'->0->'questions'->1->'distribution'->0->>'count', '2', 'choice aggregate counts answers by option');
 select is(public.get_org_seminar_evaluation('00000000-0000-4000-8000-000000000921', null, 1)->'aggregates'->0->'questions'->2->'distribution'->1->>'count', '2', 'checkbox aggregate counts selected options');
 select is(public.get_org_seminar_evaluation('00000000-0000-4000-8000-000000000921', null, 1)->'aggregates'->0->'questions'->3->'comments'->>0, 'clear', 'paragraph aggregate includes anonymized comments');

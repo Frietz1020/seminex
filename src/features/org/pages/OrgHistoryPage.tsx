@@ -62,12 +62,13 @@ function DateTile({ date, cancelled }: { date: string; cancelled: boolean }) {
 
 function ArchiveCard({ seminar, now, onCancellation }: { seminar: OrgSeminar; now: number; onCancellation: (seminar: OrgSeminar) => void }) {
   const cancelled = Boolean(seminar.cancellation);
+  const archived = seminar.publicationStatus === 'archived';
   const ended = new Date(getEffectiveEnd(seminar)).toISOString();
   return <article className="flex flex-col gap-space-lg rounded-xl border border-outline-variant/45 bg-surface-card p-space-lg shadow-card transition-shadow hover:shadow-overlay xl:flex-row xl:items-center xl:justify-between">
     <div className="flex min-w-0 flex-1 items-start gap-space-md">
       <DateTile date={seminar.startsAt} cancelled={cancelled} />
       <div className="min-w-0 flex-1">
-        <div className="mb-1 flex flex-wrap items-center gap-space-xs"><OrgStatusBadge status={getOrgLifecycle(seminar, now)} /><span aria-hidden="true" className="text-text-subtle">·</span><span className="font-caption text-caption text-text-secondary">{cancelled ? `Cancelled ${formatDate(seminar.cancellation?.at ?? seminar.startsAt)}` : `Concluded ${formatDateTime(ended)}`}</span><span aria-hidden="true" className="text-text-subtle">·</span><span className="font-caption text-caption text-text-secondary">Record #{seminar.reference}</span></div>
+        <div className="mb-1 flex flex-wrap items-center gap-space-xs">{archived ? <span className="rounded-md bg-surface-container-high px-2.5 py-1 font-label-sm text-label-sm text-text-secondary">Archived</span> : <OrgStatusBadge status={getOrgLifecycle(seminar, now)} />}<span aria-hidden="true" className="text-text-subtle">·</span><span className="font-caption text-caption text-text-secondary">{cancelled ? `Cancelled ${formatDate(seminar.cancellation?.at ?? seminar.startsAt)}` : archived ? 'Removed from participant catalog' : `Concluded ${formatDateTime(ended)}`}</span><span aria-hidden="true" className="text-text-subtle">·</span><span className="font-caption text-caption text-text-secondary">Record #{seminar.reference}</span></div>
         <h2 className="truncate font-title-lg text-title-lg text-on-surface">{seminar.title}</h2>
         <div className="mt-1 flex flex-wrap items-center gap-x-space-md gap-y-1 font-body-sm text-body-sm text-text-secondary"><span className="inline-flex items-center gap-1.5"><Icon name="person" size={16} className="text-primary" />{seminar.speaker.name}</span>{!cancelled && <span className="inline-flex items-center gap-1.5"><Icon name="location_on" size={16} />{seminar.venue}</span>}<span className="inline-flex items-center gap-1.5"><Icon name="school" size={16} />{seminar.department}</span></div>
         {cancelled && <p className="mt-2 line-clamp-2 font-caption text-caption text-danger-ink">{seminar.cancellation?.reason}</p>}
@@ -87,7 +88,7 @@ export default function OrgHistoryPage() {
   const [cancellationNotice, setCancellationNotice] = useState<OrgSeminar | null>(null);
   useEffect(() => { document.title = 'Organization history - Seminex'; }, []);
 
-  const all = state.status === 'success' && now !== null ? state.data.seminars.items.filter((item) => ['finished', 'cancelled'].includes(getOrgLifecycle(item, now))) : [];
+  const all = state.status === 'success' && now !== null ? state.data.seminars.items.filter((item) => item.publicationStatus === 'archived' || ['finished', 'cancelled'].includes(getOrgLifecycle(item, now))) : [];
   const years = [...new Set(all.map((item) => academicYear(item.startsAt)))].sort((a, b) => b.localeCompare(a));
   const visible = useMemo(() => all.filter((item) => {
     const isCancelled = Boolean(item.cancellation);
@@ -96,16 +97,19 @@ export default function OrgHistoryPage() {
     const queryMatch = `${item.title} ${item.reference} ${item.speaker.name} ${item.venue} ${item.department}`.toLowerCase().includes(query.trim().toLowerCase());
     return statusMatch && yearMatch && queryMatch;
   }), [all, filter, query, year]);
-  const finished = all.filter((item) => !item.cancellation);
+  const finished = all.filter((item) => !item.cancellation && item.publicationStatus !== 'archived');
+  const archived = all.filter((item) => item.publicationStatus === 'archived');
   const cancelled = all.filter((item) => item.cancellation);
-  const archivedRegistrations = finished.reduce((total, item) => total + item.registeredCount, 0);
-  const archivedCapacity = finished.reduce((total, item) => total + item.capacity, 0);
+  const retainedSeminars = all.filter((item) => !item.cancellation);
+  const archivedRegistrations = retainedSeminars.reduce((total, item) => total + item.registeredCount, 0);
+  const archivedCapacity = retainedSeminars.reduce((total, item) => total + item.capacity, 0);
 
   const summary = [
     { label: 'Finished seminars', value: finished.length, icon: 'event_available' },
+    { label: 'Archived seminars', value: archived.length, icon: 'history' },
     { label: 'Cancelled seminars', value: cancelled.length, icon: 'event_busy' },
     { label: 'Registrations archived', value: archivedRegistrations, icon: 'group' },
-    { label: 'Seats in finished seminars', value: archivedCapacity, icon: 'confirmation_number' },
+    { label: 'Seats in retained seminars', value: archivedCapacity, icon: 'confirmation_number' },
   ] as const;
 
   if (now === null) {

@@ -12,7 +12,7 @@ const SEMINAR_COLUMNS = [
   'id', 'organization_id', 'reference', 'title', 'description', 'overview', 'objectives',
   'seminar_type', 'speaker_name', 'speaker_role', 'venue', 'venue_guidelines', 'department',
   'topics', 'starts_at', 'ends_at', 'capacity', 'registered_count', 'required_attendance_percent',
-  'confirmation_opens_hours_before', 'confirmation_closes_hours_before', 'image_url',
+  'confirmation_opens_minutes_before', 'confirmation_closes_minutes_before', 'image_url',
   'curriculum_credit', 'organizing_body', 'certificate_eligibility', 'publication_status', 'published_at',
 ].join(', ');
 const REGISTRATION_COLUMNS = [
@@ -73,8 +73,8 @@ function seminarFromRow(value: unknown): Seminar | null {
     registeredCount: numberValue(value, 'registered_count'),
     requiredAttendancePercent: numberValue(value, 'required_attendance_percent', 60),
     seminarType: value.seminar_type === 'webinar' ? 'webinar' : 'seminar',
-    confirmationOpensHoursBefore: numberValue(value, 'confirmation_opens_hours_before', 24),
-    confirmationClosesHoursBefore: numberValue(value, 'confirmation_closes_hours_before', 1),
+    confirmationOpensMinutesBefore: numberValue(value, 'confirmation_opens_minutes_before', 1440),
+    confirmationClosesMinutesBefore: numberValue(value, 'confirmation_closes_minutes_before', 60),
   };
   const overview = nullableString(value, 'overview');
   const venueGuidelines = nullableString(value, 'venue_guidelines');
@@ -403,7 +403,13 @@ export async function confirmRegistration(seminarId: string): Promise<ApiResult<
 function draftFromRow(value: unknown): SeminarDraft | null {
   if (!isRow(value) || typeof value.id !== 'string' || typeof value.organization_id !== 'string' || typeof value.created_at !== 'string' || typeof value.updated_at !== 'string') return null;
   const details = isRow(value.details) ? value.details as SeminarDetailsDraft : {};
-  const certificate = isRow(value.certificate_template) ? value.certificate_template as unknown as SeminarDraft['certificate'] : null;
+  let certificate: SeminarDraft['certificate'] = null;
+  if (isRow(value.certificate_template)) {
+    const savedCertificate = { ...value.certificate_template };
+    delete savedCertificate.signatureBox;
+    delete savedCertificate.signatureBoxes;
+    certificate = savedCertificate as unknown as SeminarDraft['certificate'];
+  }
   const survey = isRow(value.survey_definition) ? value.survey_definition as unknown as AuthoredSurvey : null;
   const draft: SeminarDraft = {
     id: value.id,
@@ -417,6 +423,8 @@ function draftFromRow(value: unknown): SeminarDraft | null {
   };
   const editingSeminarId = nullableString(value, 'editing_seminar_id');
   if (editingSeminarId) draft.editingSeminarId = editingSeminarId;
+  const deletionRequestedAt = nullableString(value, 'deletion_requested_at');
+  if (deletionRequestedAt) draft.deletionRequestedAt = deletionRequestedAt;
   return draft;
 }
 
@@ -429,6 +437,7 @@ function seminarToOrgSeminar(value: unknown): OrgSeminar | null {
     registrationClosed: false,
     endedEarlyAt: null,
     cancellation: null,
+    publicationStatus: value.publication_status === 'archived' || value.publication_status === 'cancelled' ? value.publication_status : 'published',
   };
 }
 
@@ -515,6 +524,54 @@ export async function createOrgEditDraft(seminarId: string): Promise<ApiResult<S
     supabase.rpc('create_org_edit_draft', { p_seminar_id: seminarId }),
     (data) => draftFromRow(data) ?? (() => { throw new Error('Invalid seminar draft response'); })(),
   );
+}
+
+export async function deleteOrgDraft(draftId: string): Promise<ApiResult<void>> {
+  const supabase = getSupabaseClient();
+  if (!supabase) return failure('configuration_error');
+  const deletion = await settle(
+    supabase.rpc('begin_org_draft_deletion', { p_draft_id: draftId }),
+    (data) => typeof data === 'string' ? data : null,
+  );
+  if (!deletion.ok) return deletion;
+  if (!deletion.data) return failure('not_found');
+
+  const bucket = supabase.storage.from(SEMINAR_COVER_BUCKET);
+  const prefix = `${deletion.data}/${draftId}`;
+  let offset = 0;
+  for (;;) {
+    const listed = await settle(bucket.list(prefix, { limit: 100, offset }), (data) =>
+      Array.isArray(data) ? data.filter((item): item is { name: string } => isRow(item) && typeof item.name === 'string') : null,
+    );
+    if (!listed.ok) return listed;
+    if (!listed.data) return failure('validation_failed');
+    const paths = listed.data
+      .filter((item) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(png|jpg|webp)$/i.test(item.name))
+      .map((item) => `${prefix}/${item.name}`);
+    if (paths.length) {
+      const removed = await settle(bucket.remove(paths), () => undefined);
+      if (!removed.ok) return removed;
+      offset = 0;
+      continue;
+    }
+    if (listed.data.length < 100) break;
+    offset += 100;
+  }
+
+  return settle(
+    supabase.from('seminar_drafts').delete().eq('id', draftId).is('published_seminar_id', null)
+      .not('deletion_requested_at', 'is', null).select('id').maybeSingle(),
+    (data) => {
+      if (!isRow(data) || data.id !== draftId) throw new Error('Draft not found');
+      return undefined;
+    },
+  );
+}
+
+export async function archiveOrgSeminar(seminarId: string): Promise<ApiResult<void>> {
+  const supabase = getSupabaseClient();
+  if (!supabase) return failure('configuration_error');
+  return settle(supabase.rpc('archive_org_seminar', { p_seminar_id: seminarId }), () => undefined);
 }
 
 async function coverDraftOrganization(draftId: string): Promise<ApiResult<string>> {

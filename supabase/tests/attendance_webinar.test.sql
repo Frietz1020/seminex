@@ -1,6 +1,6 @@
 begin;
 
-select plan(32);
+select plan(34);
 
 select ok(not (select public from storage.buckets where id = 'webinar-proofs'), 'webinar proof bucket remains private');
 
@@ -53,13 +53,13 @@ values
   ('00000000-0000-4000-8000-000000000732', '00000000-0000-4000-8000-000000000721', 'ATTENDANCE-WEBINAR', 'Attendance Webinar', 'Proof tests', 'webinar', 'Speaker', '', 'CCS', now() - interval '10 minutes', now() + interval '2 hours', 5, 'published', now(), '00000000-0000-4000-8000-000000000712', 'https://meet.example.test/private'),
   ('00000000-0000-4000-8000-000000000733', '00000000-0000-4000-8000-000000000721', 'ATTENDANCE-OTHER-SEMINAR', 'Other Attendance Seminar', 'Wrong-seminar challenge test', 'seminar', 'Speaker', 'Hall', 'CCS', now() - interval '10 minutes', now() + interval '2 hours', 5, 'published', now(), '00000000-0000-4000-8000-000000000712', null);
 
-insert into public.registrations (id, seminar_id, student_user_id, status, confirmed_at)
+insert into public.registrations (id, seminar_id, student_user_id, status, confirmed_at, attendance_ack_at)
 values
-  ('00000000-0000-4000-8000-000000000741', '00000000-0000-4000-8000-000000000731', '00000000-0000-4000-8000-000000000711', 'confirmed', now()),
-  ('00000000-0000-4000-8000-000000000742', '00000000-0000-4000-8000-000000000732', '00000000-0000-4000-8000-000000000711', 'confirmed', now()),
-  ('00000000-0000-4000-8000-000000000743', '00000000-0000-4000-8000-000000000731', '00000000-0000-4000-8000-000000000713', 'released', null),
-  ('00000000-0000-4000-8000-000000000744', '00000000-0000-4000-8000-000000000731', '00000000-0000-4000-8000-000000000715', 'confirmed', now()),
-  ('00000000-0000-4000-8000-000000000745', '00000000-0000-4000-8000-000000000732', '00000000-0000-4000-8000-000000000715', 'confirmed', now());
+  ('00000000-0000-4000-8000-000000000741', '00000000-0000-4000-8000-000000000731', '00000000-0000-4000-8000-000000000711', 'confirmed', now(), now()),
+  ('00000000-0000-4000-8000-000000000742', '00000000-0000-4000-8000-000000000732', '00000000-0000-4000-8000-000000000711', 'confirmed', now(), now()),
+  ('00000000-0000-4000-8000-000000000743', '00000000-0000-4000-8000-000000000731', '00000000-0000-4000-8000-000000000713', 'released', null, null),
+  ('00000000-0000-4000-8000-000000000744', '00000000-0000-4000-8000-000000000731', '00000000-0000-4000-8000-000000000715', 'confirmed', now(), now()),
+  ('00000000-0000-4000-8000-000000000745', '00000000-0000-4000-8000-000000000732', '00000000-0000-4000-8000-000000000715', 'confirmed', now(), now());
 
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-000000000712","role":"authenticated"}', true);
 set local role authenticated;
@@ -126,20 +126,20 @@ reset role;
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-000000000712","role":"authenticated"}', true);
 set local role authenticated;
 select throws_ok(
-  $$select public.record_org_challenge_scan('00000000-0000-4000-8000-000000000733', current_setting('test.scan_challenge'), '00000000-0000-4000-8000-000000000757')$$,
+  $$select public.record_org_challenge_scan('00000000-0000-4000-8000-000000000733', current_setting('test.scan_challenge'), '00000000-0000-4000-8000-000000000757', 'time_in')$$,
   'P0001', 'not_found', 'a challenge cannot be used for a different seminar'
 );
 select is(
-  public.record_org_challenge_scan('00000000-0000-4000-8000-000000000731', current_setting('test.scan_challenge'), '00000000-0000-4000-8000-000000000758')->'entry'->>'kind',
+  public.record_org_challenge_scan('00000000-0000-4000-8000-000000000731', current_setting('test.scan_challenge'), '00000000-0000-4000-8000-000000000758', 'time_in')->'entry'->>'kind',
   'time_in', 'challenge records the owning registration time-in'
 );
 select is(
-  public.record_org_challenge_scan('00000000-0000-4000-8000-000000000731', current_setting('test.scan_challenge'), '00000000-0000-4000-8000-000000000758')->'student'->>'studentId',
+  public.record_org_challenge_scan('00000000-0000-4000-8000-000000000731', current_setting('test.scan_challenge'), '00000000-0000-4000-8000-000000000758', 'time_in')->'student'->>'studentId',
   '207000715', 'challenge resolves to its bound registration, not a supplied Student ID'
 );
 select throws_ok(
-  $$select public.record_org_challenge_scan('00000000-0000-4000-8000-000000000731', current_setting('test.scan_challenge'), '00000000-0000-4000-8000-000000000759')$$,
-  'P0001', 'conflict', 'copied challenge replay with another idempotency key is rejected'
+  $$select public.record_org_challenge_scan('00000000-0000-4000-8000-000000000731', current_setting('test.scan_challenge'), '00000000-0000-4000-8000-000000000759', 'time_in')$$,
+  'P0001', 'attendance_already_recorded', 'a copied challenge cannot record the same attendance mode twice'
 );
 select is((select count(*)::integer from public.attendance_ledger where registration_id = '00000000-0000-4000-8000-000000000744'), 1, 'challenge retry creates one ledger entry');
 reset role;
@@ -153,8 +153,8 @@ where challenge_hash = extensions.digest(current_setting('test.expired_scan_chal
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-000000000712","role":"authenticated"}', true);
 set local role authenticated;
 select throws_ok(
-  $$select public.record_org_challenge_scan('00000000-0000-4000-8000-000000000731', current_setting('test.expired_scan_challenge'), '00000000-0000-4000-8000-000000000760')$$,
-  'P0001', 'not_available', 'expired challenge is rejected'
+  $$select public.record_org_challenge_scan('00000000-0000-4000-8000-000000000731', current_setting('test.expired_scan_challenge'), '00000000-0000-4000-8000-000000000760', 'time_in')$$,
+  'P0001', 'challenge_expired', 'expired challenge is rejected'
 );
 reset role;
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-000000000715","role":"authenticated"}', true);
@@ -164,15 +164,16 @@ reset role;
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-000000000712","role":"authenticated"}', true);
 set local role authenticated;
 select is(
-  public.record_org_challenge_scan('00000000-0000-4000-8000-000000000731', current_setting('test.scan_challenge'), '00000000-0000-4000-8000-000000000761')->'entry'->>'kind',
+  public.record_org_challenge_scan('00000000-0000-4000-8000-000000000731', current_setting('test.scan_challenge'), '00000000-0000-4000-8000-000000000761', 'time_out')->'entry'->>'kind',
   'time_out', 'a fresh challenge permits one Time-Out after Time-In'
 );
 reset role;
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-000000000715","role":"authenticated"}', true);
 set local role authenticated;
-select throws_ok(
-  $$select public.issue_attendance_challenge('00000000-0000-4000-8000-000000000731')$$,
-  'P0001', 'not_available', 'no further checkpoint is issued after Time-Out'
+select is(
+  (public.issue_attendance_challenge('00000000-0000-4000-8000-000000000731')->>'expires_at')::timestamptz,
+  (select ends_at + interval '1 hour' from public.seminars where id = '00000000-0000-4000-8000-000000000731'),
+  'acknowledged applicant can still access the QR through its fixed deadline after Time-Out'
 );
 
 reset role;
@@ -231,6 +232,22 @@ select is((select status from public.review_webinar_proof(
 select is((select count(*)::integer from public.attendance_ledger where seminar_id = '00000000-0000-4000-8000-000000000732' and method = 'webinar_proof'), 1, 'approval appends exactly one webinar attendance entry');
 select is((select event_at from public.attendance_ledger where seminar_id = '00000000-0000-4000-8000-000000000732' and method = 'webinar_proof'), (select submitted_at from public.webinar_proofs where idempotency_key = '00000000-0000-4000-8000-000000000763'), 'approval uses the submission timestamp for attendance');
 select is((select officer_user_id::text from public.attendance_ledger where seminar_id = '00000000-0000-4000-8000-000000000732' and method = 'webinar_proof'), '00000000-0000-4000-8000-000000000712', 'approval records the authenticated reviewing officer');
+
+reset role;
+set local role service_role;
+insert into public.attendance_ledger (seminar_id, registration_id, student_user_id, kind, event_at, method, officer_user_id, idempotency_key)
+values ('00000000-0000-4000-8000-000000000732', '00000000-0000-4000-8000-000000000745', '00000000-0000-4000-8000-000000000715', 'time_in', now(), 'qr', '00000000-0000-4000-8000-000000000712', '00000000-0000-4000-8000-000000000766');
+select throws_ok(
+  $$insert into public.attendance_ledger (seminar_id, registration_id, student_user_id, kind, event_at, method, officer_user_id, idempotency_key) values ('00000000-0000-4000-8000-000000000732', '00000000-0000-4000-8000-000000000745', '00000000-0000-4000-8000-000000000715', 'time_in', now(), 'qr', '00000000-0000-4000-8000-000000000712', '00000000-0000-4000-8000-000000000767')$$,
+  '23505', null, 'database uniqueness constraint rejects a duplicate registration/mode event'
+);
+reset role;
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-000000000712","role":"authenticated"}', true);
+set local role authenticated;
+select throws_ok(
+  $$select public.review_webinar_proof((select id from public.webinar_proofs where idempotency_key = '00000000-0000-4000-8000-000000000765'), true, null)$$,
+  'P0001', 'attendance_already_recorded', 'webinar proof approval cannot duplicate an attendance mode recorded by another method'
+);
 
 select * from finish();
 rollback;

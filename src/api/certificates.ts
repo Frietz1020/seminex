@@ -74,7 +74,17 @@ function certificateTemplate(value: unknown): CertificateTemplate | null {
   if (![box.x, box.y, box.width, box.height, box.fontSize].every((part) => typeof part === 'number' && Number.isFinite(part))
     || typeof box.fontFamily !== 'string' || (box.fontWeight !== 400 && box.fontWeight !== 700)
     || !['left', 'center', 'right'].includes(String(box.align)) || typeof box.color !== 'string') return null;
-  return value as unknown as CertificateTemplate;
+  const saved = { ...value };
+  delete saved.signatureBox;
+  delete saved.signatureBoxes;
+  const safeNameBox = {
+    ...box,
+    italic: box.italic === true,
+    underline: box.underline === true,
+    opacity: Number.isInteger(box.opacity) && Number(box.opacity) >= 0 && Number(box.opacity) <= 100 ? Number(box.opacity) : 100,
+    textTransform: ['sentence', 'lowercase', 'uppercase', 'capitalize'].includes(String(box.textTransform)) ? box.textTransform : 'sentence',
+  };
+  return { ...saved, nameBox: safeNameBox } as unknown as CertificateTemplate;
 }
 
 function certificateRecord(value: unknown): CertificateRecord | null {

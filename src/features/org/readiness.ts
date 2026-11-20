@@ -27,12 +27,14 @@ export function getMissingDetails(details: SeminarDetailsDraft): string[] {
   if (details.seminarType === 'webinar') {
     if (!isHttpsUrl(details.joinUrl)) missing.push('an HTTPS webinar join link');
   } else if (!isFilled(details.venue)) missing.push('venue');
-  const opens = details.confirmationOpensHoursBefore ?? 24;
-  const closes = details.confirmationClosesHoursBefore ?? 1;
-  if (!Number.isFinite(opens) || !Number.isFinite(closes) || closes < 1 || opens <= closes) missing.push('a valid confirmation window');
-  if (details.startsAt && details.endsAt && Date.parse(details.endsAt) <= Date.parse(details.startsAt)) {
-    missing.push('an end time after the start time');
-  }
+  const opens = details.confirmationOpensMinutesBefore ?? 1440;
+  const closes = details.confirmationClosesMinutesBefore ?? 60;
+  if (!Number.isInteger(opens) || !Number.isInteger(closes) || opens < 1 || closes < 1 || opens > 10080 || closes > 10080 || opens <= closes) missing.push('a valid confirmation window');
+  const start = details.startsAt ? Date.parse(details.startsAt) : Number.NaN;
+  const end = details.endsAt ? Date.parse(details.endsAt) : Number.NaN;
+  if (details.startsAt && !Number.isFinite(start)) missing.push('a valid start date and time');
+  if (details.endsAt && !Number.isFinite(end)) missing.push('a valid end date and time');
+  if (Number.isFinite(start) && Number.isFinite(end) && end <= start) missing.push('an end time after the start time');
   return missing;
 }
 

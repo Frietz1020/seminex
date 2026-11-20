@@ -17,12 +17,14 @@ type Template = {
     fontSize: number;
     lineHeight?: number;
     fontWeight: 400 | 700;
+    italic?: boolean;
+    underline?: boolean;
+    opacity?: number;
+    textTransform?: 'sentence' | 'lowercase' | 'uppercase' | 'capitalize';
     align: 'left' | 'center' | 'right';
     color: string;
   };
   qrCodeBox?: Box;
-  signatureBox?: Box & { imageUrl: string };
-  signatureBoxes?: Array<Box & { id: string; imageUrl: string; imageName: string }>;
 };
 
 type RenderCertificateInput = {
@@ -55,15 +57,6 @@ export async function renderCertificatePdf(input: RenderCertificateInput): Promi
     ? await renderSvgDataImage(background.bytes, width, height)
     : template.backgroundUrl;
 
-  const signatureBoxes = template.signatureBoxes ?? (template.signatureBox
-    ? [{ ...template.signatureBox, id: 'legacy-signature', imageName: 'Signature' }]
-    : []);
-  if (signatureBoxes.length > 8) throw new Error('validation_failed');
-  const signatures = signatureBoxes.map((signature) => ({
-    ...signature,
-    image: decodeDataImage(signature.imageUrl, ['image/png', 'image/jpeg', 'image/webp']),
-  }));
-
   const qrSvg = template.qrCodeBox ? qrSvgContents(serial, template.qrCodeBox) : '';
   const nameBox = template.nameBox;
   const centerY = nameBox.y + nameBox.height / 2;
@@ -73,11 +66,13 @@ export async function renderCertificatePdf(input: RenderCertificateInput): Promi
     : nameBox.x + nameBox.width / 2;
   const safeFont = FONT_FAMILIES.has(nameBox.fontFamily) ? nameBox.fontFamily : 'Outfit';
   const safeColor = /^#[0-9a-f]{6}$/i.test(nameBox.color) ? nameBox.color : '#1B365D';
+  const safeOpacity = nameBox.opacity === undefined ? 100 : nameBox.opacity;
+  const safeTransform = nameBox.textTransform ?? 'sentence';
+  const renderedName = transformName(studentName, safeTransform);
   const svg = [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
     `<image href="${escapeAttribute(backgroundUrl)}" x="0" y="0" width="${width}" height="${height}" preserveAspectRatio="none"/>`,
-    `<text x="${textX}" y="${centerY}" dominant-baseline="central" text-anchor="${textAnchor}" font-family="${escapeAttribute(safeFont)}" font-size="${nameBox.fontSize}" font-weight="${nameBox.fontWeight}" fill="${safeColor}">${escapeXml(studentName)}</text>`,
-    ...signatures.map((signature) => `<image href="${imageDataUrl(signature.image)}" x="${signature.x}" y="${signature.y}" width="${signature.width}" height="${signature.height}" preserveAspectRatio="xMidYMid meet"/>`),
+    `<text x="${textX}" y="${centerY}" dominant-baseline="central" text-anchor="${textAnchor}" font-family="${escapeAttribute(safeFont)}" font-size="${nameBox.fontSize}" font-weight="${nameBox.fontWeight}" font-style="${nameBox.italic ? 'italic' : 'normal'}" text-decoration="${nameBox.underline ? 'underline' : 'none'}" fill="${safeColor}" fill-opacity="${safeOpacity / 100}">${escapeXml(renderedName)}</text>`,
     qrSvg,
     '</svg>',
   ].join('');
@@ -121,10 +116,20 @@ function validateTemplate(template: Template, width: number, height: number): vo
     || (template.nameBox.lineHeight !== undefined && (!Number.isFinite(template.nameBox.lineHeight) || template.nameBox.lineHeight < 1 || template.nameBox.lineHeight > 500))
     || ![400, 700].includes(template.nameBox.fontWeight)
     || !['left', 'center', 'right'].includes(template.nameBox.align)
+    || (template.nameBox.italic !== undefined && typeof template.nameBox.italic !== 'boolean')
+    || (template.nameBox.underline !== undefined && typeof template.nameBox.underline !== 'boolean')
+    || (template.nameBox.opacity !== undefined && (!Number.isFinite(template.nameBox.opacity) || template.nameBox.opacity < 0 || template.nameBox.opacity > 100))
+    || (template.nameBox.textTransform !== undefined && !['sentence', 'lowercase', 'uppercase', 'capitalize'].includes(template.nameBox.textTransform))
     || !/^#[0-9a-f]{6}$/i.test(template.nameBox.color)) throw new Error('validation_failed');
   if (template.qrCodeBox) validateBox(template.qrCodeBox, width, height);
-  if (template.signatureBox) validateBox(template.signatureBox, width, height);
-  for (const signature of template.signatureBoxes ?? []) validateBox(signature, width, height);
+}
+
+function transformName(name: string, transform: NonNullable<Template['nameBox']['textTransform']>): string {
+  if (transform === 'uppercase') return name.toLocaleUpperCase();
+  if (transform === 'lowercase') return name.toLocaleLowerCase();
+  if (transform === 'capitalize') return name.replace(/\b\p{L}/gu, (letter) => letter.toLocaleUpperCase());
+  const lower = name.toLocaleLowerCase();
+  return lower ? lower[0]!.toLocaleUpperCase() + lower.slice(1) : lower;
 }
 
 function validateBox(box: Box, canvasWidth: number, canvasHeight: number): void {
@@ -162,10 +167,6 @@ async function renderSvgDataImage(bytes: Uint8Array, width: number, height: numb
 
 function rejectExternalImages(references: string[]): void {
   if (references.some((reference) => !reference.startsWith('data:image/'))) throw new Error('validation_failed');
-}
-
-function imageDataUrl(image: DataImage): string {
-  return `data:${image.mimeType};base64,${encodeBase64(image.bytes)}`;
 }
 
 function encodeBase64(bytes: Uint8Array): string {

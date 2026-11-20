@@ -29,17 +29,19 @@ export function formatQuestionCount(count: number): string {
 export function localizeQuestion(question: SurveyQuestion, speaker: string): SurveyQuestion {
   const prompt = fillSpeaker(question.prompt, speaker);
   const help = question.help ? fillSpeaker(question.help, speaker) : undefined;
+  const description = question.description ? fillSpeaker(question.description, speaker) : undefined;
   switch (question.type) {
     case 'rating':
-      return { ...question, prompt, help, descriptors: question.descriptors.map((text) => fillSpeaker(text, speaker)) };
+      return { ...question, prompt, help, description, descriptors: question.descriptors.map((text) => fillSpeaker(text, speaker)) };
     case 'paragraph':
       return {
         ...question,
         prompt,
         help,
+        description,
         placeholder: question.placeholder ? fillSpeaker(question.placeholder, speaker) : undefined,
       };
     default:
-      return { ...question, prompt, help };
+      return { ...question, prompt, help, description };
   }
 }

@@ -139,6 +139,9 @@ export default function OrgSeminarDetailsPage() {
   const [rosterQuery, setRosterQuery] = useState('');
   const [registrationFilter, setRegistrationFilter] = useState<RegistrationFilter>('all');
   const [actionsOpen, setActionsOpen] = useState(false);
+  const [confirmArchive, setConfirmArchive] = useState(false);
+  const [archiving, setArchiving] = useState(false);
+  const [archiveError, setArchiveError] = useState(false);
   const [evaluationView, setEvaluationView] = useState<'overview' | 'responses'>('overview');
   const [additionalEvaluationResponses, setAdditionalEvaluationResponses] = useState<{ seminarId: string; items: SurveyResponse[]; nextCursor: string | null; error: boolean } | null>(null);
   const [loadingMoreEvaluationResponses, setLoadingMoreEvaluationResponses] = useState(false);
@@ -205,13 +208,23 @@ export default function OrgSeminarDetailsPage() {
     : undefined;
 
   async function openEditor() {
-    if (editing || status === 'finished' || status === 'cancelled') return;
+    if (editing || status === 'finished' || status === 'cancelled' || seminar?.publicationStatus === 'archived') return;
     setEditing(true);
     setEditError(false);
     const result = await api.createOrgEditDraft(seminar!.id);
     setEditing(false);
     if (result.ok) navigate(`/org/seminars/${result.data.id}/edit`);
     else setEditError(true);
+  }
+
+  async function archiveSeminar() {
+    if (archiving || !seminar || seminar.publicationStatus !== 'published') return;
+    setArchiving(true);
+    setArchiveError(false);
+    const result = await api.archiveOrgSeminar(seminar.id);
+    setArchiving(false);
+    if (!result.ok) { setArchiveError(true); return; }
+    navigate('/org/my-seminars', { replace: true });
   }
 
   function selectTab(tab: SeminarTab) {
@@ -238,11 +251,12 @@ export default function OrgSeminarDetailsPage() {
   }
 
   return <PageContainer>
+    {archiveError && <p role="alert" className="mb-space-md rounded-lg border border-danger-soft bg-danger-surface p-space-md text-danger-ink">Seminar could not be archived. Your participant and certificate records are unchanged.</p>}
     <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-2 font-caption text-caption text-text-secondary"><Link to="/org/my-seminars" className="hover:text-primary">My Seminars</Link><Icon name="chevron_right" size={16} /><span>{seminar.reference}</span></nav>
 
     <header className="flex flex-col gap-space-md sm:flex-row sm:items-end sm:justify-between">
       <div><p className="font-label-sm text-label-sm uppercase tracking-widest text-secondary">Organization seminar</p><h1 className="mt-1 font-headline-xl text-headline-xl-mobile tracking-tight text-primary md:text-headline-xl">{seminar.title}</h1><p className="mt-1 font-body-base text-body-base text-text-secondary">{seminar.organizationId} · {seminar.department}</p></div>
-      <div className="relative"><button type="button" aria-haspopup="menu" aria-expanded={actionsOpen} onClick={() => setActionsOpen((open) => !open)} className={actionTonal}><Icon name="more_vert" size={18} />Actions<Icon name="unfold_more" size={16} /></button>{actionsOpen && <div role="menu" className="absolute right-0 z-20 mt-2 flex w-60 flex-col overflow-hidden rounded-xl border border-outline-variant/50 bg-surface-card p-1 shadow-card"><button type="button" role="menuitem" disabled={editing || status === 'finished' || status === 'cancelled'} onClick={() => { setActionsOpen(false); void openEditor(); }} className="flex min-h-11 items-center gap-2 rounded-lg px-space-md text-left font-body-sm-medium text-body-sm-medium text-on-surface hover:bg-surface-container-low disabled:cursor-not-allowed disabled:opacity-50"><Icon name="edit" size={18} />{editing ? 'Opening editor…' : 'Edit seminar'}</button><div className="my-1 border-t border-outline-variant/50" />{[{ icon: 'event' as const, label: 'Duplicate seminar' }, { icon: 'lock' as const, label: 'Close registration' }, { icon: 'event_busy' as const, label: 'End seminar now' }, { icon: 'close' as const, label: 'Cancel seminar' }].map((item) => <button key={item.label} type="button" role="menuitem" disabled title="This action will be available when the organization backend supports it." className="flex min-h-11 items-center gap-2 rounded-lg px-space-md text-left font-body-sm text-body-sm text-text-subtle disabled:cursor-not-allowed"><Icon name={item.icon} size={18} />{item.label}<span className="ml-auto font-caption text-caption">Unavailable</span></button>)}</div>}</div>
+      <div className="relative"><button type="button" aria-haspopup="menu" aria-expanded={actionsOpen} onClick={() => setActionsOpen((open) => !open)} className={actionTonal}><Icon name="more_vert" size={18} />Actions<Icon name="unfold_more" size={16} /></button>{actionsOpen && <div role="menu" className="absolute right-0 z-20 mt-2 flex w-60 flex-col overflow-hidden rounded-xl border border-outline-variant/50 bg-surface-card p-1 shadow-card"><button type="button" role="menuitem" disabled={editing || status === 'finished' || status === 'cancelled' || seminar.publicationStatus === 'archived'} onClick={() => { setActionsOpen(false); void openEditor(); }} className="flex min-h-11 items-center gap-2 rounded-lg px-space-md text-left font-body-sm-medium text-body-sm-medium text-on-surface hover:bg-surface-container-low disabled:cursor-not-allowed disabled:opacity-50"><Icon name="edit" size={18} />{editing ? 'Opening editor…' : 'Edit seminar'}</button>{seminar.publicationStatus === 'published' && <><div className="my-1 border-t border-outline-variant/50"/><button type="button" role="menuitem" onClick={() => { setActionsOpen(false); setConfirmArchive(true); setArchiveError(false); }} className="flex min-h-11 items-center gap-2 rounded-lg px-space-md text-left font-body-sm-medium text-body-sm-medium text-danger hover:bg-danger-surface"><Icon name="history" size={18}/>Archive seminar</button></> }<div className="my-1 border-t border-outline-variant/50" />{[{ icon: 'event' as const, label: 'Duplicate seminar' }, { icon: 'lock' as const, label: 'Close registration' }, { icon: 'event_busy' as const, label: 'End seminar now' }, { icon: 'close' as const, label: 'Cancel seminar' }].map((item) => <button key={item.label} type="button" role="menuitem" disabled title="This action will be available when the organization backend supports it." className="flex min-h-11 items-center gap-2 rounded-lg px-space-md text-left font-body-sm text-body-sm text-text-subtle disabled:cursor-not-allowed"><Icon name={item.icon} size={18} />{item.label}<span className="ml-auto font-caption text-caption">Unavailable</span></button>)}</div>}</div>
     </header>
     {editError && <p role="alert" className="rounded-xl border border-danger-soft bg-danger-surface p-space-md font-body-sm text-body-sm text-danger-ink">The seminar editor could not be opened. Try again.</p>}
 
@@ -279,6 +293,8 @@ export default function OrgSeminarDetailsPage() {
          <section className="flex flex-col gap-space-sm rounded-xl border border-outline-variant/45 bg-surface-card p-space-lg shadow-card" aria-labelledby="credential-preview-heading"><div className="flex items-center justify-between gap-2"><div><p className="font-label-sm text-label-sm uppercase tracking-widest text-secondary">Digital credential</p><h2 id="credential-preview-heading" className="mt-1 font-title-lg text-title-lg text-on-surface">Certificate preview</h2></div><Icon name="workspace_premium" size={22} className="text-primary" /></div><div className="relative flex aspect-[16/9] items-center justify-center overflow-hidden rounded-xl border border-outline-variant/50 bg-surface-container-low bg-cover bg-center p-space-md text-center" style={certificateData.state.status === 'success' && certificateData.state.data.template ? { backgroundImage: `linear-gradient(rgba(255,255,255,.78),rgba(255,255,255,.78)),url("${certificateData.state.data.template.backgroundUrl}")` } : undefined}><div><p className="font-caption text-caption text-text-secondary">Seminex certificate of participation</p><p className="mt-2 font-title-lg text-title-lg text-primary">[Student name]</p><p className="mt-1 font-caption text-caption text-text-secondary">{seminar.title}</p></div></div><p className="font-caption text-caption text-text-secondary">Eligibility follows the recorded attendance threshold. Certificate issue state is available in the Certificates tab.</p><button type="button" disabled className={`${actionTonal} w-full`} title="Certificate preview actions are not connected yet"><Icon name="visibility" size={18} />Preview layout</button></section>
       </div>
     </div>}
+
+    {confirmArchive && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4"><section role="alertdialog" aria-modal="true" aria-labelledby="archive-seminar-title" aria-describedby="archive-seminar-copy" className="w-full max-w-md rounded-2xl bg-surface-card p-space-lg shadow-overlay"><h2 id="archive-seminar-title" className="font-title-lg text-title-lg text-on-surface">Archive {seminar.title}?</h2><p id="archive-seminar-copy" className="mt-space-sm font-body-sm text-body-sm text-text-secondary">This removes the seminar from the participant catalog and your active seminar list. Registrations, attendance, evaluation responses, certificate serials, and issued PDFs remain available in History.</p><div className="mt-space-lg flex justify-end gap-space-sm"><button type="button" autoFocus disabled={archiving} onClick={() => setConfirmArchive(false)} className={actionTonal}>Keep seminar</button><button type="button" disabled={archiving} onClick={() => void archiveSeminar()} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-danger px-4 font-body-sm-medium text-body-sm-medium text-white disabled:opacity-60">{archiving ? 'Archiving…' : 'Archive seminar'}</button></div></section></div>}
 
     {activeTab === 'registrations' && <section id="panel-registrations" role="tabpanel" aria-labelledby="tab-registrations" className="flex flex-col gap-space-md rounded-xl border border-outline-variant/45 bg-surface-card p-space-lg shadow-card">
       <div className="flex flex-wrap items-end justify-between gap-space-sm"><div><p className="font-label-sm text-label-sm uppercase tracking-widest text-secondary">Seminar roster</p><h2 className="mt-1 font-title-lg text-title-lg text-on-surface">Registrations</h2><p className="mt-1 font-body-sm text-body-sm text-text-secondary">{attendance.registered} active registrations · capacity {seminar.capacity}</p></div><button type="button" onClick={() => exportRegistrations(seminar, filteredRows)} disabled={!filteredRows.length} className={actionTonal}><Icon name="download" size={18} />Export visible</button></div>
