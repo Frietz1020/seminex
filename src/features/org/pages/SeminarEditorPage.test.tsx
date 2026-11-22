@@ -69,7 +69,7 @@ describe('SeminarEditorPage cover persistence', () => {
     mocks.publishDraft.mockResolvedValue({ ok: true, data: { id: 'seminar-1' } });
   });
 
-  afterEach(() => cleanup());
+  afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
   it('uploads and saves a legacy cover URL before publishing', async () => {
     renderPage();
@@ -196,6 +196,67 @@ describe('SeminarEditorPage cover persistence', () => {
 
     await waitFor(() => expect(mocks.removeCover).toHaveBeenCalledWith('draft-1', oldPath));
     expect(mocks.saveDraft.mock.invocationCallOrder[0]).toBeLessThan(mocks.removeCover.mock.invocationCallOrder[0] ?? 0);
+  });
+
+  it('normalizes a JPEG certificate background to PNG before saving the draft', async () => {
+    vi.stubGlobal('createImageBitmap', vi.fn().mockResolvedValue({ width: 800, height: 600, close: vi.fn() }));
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({ drawImage: vi.fn() } as unknown as CanvasRenderingContext2D);
+    vi.spyOn(HTMLCanvasElement.prototype, 'toBlob').mockImplementation((callback) => callback(new Blob(['normalized-png'], { type: 'image/png' })));
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: /Certificate/ }));
+    fireEvent.change(screen.getByLabelText(/Replace certificate background/), {
+      target: { files: [new File(['jpeg-bytes'], 'background.jpg', { type: 'image/jpeg' })] },
+    });
+    await waitFor(() => expect(document.querySelector('[style*="data:image"]')).not.toBeNull());
+    fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
+
+    await waitFor(() => expect(mocks.saveDraft).toHaveBeenCalled());
+    expect(mocks.saveDraft.mock.calls[0]?.[0].certificate.backgroundUrl).toMatch(/^data:image\/png;base64,/);
+    expect(HTMLCanvasElement.prototype.toBlob).toHaveBeenCalled();
+  });
+
+  it('normalizes WebP bytes mislabeled as JPEG to PNG', async () => {
+    vi.stubGlobal('createImageBitmap', vi.fn().mockResolvedValue({ width: 800, height: 600, close: vi.fn() }));
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({ drawImage: vi.fn() } as unknown as CanvasRenderingContext2D);
+    vi.spyOn(HTMLCanvasElement.prototype, 'toBlob').mockImplementation((callback) => callback(new Blob(['normalized-png'], { type: 'image/png' })));
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: /Certificate/ }));
+    fireEvent.change(screen.getByLabelText(/Replace certificate background/), {
+      target: { files: [new File(['RIFF\x00\x00\x00\x00WEBP'], 'background.jpg', { type: 'image/jpeg' })] },
+    });
+    await waitFor(() => expect(document.querySelector('[style*="data:image"]')).not.toBeNull());
+    fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
+
+    await waitFor(() => expect(mocks.saveDraft).toHaveBeenCalled());
+    expect(mocks.saveDraft.mock.calls[0]?.[0].certificate.backgroundUrl).toMatch(/^data:image\/png;base64,/);
+  });
+
+  it('keeps the existing certificate background when the selected raster cannot be decoded', async () => {
+    vi.stubGlobal('createImageBitmap', vi.fn().mockRejectedValue(new Error('unsupported image')));
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: /Certificate/ }));
+    fireEvent.change(screen.getByLabelText(/Replace certificate background/), {
+      target: { files: [new File(['not-an-image'], 'background.jpg', { type: 'image/jpeg' })] },
+    });
+    expect((await screen.findByRole('alert')).textContent).toContain('image could not be read');
+    fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
+
+    await waitFor(() => expect(mocks.saveDraft).toHaveBeenCalled());
+    expect(mocks.saveDraft.mock.calls[0]?.[0].certificate.backgroundUrl).toBe('https://project.test/template.png');
+  });
+
+  it('keeps a valid SVG certificate background as SVG data', async () => {
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: /Certificate/ }));
+    fireEvent.change(screen.getByLabelText(/Replace certificate background/), {
+      target: { files: [new File(['<svg xmlns="http://www.w3.org/2000/svg"/>'], 'background.svg', { type: 'image/svg+xml' })] },
+    });
+    await waitFor(() => expect(document.querySelector('[style*="data:image"]')).not.toBeNull());
+    fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
+
+    await waitFor(() => expect(mocks.saveDraft).toHaveBeenCalled());
+    expect(mocks.saveDraft.mock.calls[0]?.[0].certificate.backgroundUrl).toMatch(/^data:image\/svg\+xml;base64,/);
+    expect(globalThis.createImageBitmap).toBeUndefined();
   });
 
 });

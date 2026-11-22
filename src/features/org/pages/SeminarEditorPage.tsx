@@ -38,6 +38,42 @@ function fileAsDataUrl(file: File): Promise<string> {
   });
 }
 
+const MAX_CERTIFICATE_IMAGE_BYTES = 5 * 1024 * 1024;
+const MAX_CERTIFICATE_IMAGE_SIDE = 8192;
+const MAX_CERTIFICATE_IMAGE_PIXELS = 24_000_000;
+
+async function certificateImageAsDataUrl(file: File): Promise<string> {
+  if (!file.size || file.size > MAX_CERTIFICATE_IMAGE_BYTES) throw new Error('validation_failed');
+  if (file.type === 'image/svg+xml') return await fileAsDataUrl(file);
+  if (file.type !== 'image/png' && file.type !== 'image/jpeg') throw new Error('validation_failed');
+
+  const bitmap = await createImageBitmap(file);
+  try {
+    if (!bitmap.width || !bitmap.height || bitmap.width > MAX_CERTIFICATE_IMAGE_SIDE
+      || bitmap.height > MAX_CERTIFICATE_IMAGE_SIDE || bitmap.width * bitmap.height > MAX_CERTIFICATE_IMAGE_PIXELS) {
+      throw new Error('validation_failed');
+    }
+    const canvas = document.createElement('canvas');
+    canvas.width = bitmap.width;
+    canvas.height = bitmap.height;
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error('validation_failed');
+    context.drawImage(bitmap, 0, 0);
+    const normalized = await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob((blob) => {
+        if (!blob || blob.type !== 'image/png' || !blob.size || blob.size > MAX_CERTIFICATE_IMAGE_BYTES) {
+          reject(new Error('validation_failed'));
+          return;
+        }
+        resolve(blob);
+      }, 'image/png');
+    });
+    return await fileAsDataUrl(new File([normalized], 'certificate-background.png', { type: 'image/png' }));
+  } finally {
+    bitmap.close();
+  }
+}
+
 function seminarCoverObjectPath(publicUrl: string | undefined, draftId: string): string | null {
   if (!publicUrl) return null;
   try {
@@ -328,7 +364,7 @@ export default function SeminarEditorPage() {
     if (!file.type.startsWith('image/')) { setFailure('Choose an image file for the seminar cover or certificate.'); return; }
     if (file.size > 5 * 1024 * 1024) { setFailure('Choose an image smaller than 5 MB.'); return; }
     try {
-      const dataUrl = await fileAsDataUrl(file);
+      const dataUrl = target === 'certificate' ? await certificateImageAsDataUrl(file) : await fileAsDataUrl(file);
       if (target === 'cover') updateDetails('coverImageUrl', dataUrl);
       else updateCertificate('backgroundUrl', dataUrl);
     } catch { setFailure('The image could not be read. Please choose another file.'); }

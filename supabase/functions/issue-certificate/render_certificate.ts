@@ -6,6 +6,7 @@ import { initWasm, Resvg } from 'npm:@resvg/resvg-wasm@2.6.2';
 
 const wasmBytes = await Deno.readFile(new URL('./resvg.wasm', import.meta.url));
 await initWasm(wasmBytes);
+const outfitFont = await Deno.readFile(new URL('./fonts/Outfit-Variable.ttf', import.meta.url));
 
 type Box = { x: number; y: number; width: number; height: number };
 type Template = {
@@ -44,6 +45,23 @@ const PIXELS_TO_POINTS = 0.75;
 const FONT_FAMILIES = new Set(['Outfit', 'DM Sans', 'Cinzel', 'Playfair Display']);
 
 export async function renderCertificatePdf(input: RenderCertificateInput): Promise<Uint8Array> {
+  const { template } = input;
+  const png = await renderCertificatePng(input);
+  const width = template.canvasWidth ?? 1920;
+  const height = template.canvasHeight ?? 1080;
+
+  const pdf = await PDFDocument.create();
+  const pageWidth = width * PIXELS_TO_POINTS;
+  const pageHeight = height * PIXELS_TO_POINTS;
+  const page = pdf.addPage([pageWidth, pageHeight]);
+  const image = await pdf.embedPng(png);
+  page.drawImage(image, { x: 0, y: 0, width: pageWidth, height: pageHeight });
+  pdf.setTitle('Seminex Certificate');
+  pdf.setSubject(input.seminarTitle.slice(0, 200));
+  return await pdf.save();
+}
+
+export async function renderCertificatePng(input: RenderCertificateInput): Promise<Uint8Array> {
   const { template, studentName, serial } = input;
   const width = template.canvasWidth ?? 1920;
   const height = template.canvasHeight ?? 1080;
@@ -79,21 +97,12 @@ export async function renderCertificatePdf(input: RenderCertificateInput): Promi
 
   const renderer = new Resvg(svg, {
     fitTo: { mode: 'original' },
-    font: { defaultFontFamily: safeFont, loadSystemFonts: true },
+    font: { fontBuffers: [outfitFont], defaultFontFamily: 'Outfit', loadSystemFonts: true },
   });
   rejectExternalImages(renderer.imagesToResolve());
   const png = renderer.render().asPng();
   if (png.byteLength > 20 * 1024 * 1024) throw new Error('validation_failed');
-
-  const pdf = await PDFDocument.create();
-  const pageWidth = width * PIXELS_TO_POINTS;
-  const pageHeight = height * PIXELS_TO_POINTS;
-  const page = pdf.addPage([pageWidth, pageHeight]);
-  const image = await pdf.embedPng(png);
-  page.drawImage(image, { x: 0, y: 0, width: pageWidth, height: pageHeight });
-  pdf.setTitle('Seminex Certificate');
-  pdf.setSubject(input.seminarTitle.slice(0, 200));
-  return await pdf.save();
+  return png;
 }
 
 function validateCanvas(width: number, height: number): void {
@@ -146,18 +155,36 @@ function decodeDataImage(value: string, acceptedMimeTypes: string[]): DataImage 
   const binary = atob(match[2]);
   if (binary.length < 1 || binary.length > MAX_IMAGE_BYTES) throw new Error('validation_failed');
   const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
-  if (match[1].toLowerCase() === 'image/svg+xml') {
+  const mimeType = match[1].toLowerCase();
+  if (!matchesImageSignature(mimeType, bytes)) throw new Error('validation_failed');
+  if (mimeType === 'image/svg+xml') {
     const svg = new TextDecoder().decode(bytes);
     if (/<script\b|<foreignObject\b|javascript:|<!ENTITY/i.test(svg)) throw new Error('validation_failed');
   }
-  return { mimeType: match[1].toLowerCase(), bytes };
+  return { mimeType, bytes };
+}
+
+function matchesImageSignature(mimeType: string, bytes: Uint8Array): boolean {
+  if (mimeType === 'image/png') return bytes.length >= 8
+    && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47
+    && bytes[4] === 0x0d && bytes[5] === 0x0a && bytes[6] === 0x1a && bytes[7] === 0x0a;
+  if (mimeType === 'image/jpeg') return bytes.length >= 3
+    && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+  if (mimeType === 'image/webp') return bytes.length >= 12
+    && bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46
+    && bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50;
+  if (mimeType === 'image/svg+xml') {
+    const text = new TextDecoder().decode(bytes).replace(/^\uFEFF/, '');
+    return /^\s*(?:<\?xml\b[^?]*\?>\s*)?<svg\b/i.test(text);
+  }
+  return false;
 }
 
 async function renderSvgDataImage(bytes: Uint8Array, width: number, height: number): Promise<string> {
   const svg = new TextDecoder().decode(bytes);
   const renderer = new Resvg(svg, {
     fitTo: { mode: 'width', value: width },
-    font: { defaultFontFamily: 'Outfit', loadSystemFonts: true },
+    font: { fontBuffers: [outfitFont], defaultFontFamily: 'Outfit', loadSystemFonts: true },
   });
   rejectExternalImages(renderer.imagesToResolve());
   const png = renderer.render().asPng();

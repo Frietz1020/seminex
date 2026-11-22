@@ -137,3 +137,18 @@ export async function getOrgCertificate(seminarId: string, registrationId: strin
     return failure('network');
   }
 }
+
+export async function regenerateOrgCertificate(registrationId: string): Promise<ApiResult<{ serial: string }>> {
+  const supabase = getSupabaseClient();
+  if (!supabase) return failure('configuration_error');
+  try {
+    const { data, error } = await supabase.functions.invoke('regenerate-certificate', {
+      body: { registrationId },
+    });
+    if (error) return failure(await functionErrorCode(error));
+    if (!isRow(data) || data.status !== 'issued' || typeof data.serial !== 'string') return failure('network');
+    return { ok: true, data: { serial: data.serial } };
+  } catch {
+    return failure('network');
+  }
+}

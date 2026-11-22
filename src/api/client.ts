@@ -591,6 +591,7 @@ export const api = {
   getOrgSeminarEvaluation,
   getOrgSeminarCertificates: certificateApi.getOrgSeminarCertificates,
   getOrgCertificate: certificateApi.getOrgCertificate,
+  regenerateOrgCertificate: certificateApi.regenerateOrgCertificate,
   createOrgDraft,
   createOrgEditDraft,
   saveOrgDraft,
