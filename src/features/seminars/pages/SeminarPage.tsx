@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { api } from '../../../api/client';
+import { getConfirmationWindow } from '../confirmationWindow';
 import { PageContainer } from '../../../components/shell/PageContainer';
 import { actionPrimary } from '../../../components/ui/actionStyles';
 import { errorText } from '../../../components/ui/errorText';
@@ -27,6 +28,12 @@ export default function SeminarPage() {
 
   const seminar = useResource(() => api.getSeminar(id), `seminar-${id}`);
   const item = seminar.state.status === 'success' ? seminar.state.data : null;
+
+  useEffect(() => {
+    const refreshRegistration = () => seminar.reload();
+    window.addEventListener('seminex:registrations-changed', refreshRegistration);
+    return () => window.removeEventListener('seminex:registrations-changed', refreshRegistration);
+  }, [seminar.reload]);
 
   useEffect(() => {
     document.title = item ? `${item.seminar.title} - Seminex` : 'Seminar - Seminex';
@@ -118,8 +125,7 @@ export default function SeminarPage() {
   }
 
   const { seminar: details, registration } = item;
-  const opensAt = Date.parse(details.startsAt) - (details.confirmationOpensHoursBefore ?? 24) * 60 * 60_000;
-  const closesAt = Date.parse(details.startsAt) - (details.confirmationClosesHoursBefore ?? 1) * 60 * 60_000;
+  const { opensAt, closesAt } = getConfirmationWindow(details.startsAt, details.confirmationOpensMinutesBefore, details.confirmationClosesMinutesBefore);
   const confirmationOpen = now >= opensAt && now < closesAt;
   const countdown = (target: number) => {
     const seconds = Math.max(0, Math.floor((target - now) / 1000));

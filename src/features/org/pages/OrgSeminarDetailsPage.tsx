@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import type { OrgSeminar, OrgRegistration, ScanLedgerEntry, OrgSeminarEvaluationData, OrgSeminarCertificateData, CertificateRecord, SurveyResponse, AuthoredSurvey } from '../../../api/client';
 import { api } from '../../../api/client';
@@ -139,11 +139,18 @@ export default function OrgSeminarDetailsPage() {
   const [rosterQuery, setRosterQuery] = useState('');
   const [registrationFilter, setRegistrationFilter] = useState<RegistrationFilter>('all');
   const [actionsOpen, setActionsOpen] = useState(false);
+  const [confirmArchive, setConfirmArchive] = useState(false);
+  const [archiving, setArchiving] = useState(false);
+  const [archiveError, setArchiveError] = useState(false);
   const [evaluationView, setEvaluationView] = useState<'overview' | 'responses'>('overview');
   const [additionalEvaluationResponses, setAdditionalEvaluationResponses] = useState<{ seminarId: string; items: SurveyResponse[]; nextCursor: string | null; error: boolean } | null>(null);
   const [loadingMoreEvaluationResponses, setLoadingMoreEvaluationResponses] = useState(false);
   const [downloadingCertificateId, setDownloadingCertificateId] = useState<string | null>(null);
   const [certificateDownloadError, setCertificateDownloadError] = useState(false);
+  const [regenerationTarget, setRegenerationTarget] = useState<CertificateRecord | null>(null);
+  const [regeneratingCertificateId, setRegeneratingCertificateId] = useState<string | null>(null);
+  const [regenerationResult, setRegenerationResult] = useState<'success' | 'error' | null>(null);
+  const regenerationTriggerRef = useRef<HTMLButtonElement | null>(null);
   const now = useNow();
   const listing = useResource(() => api.listOrgSeminars({ seminars: { pageSize: 999 }, drafts: { pageSize: 1 } }), `org-seminar-${id}`);
   const seminar = listing.state.status === 'success' ? listing.state.data.seminars.items.find((item) => item.id === id) : null;
@@ -151,6 +158,10 @@ export default function OrgSeminarDetailsPage() {
   const ledger = useResource(() => api.listLedger(id), `org-ledger-${id}`, (items) => items.length === 0);
   const evaluationData = useResource<OrgSeminarEvaluationData>(() => api.getOrgSeminarEvaluation(id), `org-evaluation-${id}`);
   const certificateData = useResource<OrgSeminarCertificateData>(() => api.getOrgSeminarCertificates(id), `org-certificates-${id}`);
+
+  useEffect(() => {
+    if (!regenerationTarget && !regenerationResult) regenerationTriggerRef.current?.focus();
+  }, [regenerationTarget, regenerationResult]);
 
   async function downloadCertificate(record: CertificateRecord) {
     if (record.state !== 'issued' || downloadingCertificateId) return;
@@ -167,6 +178,28 @@ export default function OrgSeminarDetailsPage() {
       setCertificateDownloadError(true);
     } finally {
       setDownloadingCertificateId(null);
+    }
+  }
+
+  async function regenerateCertificate() {
+    const target = regenerationTarget;
+    if (!target || target.state !== 'issued' || regeneratingCertificateId) return;
+    setRegenerationResult(null);
+    setRegeneratingCertificateId(target.id);
+    try {
+      const result = await api.regenerateOrgCertificate(target.id);
+      setRegenerationTarget(null);
+      if (result.ok) {
+        certificateData.reload();
+        setRegenerationResult('success');
+      } else {
+        setRegenerationResult('error');
+      }
+    } catch {
+      setRegenerationTarget(null);
+      setRegenerationResult('error');
+    } finally {
+      setRegeneratingCertificateId(null);
     }
   }
 
@@ -205,13 +238,23 @@ export default function OrgSeminarDetailsPage() {
     : undefined;
 
   async function openEditor() {
-    if (editing || status === 'finished' || status === 'cancelled') return;
+    if (editing || status === 'finished' || status === 'cancelled' || seminar?.publicationStatus === 'archived') return;
     setEditing(true);
     setEditError(false);
     const result = await api.createOrgEditDraft(seminar!.id);
     setEditing(false);
     if (result.ok) navigate(`/org/seminars/${result.data.id}/edit`);
     else setEditError(true);
+  }
+
+  async function archiveSeminar() {
+    if (archiving || !seminar || seminar.publicationStatus !== 'published') return;
+    setArchiving(true);
+    setArchiveError(false);
+    const result = await api.archiveOrgSeminar(seminar.id);
+    setArchiving(false);
+    if (!result.ok) { setArchiveError(true); return; }
+    navigate('/org/my-seminars', { replace: true });
   }
 
   function selectTab(tab: SeminarTab) {
@@ -238,11 +281,12 @@ export default function OrgSeminarDetailsPage() {
   }
 
   return <PageContainer>
+    {archiveError && <p role="alert" className="mb-space-md rounded-lg border border-danger-soft bg-danger-surface p-space-md text-danger-ink">Seminar could not be archived. Your participant and certificate records are unchanged.</p>}
     <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-2 font-caption text-caption text-text-secondary"><Link to="/org/my-seminars" className="hover:text-primary">My Seminars</Link><Icon name="chevron_right" size={16} /><span>{seminar.reference}</span></nav>
 
     <header className="flex flex-col gap-space-md sm:flex-row sm:items-end sm:justify-between">
       <div><p className="font-label-sm text-label-sm uppercase tracking-widest text-secondary">Organization seminar</p><h1 className="mt-1 font-headline-xl text-headline-xl-mobile tracking-tight text-primary md:text-headline-xl">{seminar.title}</h1><p className="mt-1 font-body-base text-body-base text-text-secondary">{seminar.organizationId} · {seminar.department}</p></div>
-      <div className="relative"><button type="button" aria-haspopup="menu" aria-expanded={actionsOpen} onClick={() => setActionsOpen((open) => !open)} className={actionTonal}><Icon name="more_vert" size={18} />Actions<Icon name="unfold_more" size={16} /></button>{actionsOpen && <div role="menu" className="absolute right-0 z-20 mt-2 flex w-60 flex-col overflow-hidden rounded-xl border border-outline-variant/50 bg-surface-card p-1 shadow-card"><button type="button" role="menuitem" disabled={editing || status === 'finished' || status === 'cancelled'} onClick={() => { setActionsOpen(false); void openEditor(); }} className="flex min-h-11 items-center gap-2 rounded-lg px-space-md text-left font-body-sm-medium text-body-sm-medium text-on-surface hover:bg-surface-container-low disabled:cursor-not-allowed disabled:opacity-50"><Icon name="edit" size={18} />{editing ? 'Opening editor…' : 'Edit seminar'}</button><div className="my-1 border-t border-outline-variant/50" />{[{ icon: 'event' as const, label: 'Duplicate seminar' }, { icon: 'lock' as const, label: 'Close registration' }, { icon: 'event_busy' as const, label: 'End seminar now' }, { icon: 'close' as const, label: 'Cancel seminar' }].map((item) => <button key={item.label} type="button" role="menuitem" disabled title="This action will be available when the organization backend supports it." className="flex min-h-11 items-center gap-2 rounded-lg px-space-md text-left font-body-sm text-body-sm text-text-subtle disabled:cursor-not-allowed"><Icon name={item.icon} size={18} />{item.label}<span className="ml-auto font-caption text-caption">Unavailable</span></button>)}</div>}</div>
+      <div className="relative"><button type="button" aria-haspopup="menu" aria-expanded={actionsOpen} onClick={() => setActionsOpen((open) => !open)} className={actionTonal}><Icon name="more_vert" size={18} />Actions<Icon name="unfold_more" size={16} /></button>{actionsOpen && <div role="menu" className="absolute right-0 z-20 mt-2 flex w-60 flex-col overflow-hidden rounded-xl border border-outline-variant/50 bg-surface-card p-1 shadow-card"><button type="button" role="menuitem" disabled={editing || status === 'finished' || status === 'cancelled' || seminar.publicationStatus === 'archived'} onClick={() => { setActionsOpen(false); void openEditor(); }} className="flex min-h-11 items-center gap-2 rounded-lg px-space-md text-left font-body-sm-medium text-body-sm-medium text-on-surface hover:bg-surface-container-low disabled:cursor-not-allowed disabled:opacity-50"><Icon name="edit" size={18} />{editing ? 'Opening editor…' : 'Edit seminar'}</button>{seminar.publicationStatus === 'published' && <><div className="my-1 border-t border-outline-variant/50"/><button type="button" role="menuitem" onClick={() => { setActionsOpen(false); setConfirmArchive(true); setArchiveError(false); }} className="flex min-h-11 items-center gap-2 rounded-lg px-space-md text-left font-body-sm-medium text-body-sm-medium text-danger hover:bg-danger-surface"><Icon name="history" size={18}/>Archive seminar</button></> }<div className="my-1 border-t border-outline-variant/50" />{[{ icon: 'event' as const, label: 'Duplicate seminar' }, { icon: 'lock' as const, label: 'Close registration' }, { icon: 'event_busy' as const, label: 'End seminar now' }, { icon: 'close' as const, label: 'Cancel seminar' }].map((item) => <button key={item.label} type="button" role="menuitem" disabled title="This action will be available when the organization backend supports it." className="flex min-h-11 items-center gap-2 rounded-lg px-space-md text-left font-body-sm text-body-sm text-text-subtle disabled:cursor-not-allowed"><Icon name={item.icon} size={18} />{item.label}<span className="ml-auto font-caption text-caption">Unavailable</span></button>)}</div>}</div>
     </header>
     {editError && <p role="alert" className="rounded-xl border border-danger-soft bg-danger-surface p-space-md font-body-sm text-body-sm text-danger-ink">The seminar editor could not be opened. Try again.</p>}
 
@@ -279,6 +323,8 @@ export default function OrgSeminarDetailsPage() {
          <section className="flex flex-col gap-space-sm rounded-xl border border-outline-variant/45 bg-surface-card p-space-lg shadow-card" aria-labelledby="credential-preview-heading"><div className="flex items-center justify-between gap-2"><div><p className="font-label-sm text-label-sm uppercase tracking-widest text-secondary">Digital credential</p><h2 id="credential-preview-heading" className="mt-1 font-title-lg text-title-lg text-on-surface">Certificate preview</h2></div><Icon name="workspace_premium" size={22} className="text-primary" /></div><div className="relative flex aspect-[16/9] items-center justify-center overflow-hidden rounded-xl border border-outline-variant/50 bg-surface-container-low bg-cover bg-center p-space-md text-center" style={certificateData.state.status === 'success' && certificateData.state.data.template ? { backgroundImage: `linear-gradient(rgba(255,255,255,.78),rgba(255,255,255,.78)),url("${certificateData.state.data.template.backgroundUrl}")` } : undefined}><div><p className="font-caption text-caption text-text-secondary">Seminex certificate of participation</p><p className="mt-2 font-title-lg text-title-lg text-primary">[Student name]</p><p className="mt-1 font-caption text-caption text-text-secondary">{seminar.title}</p></div></div><p className="font-caption text-caption text-text-secondary">Eligibility follows the recorded attendance threshold. Certificate issue state is available in the Certificates tab.</p><button type="button" disabled className={`${actionTonal} w-full`} title="Certificate preview actions are not connected yet"><Icon name="visibility" size={18} />Preview layout</button></section>
       </div>
     </div>}
+
+    {confirmArchive && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4"><section role="alertdialog" aria-modal="true" aria-labelledby="archive-seminar-title" aria-describedby="archive-seminar-copy" className="w-full max-w-md rounded-2xl bg-surface-card p-space-lg shadow-overlay"><h2 id="archive-seminar-title" className="font-title-lg text-title-lg text-on-surface">Archive {seminar.title}?</h2><p id="archive-seminar-copy" className="mt-space-sm font-body-sm text-body-sm text-text-secondary">This removes the seminar from the participant catalog and your active seminar list. Registrations, attendance, evaluation responses, certificate serials, and issued PDFs remain available in History.</p><div className="mt-space-lg flex justify-end gap-space-sm"><button type="button" autoFocus disabled={archiving} onClick={() => setConfirmArchive(false)} className={actionTonal}>Keep seminar</button><button type="button" disabled={archiving} onClick={() => void archiveSeminar()} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-danger px-4 font-body-sm-medium text-body-sm-medium text-white disabled:opacity-60">{archiving ? 'Archiving…' : 'Archive seminar'}</button></div></section></div>}
 
     {activeTab === 'registrations' && <section id="panel-registrations" role="tabpanel" aria-labelledby="tab-registrations" className="flex flex-col gap-space-md rounded-xl border border-outline-variant/45 bg-surface-card p-space-lg shadow-card">
       <div className="flex flex-wrap items-end justify-between gap-space-sm"><div><p className="font-label-sm text-label-sm uppercase tracking-widest text-secondary">Seminar roster</p><h2 className="mt-1 font-title-lg text-title-lg text-on-surface">Registrations</h2><p className="mt-1 font-body-sm text-body-sm text-text-secondary">{attendance.registered} active registrations · capacity {seminar.capacity}</p></div><button type="button" onClick={() => exportRegistrations(seminar, filteredRows)} disabled={!filteredRows.length} className={actionTonal}><Icon name="download" size={18} />Export visible</button></div>
@@ -325,11 +371,13 @@ export default function OrgSeminarDetailsPage() {
           <div className="grid gap-space-sm sm:grid-cols-3"><article className="rounded-xl bg-surface-container-low p-space-md"><p className="font-caption text-caption uppercase text-text-secondary">Issued</p><p className="mt-1 font-headline-md text-headline-md text-[#1E6B37]">{certificateData.state.data.records.filter((record)=>record.state==='issued').length}</p></article><article className="rounded-xl bg-surface-container-low p-space-md"><p className="font-caption text-caption uppercase text-text-secondary">Waiting</p><p className="mt-1 font-headline-md text-headline-md text-secondary">{certificateData.state.data.records.filter((record)=>record.state==='waiting').length}</p></article><article className="rounded-xl bg-surface-container-low p-space-md"><p className="font-caption text-caption uppercase text-text-secondary">Blocked</p><p className="mt-1 font-headline-md text-headline-md text-danger">{certificateData.state.data.records.filter((record)=>record.state==='blocked').length}</p></article></div>
           {certificateData.state.data.template&&<div className="grid items-center gap-space-md rounded-xl border border-outline-variant/45 bg-surface-container-low p-space-md sm:grid-cols-[minmax(0,1fr)_auto]"><div><p className="font-body-sm-medium text-body-sm-medium text-on-surface">Certificate template configured</p><p className="mt-1 font-caption text-caption text-text-secondary">Last updated {new Intl.DateTimeFormat(undefined,{dateStyle:'medium'}).format(new Date(certificateData.state.data.template.updatedAt))}. The student name uses the saved template position.</p></div><span className="rounded-lg bg-[#E8F5EC] px-3 py-1.5 font-label-sm text-label-sm text-[#1E6B37]">Template ready</span></div>}
           {certificateDownloadError&&<p role="alert" className="font-body-sm text-body-sm text-danger">Certificate download failed. Reconnect and try again.</p>}
-          <div className="overflow-x-auto rounded-xl border border-outline-variant/50"><table className="w-full border-collapse text-left"><thead className="bg-surface-container-low font-caption text-caption text-text-secondary"><tr><th className="px-space-md py-space-md">Student</th><th className="px-space-md py-space-md">Attendance</th><th className="px-space-md py-space-md">Certificate status</th><th className="px-space-md py-space-md">Record details</th><th className="px-space-md py-space-md">Action</th></tr></thead><tbody className="divide-y divide-outline-variant/40">{certificateData.state.data.records.map((record)=>{const student=attendees.find((row)=>row.studentId===record.studentId);const name=student?`${student.firstName} ${student.lastName}`:'Participant';const minutes=attendance.rows.find((row)=>row.student.studentId===record.studentId)?.minutes??0;const duration=Math.max(1,(Date.parse(seminar.endsAt)-Date.parse(seminar.startsAt))/60000);const percent=Math.min(100,Math.round(minutes/duration*100));return <tr key={record.id}><td className="px-space-md py-space-md"><p className="font-body-sm-medium text-body-sm-medium text-on-surface">{name}</p><p className="font-caption text-caption text-text-secondary">{record.studentId}</p></td><td className="px-space-md py-space-md"><div className="w-36"><p className="mb-1 font-caption text-caption text-text-secondary">{percent}% / {seminar.requiredAttendancePercent}%</p><ProgressBar value={percent} max={100} label={`${percent}% attendance for ${name}`}/></div></td><td className="px-space-md py-space-md"><span className={`rounded-md px-2.5 py-1 font-label-sm text-label-sm ${record.state==='issued'?'bg-[#E8F5EC] text-[#1E6B37]':record.state==='blocked'?'bg-[#FEF2F2] text-[#BA1A1A]':'bg-surface-container-high text-text-secondary'}`}>{record.state==='issued'?'Issued':record.state==='blocked'?'Blocked':'Waiting'}</span></td><td className="max-w-sm px-space-md py-space-md"><p className="font-caption text-caption text-text-secondary">{record.reason}</p>{record.serial&&<p className="mt-1 font-mono text-caption text-text-secondary">{record.serial}</p>}{record.issuedAt&&<p className="mt-1 font-caption text-caption text-text-secondary">{dateTime(record.issuedAt)}</p>}</td><td className="px-space-md py-space-md"><button type="button" disabled={record.state!=='issued'||downloadingCertificateId!==null} onClick={()=>void downloadCertificate(record)} title={record.state==='issued'?'Download this issued certificate':'Certificate is not issued yet.'} className="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-outline-variant/50 px-3 font-label-sm text-label-sm text-on-surface disabled:cursor-not-allowed disabled:opacity-50"><Icon name="download" size={16}/>{downloadingCertificateId===record.id?'Downloading…':'Download certificate'}</button></td></tr>})}</tbody></table></div>
+          <div className="overflow-x-auto rounded-xl border border-outline-variant/50"><table className="w-full border-collapse text-left"><thead className="bg-surface-container-low font-caption text-caption text-text-secondary"><tr><th className="px-space-md py-space-md">Student</th><th className="px-space-md py-space-md">Attendance</th><th className="px-space-md py-space-md">Certificate status</th><th className="px-space-md py-space-md">Record details</th><th className="px-space-md py-space-md">Action</th></tr></thead><tbody className="divide-y divide-outline-variant/40">{certificateData.state.data.records.map((record)=>{const student=attendees.find((row)=>row.studentId===record.studentId);const name=student?`${student.firstName} ${student.lastName}`:'Participant';const minutes=attendance.rows.find((row)=>row.student.studentId===record.studentId)?.minutes??0;const duration=Math.max(1,(Date.parse(seminar.endsAt)-Date.parse(seminar.startsAt))/60000);const percent=Math.min(100,Math.round(minutes/duration*100));return <tr key={record.id}><td className="px-space-md py-space-md"><p className="font-body-sm-medium text-body-sm-medium text-on-surface">{name}</p><p className="font-caption text-caption text-text-secondary">{record.studentId}</p></td><td className="px-space-md py-space-md"><div className="w-36"><p className="mb-1 font-caption text-caption text-text-secondary">{percent}% / {seminar.requiredAttendancePercent}%</p><ProgressBar value={percent} max={100} label={`${percent}% attendance for ${name}`}/></div></td><td className="px-space-md py-space-md"><span className={`rounded-md px-2.5 py-1 font-label-sm text-label-sm ${record.state==='issued'?'bg-[#E8F5EC] text-[#1E6B37]':record.state==='blocked'?'bg-[#FEF2F2] text-[#BA1A1A]':'bg-surface-container-high text-text-secondary'}`}>{record.state==='issued'?'Issued':record.state==='blocked'?'Blocked':'Waiting'}</span></td><td className="max-w-sm px-space-md py-space-md"><p className="font-caption text-caption text-text-secondary">{record.reason}</p>{record.serial&&<p className="mt-1 font-mono text-caption text-text-secondary">{record.serial}</p>}{record.issuedAt&&<p className="mt-1 font-caption text-caption text-text-secondary">{dateTime(record.issuedAt)}</p>}</td><td className="px-space-md py-space-md"><div className="flex flex-wrap gap-2"><button type="button" disabled={record.state!=='issued'||downloadingCertificateId!==null||regeneratingCertificateId!==null} onClick={()=>void downloadCertificate(record)} title={record.state==='issued'?'Download this issued certificate':'Certificate is not issued yet.'} className="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-outline-variant/50 px-3 font-label-sm text-label-sm text-on-surface disabled:cursor-not-allowed disabled:opacity-50"><Icon name="download" size={16}/>{downloadingCertificateId===record.id?'Downloading…':'Download certificate'}</button>{record.state==='issued'&&<button type="button" disabled={regeneratingCertificateId!==null||downloadingCertificateId!==null} onClick={(event)=>{regenerationTriggerRef.current=event.currentTarget;setRegenerationResult(null);setRegenerationTarget(record);}} className="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-outline-variant/50 px-3 font-label-sm text-label-sm text-on-surface disabled:cursor-not-allowed disabled:opacity-50"><Icon name="refresh" size={16}/>Regenerate certificate</button>}</div></td></tr>})}</tbody></table></div>
           {certificateData.state.data.records.length===0&&<StateMessage icon="workspace_premium" title="No certificate records yet">Eligibility and issue records will appear when this seminar reaches its certificate release stage.</StateMessage>}
         </>}
       </section>
     </div>}
+    {regenerationTarget&&<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-space-md" onKeyDown={(event)=>{if(event.key==='Escape'&&regeneratingCertificateId===null)setRegenerationTarget(null);if(event.key==='Tab'){const buttons=Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('button:not([disabled])'));const first=buttons[0];const last=buttons.at(-1);if(event.shiftKey&&document.activeElement===first){event.preventDefault();last?.focus();}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus();}}}}><section role="alertdialog" aria-modal="true" aria-labelledby="certificate-regeneration-heading" aria-describedby="certificate-regeneration-description" className="w-full max-w-lg rounded-2xl bg-surface-card p-space-lg shadow-xl"><h2 id="certificate-regeneration-heading" className="font-title-lg text-title-lg text-on-surface">Replace this issued certificate?</h2><p id="certificate-regeneration-description" className="mt-space-sm font-body-sm text-body-sm text-text-secondary">A new PDF will be generated for student {regenerationTarget.studentId}. The certificate serial will stay the same.</p><div className="mt-space-lg flex justify-end gap-space-sm"><button type="button" disabled={regeneratingCertificateId!==null} onClick={()=>setRegenerationTarget(null)} className={actionTonal}>Cancel</button><button type="button" autoFocus disabled={regeneratingCertificateId!==null} onClick={()=>void regenerateCertificate()} className={actionPrimary}>{regeneratingCertificateId===regenerationTarget.id?'Regenerating…':'Replace certificate'}</button></div></section></div>}
+    {regenerationResult&&<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-space-md"><section role="dialog" aria-modal="true" aria-labelledby="certificate-regeneration-result-heading" className="w-full max-w-lg rounded-2xl bg-surface-card p-space-lg shadow-xl"><h2 id="certificate-regeneration-result-heading" className="font-title-lg text-title-lg text-on-surface">{regenerationResult==='success'?'Certificate replaced':'Certificate replacement failed'}</h2><p className="mt-space-sm font-body-sm text-body-sm text-text-secondary">{regenerationResult==='success'?'The new PDF is ready. The existing certificate serial is unchanged.':'The current certificate is still available. Reconnect and try again.'}</p><div className="mt-space-lg flex justify-end"><button type="button" autoFocus onClick={()=>setRegenerationResult(null)} className={actionPrimary}>Close</button></div></section></div>}
   </PageContainer>;
 }
 

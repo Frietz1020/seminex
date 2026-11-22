@@ -19,7 +19,14 @@ const textareaClass = 'w-full rounded-lg border border-border-subtle bg-surface-
 function localDateTime(value?: string) {
   if (!value) return '';
   const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return '';
   return new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
+}
+
+function localDateTimeToIso(value: string): string | undefined | null {
+  if (!value) return undefined;
+  const date = new Date(value);
+  return Number.isFinite(date.getTime()) ? date.toISOString() : null;
 }
 
 function fileAsDataUrl(file: File): Promise<string> {
@@ -29,6 +36,42 @@ function fileAsDataUrl(file: File): Promise<string> {
     reader.onerror = () => reject(reader.error ?? new Error('Could not read file'));
     reader.readAsDataURL(file);
   });
+}
+
+const MAX_CERTIFICATE_IMAGE_BYTES = 5 * 1024 * 1024;
+const MAX_CERTIFICATE_IMAGE_SIDE = 8192;
+const MAX_CERTIFICATE_IMAGE_PIXELS = 24_000_000;
+
+async function certificateImageAsDataUrl(file: File): Promise<string> {
+  if (!file.size || file.size > MAX_CERTIFICATE_IMAGE_BYTES) throw new Error('validation_failed');
+  if (file.type === 'image/svg+xml') return await fileAsDataUrl(file);
+  if (file.type !== 'image/png' && file.type !== 'image/jpeg') throw new Error('validation_failed');
+
+  const bitmap = await createImageBitmap(file);
+  try {
+    if (!bitmap.width || !bitmap.height || bitmap.width > MAX_CERTIFICATE_IMAGE_SIDE
+      || bitmap.height > MAX_CERTIFICATE_IMAGE_SIDE || bitmap.width * bitmap.height > MAX_CERTIFICATE_IMAGE_PIXELS) {
+      throw new Error('validation_failed');
+    }
+    const canvas = document.createElement('canvas');
+    canvas.width = bitmap.width;
+    canvas.height = bitmap.height;
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error('validation_failed');
+    context.drawImage(bitmap, 0, 0);
+    const normalized = await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob((blob) => {
+        if (!blob || blob.type !== 'image/png' || !blob.size || blob.size > MAX_CERTIFICATE_IMAGE_BYTES) {
+          reject(new Error('validation_failed'));
+          return;
+        }
+        resolve(blob);
+      }, 'image/png');
+    });
+    return await fileAsDataUrl(new File([normalized], 'certificate-background.png', { type: 'image/png' }));
+  } finally {
+    bitmap.close();
+  }
 }
 
 function seminarCoverObjectPath(publicUrl: string | undefined, draftId: string): string | null {
@@ -83,8 +126,8 @@ function QuestionEditor({
           </select>
         </div>
         {question.type === 'paragraph' && <div className="max-w-lg border-b border-dashed border-border-subtle pb-2 font-body-sm text-text-subtle">Long answer text</div>}
-        {(question.type === 'choice' || question.type === 'checkbox') && options && <div className="flex flex-col gap-2">{options.map((option, optionIndex) => <div key={`${option.value}-${optionIndex}`} className="flex items-center gap-2"><span className={`flex h-5 w-5 shrink-0 items-center justify-center border border-outline-variant ${question.type === 'choice' ? 'rounded-full' : 'rounded-sm'}`} /><input aria-label={`Option ${optionIndex + 1}`} value={option.label} onChange={(event) => onChange({ ...question, options: question.options.map((item, index) => index === optionIndex ? { ...item, label: event.target.value, value: optionValue(event.target.value, index) } : item) })} className="h-9 min-w-0 flex-1 border-b border-transparent bg-transparent font-body-sm text-body-sm text-on-surface outline-none focus:border-primary" placeholder={`Option ${optionIndex + 1}`} /><button type="button" aria-label={`Remove option ${optionIndex + 1}`} disabled={options.length <= 1} onClick={() => onChange({ ...question, options: question.options.filter((_, index) => index !== optionIndex) })} className="flex h-8 w-8 items-center justify-center rounded-full text-text-subtle hover:bg-surface-container disabled:opacity-30"><Icon name="close" size={16}/></button></div>)}<button type="button" onClick={() => onChange({ ...question, options: [...question.options, { value: `option-${question.options.length + 1}`, label: `Option ${question.options.length + 1}` }] })} className="w-fit font-body-sm text-primary hover:underline">Add option</button></div>}
-        {question.type === 'scale' && <div className="flex flex-wrap items-center gap-3 rounded-lg bg-surface-container-low p-space-sm"><span className="font-caption text-caption text-text-secondary">{question.min}</span><div className="flex gap-2">{Array.from({ length: Math.min(question.max - question.min + 1, 7) }, (_, index) => <span key={index} className="flex h-8 w-8 items-center justify-center rounded-full border border-outline-variant bg-surface-card font-caption text-caption">{question.min + index}</span>)}</div><span className="font-caption text-caption text-text-secondary">{question.max}</span><label className="ml-auto flex items-center gap-2 font-caption text-caption text-text-secondary">Scale to<input type="number" min={2} max={10} value={question.max} onChange={(event) => onChange({ ...question, max: Math.max(question.min + 1, Number(event.target.value)) })} className="h-9 w-16 rounded-md border border-border-subtle bg-surface-card px-2"/></label></div>}
+        {(question.type === 'choice' || question.type === 'checkbox') && options && <div className="flex flex-col gap-2">{options.map((option, optionIndex) => <div key={option.value} className="flex items-center gap-2"><span className={`flex h-5 w-5 shrink-0 items-center justify-center border border-outline-variant ${question.type === 'choice' ? 'rounded-full' : 'rounded-sm'}`} /><input aria-label={`Option ${optionIndex + 1}`} value={option.label} onChange={(event) => onChange({ ...question, options: question.options.map((item, index) => index === optionIndex ? { ...item, label: event.target.value } : item) })} className="h-9 min-w-0 flex-1 border-b border-transparent bg-transparent font-body-sm text-body-sm text-on-surface outline-none focus:border-primary" placeholder={`Option ${optionIndex + 1}`} /><button type="button" aria-label={`Remove option ${optionIndex + 1}`} disabled={options.length <= 1} onClick={() => onChange({ ...question, options: question.options.filter((_, index) => index !== optionIndex) })} className="flex h-8 w-8 items-center justify-center rounded-full text-text-subtle hover:bg-surface-container disabled:opacity-30"><Icon name="close" size={16}/></button></div>)}<button type="button" onClick={() => onChange({ ...question, options: [...question.options, { value: `option-${crypto.randomUUID()}`, label: `Option ${question.options.length + 1}` }] })} className="w-fit font-body-sm text-primary hover:underline">Add option</button></div>}
+        {question.type === 'scale' && <div className="flex flex-col gap-space-sm rounded-lg bg-surface-container-low p-space-sm"><label className="flex flex-col gap-1 font-caption text-caption text-text-secondary">Question description<input aria-label="Question description" type="text" value={question.description ?? ''} onChange={(event) => onChange({ ...question, description: event.target.value })} className="h-9 rounded-md border border-border-subtle bg-surface-card px-2 font-body-sm text-body-sm text-on-surface" /></label><div className="flex flex-wrap items-end gap-3"><label className="flex items-center gap-2 font-caption text-caption text-text-secondary">Minimum<input aria-label="Scale minimum" type="number" min={0} max={9} value={question.min} onChange={(event) => { const min = Number(event.target.value); if (Number.isInteger(min) && min >= 0 && min < question.max) onChange({ ...question, min }); }} className="h-9 w-16 rounded-md border border-border-subtle bg-surface-card px-2" /></label><label className="flex items-center gap-2 font-caption text-caption text-text-secondary">Maximum<input aria-label="Scale maximum" type="number" min={1} max={10} value={question.max} onChange={(event) => { const max = Number(event.target.value); if (Number.isInteger(max) && max > question.min && max <= 10) onChange({ ...question, max }); }} className="h-9 w-16 rounded-md border border-border-subtle bg-surface-card px-2" /></label><label className="flex min-w-28 flex-col gap-1 font-caption text-caption text-text-secondary">First value label<input aria-label="First value label" type="text" value={question.startLabel} onChange={(event) => onChange({ ...question, startLabel: event.target.value })} className="h-9 rounded-md border border-border-subtle bg-surface-card px-2 font-body-sm text-body-sm text-on-surface" /></label><label className="flex min-w-28 flex-col gap-1 font-caption text-caption text-text-secondary">Last value label<input aria-label="Last value label" type="text" value={question.endLabel} onChange={(event) => onChange({ ...question, endLabel: event.target.value })} className="h-9 rounded-md border border-border-subtle bg-surface-card px-2 font-body-sm text-body-sm text-on-surface" /></label></div><div className="flex flex-wrap items-end gap-2"><span className="min-w-0 flex-1 text-left font-caption text-caption text-text-secondary">{question.startLabel}</span><span className="min-w-0 flex-1 text-right font-caption text-caption text-text-secondary">{question.endLabel}</span></div><div className="flex flex-wrap justify-between gap-2">{Array.from({ length: question.max - question.min + 1 }, (_, index) => <span key={question.min + index} className="flex h-8 w-8 items-center justify-center rounded-full border border-outline-variant bg-surface-card font-caption text-caption">{question.min + index}</span>)}</div></div>}
         {question.type === 'rating' && <div className="flex items-center gap-2 text-secondary"><Icon name="star" size={22}/><Icon name="star" size={22}/><Icon name="star" size={22}/><Icon name="star" size={22}/><Icon name="star" size={22}/><label className="ml-auto flex items-center gap-2 font-caption text-caption text-text-secondary">Max rating<input type="number" min={2} max={10} value={question.max} onChange={(event) => onChange({ ...question, max: Math.max(2, Number(event.target.value)), descriptors: question.descriptors.slice(0, Math.max(2, Number(event.target.value))) })} className="h-9 w-16 rounded-md border border-border-subtle bg-surface-card px-2"/></label></div>}
         <div className="flex flex-wrap items-center justify-end gap-space-sm border-t border-border-subtle pt-space-sm"><button type="button" onClick={onDuplicate} title="Duplicate question" aria-label="Duplicate question" className="flex h-9 w-9 items-center justify-center rounded-full text-text-secondary hover:bg-surface-container"><Icon name="draft" size={18}/></button><button type="button" onClick={onRemove} title="Delete question" aria-label="Delete question" className="flex h-9 w-9 items-center justify-center rounded-full text-text-secondary hover:bg-error-container hover:text-error"><Icon name="delete" size={18}/></button><span className="mx-1 h-7 border-l border-border-subtle"/><label className="inline-flex min-h-9 items-center gap-2 font-body-sm text-body-sm text-text-secondary"><input type="checkbox" checked={question.required} onChange={(event) => onChange({ ...question, required: event.target.checked })} className="accent-primary"/>Required</label></div>
       </div>
@@ -93,7 +136,6 @@ function QuestionEditor({
 }
 
 type QuestionKind = AuthoredQuestion['type'];
-function optionValue(label: string, index: number) { return `${label.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-') || 'option'}-${index + 1}`; }
 function createQuestionType(question: AuthoredQuestion, type: QuestionKind): AuthoredQuestion {
   const base = { id: question.id, prompt: question.prompt, help: question.help, required: question.required };
   if (type === 'paragraph') return { ...base, type, maxLength: 600, placeholder: 'Your answer' };
@@ -114,6 +156,7 @@ export default function SeminarEditorPage() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
+  const [scheduleErrors, setScheduleErrors] = useState<{ startsAt?: string; endsAt?: string }>({});
   const savedCoverUrl = useRef<string | undefined>(undefined);
 
   useEffect(() => {
@@ -132,6 +175,16 @@ export default function SeminarEditorPage() {
   function updateDetails(field: keyof SeminarDraft['details'], value: string | number | undefined) {
     setDraft((current) => current ? { ...current, details: { ...current.details, [field]: value } } : current);
     setFailure(null); setMessage(null);
+  }
+
+  function updateSchedule(field: 'startsAt' | 'endsAt', value: string) {
+    const parsed = localDateTimeToIso(value);
+    if (parsed === null) {
+      setScheduleErrors((current) => ({ ...current, [field]: 'Enter a complete date and time.' }));
+      return;
+    }
+    setScheduleErrors((current) => ({ ...current, [field]: undefined }));
+    updateDetails(field, parsed);
   }
 
   function updateCertificate(field: 'backgroundUrl', value: string) {
@@ -153,49 +206,12 @@ export default function SeminarEditorPage() {
     setDraft((current) => current?.certificate ? { ...current, certificate: { ...current.certificate, [field]: Math.max(1, Math.min(20000, value)), updatedAt: new Date().toISOString() } } : current);
   }
 
-  function updateNameBox(field: 'fontFamily' | 'fontSize' | 'fontWeight' | 'x' | 'y' | 'width' | 'height' | 'align' | 'color' | 'lineHeight', value: string | number) {
+  function updateNameBox(field: keyof NonNullable<SeminarDraft['certificate']>['nameBox'], value: string | number | boolean) {
     setDraft((current) => current?.certificate ? { ...current, certificate: { ...current.certificate, nameBox: { ...current.certificate.nameBox, [field]: value }, updatedAt: new Date().toISOString() } } : current);
   }
 
   function updateNameBoxGeometry(value: Pick<NonNullable<SeminarDraft['certificate']>['nameBox'], 'x' | 'y' | 'width' | 'height'>) {
     setDraft((current) => current?.certificate ? { ...current, certificate: { ...current.certificate, nameBox: { ...current.certificate.nameBox, ...value }, updatedAt: new Date().toISOString() } } : current);
-  }
-
-  async function onSignatureImage(event: ChangeEvent<HTMLInputElement>, signatureId?: string) {
-    const file = event.target.files?.[0];
-    event.target.value = '';
-    if (!file) return;
-    if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) { setFailure('Choose a PNG, JPG, or WebP signature image.'); return; }
-    if (file.size > 5 * 1024 * 1024) { setFailure('Choose a signature image smaller than 5 MB.'); return; }
-    try {
-      const imageUrl = await fileAsDataUrl(file);
-      setDraft((current) => {
-        if (!current?.certificate) return current;
-        const legacy = current.certificate.signatureBox ? [{ id: 'legacy-signature', imageName: 'Signature', ...current.certificate.signatureBox }] : [];
-        const boxes = current.certificate.signatureBoxes ?? legacy;
-        const next = signatureId
-          ? boxes.map((box) => box.id === signatureId ? { ...box, imageUrl, imageName: file.name } : box)
-          : [...boxes, { id: crypto.randomUUID(), imageName: file.name, imageUrl, x: 1320 + boxes.length * 32, y: 850 + boxes.length * 24, width: 400, height: 120 }];
-        return { ...current, certificate: { ...current.certificate, signatureBox: undefined, signatureBoxes: next, updatedAt: new Date().toISOString() } };
-      });
-      setFailure(null); setMessage(null);
-    } catch { setFailure('The signature image could not be read. Please choose another file.'); }
-  }
-
-  function removeSignatureBox(signatureId: string) {
-    setDraft((current) => {
-      if (!current?.certificate) return current;
-      const boxes = current.certificate.signatureBoxes ?? (current.certificate.signatureBox ? [{ id: 'legacy-signature', imageName: 'Signature', ...current.certificate.signatureBox }] : []);
-      return { ...current, certificate: { ...current.certificate, signatureBox: undefined, signatureBoxes: boxes.filter((box) => box.id !== signatureId), updatedAt: new Date().toISOString() } };
-    });
-  }
-
-  function updateSignatureGeometry(signatureId: string, value: Pick<NonNullable<SeminarDraft['certificate']>['nameBox'], 'x' | 'y' | 'width' | 'height'>) {
-    setDraft((current) => {
-      if (!current?.certificate) return current;
-      const boxes = current.certificate.signatureBoxes ?? (current.certificate.signatureBox ? [{ id: 'legacy-signature', imageName: 'Signature', ...current.certificate.signatureBox }] : []);
-      return { ...current, certificate: { ...current.certificate, signatureBox: undefined, signatureBoxes: boxes.map((box) => box.id === signatureId ? { ...box, ...value } : box), updatedAt: new Date().toISOString() } };
-    });
   }
 
   function updateQrCodeGeometry(value: Pick<NonNullable<SeminarDraft['certificate']>['nameBox'], 'x' | 'y' | 'width' | 'height'>) {
@@ -348,7 +364,7 @@ export default function SeminarEditorPage() {
     if (!file.type.startsWith('image/')) { setFailure('Choose an image file for the seminar cover or certificate.'); return; }
     if (file.size > 5 * 1024 * 1024) { setFailure('Choose an image smaller than 5 MB.'); return; }
     try {
-      const dataUrl = await fileAsDataUrl(file);
+      const dataUrl = target === 'certificate' ? await certificateImageAsDataUrl(file) : await fileAsDataUrl(file);
       if (target === 'cover') updateDetails('coverImageUrl', dataUrl);
       else updateCertificate('backgroundUrl', dataUrl);
     } catch { setFailure('The image could not be read. Please choose another file.'); }
@@ -359,6 +375,7 @@ export default function SeminarEditorPage() {
   if (!draft) return <PageContainer><StateMessage role="status" icon="draft" title="Draft not found" action={<Link to="/org/my-seminars" className={actionPrimary}>Back to My Seminars</Link>}>This draft may have been published or removed.</StateMessage></PageContainer>;
 
   const details = draft.details;
+  const datesOutOfOrder = Boolean(details.startsAt && details.endsAt && Date.parse(details.endsAt) <= Date.parse(details.startsAt));
   const questions = draft.survey?.sections.flatMap((section) => section.questions) ?? [];
   function applyPromptFormat(command: 'bold' | 'italic' | 'underline') { document.execCommand(command, false); }
   const formatButtons = (['bold', 'italic', 'underline'] as const).map((command) => <button key={command} type="button" aria-label={command[0].toUpperCase() + command.slice(1)} title={command[0].toUpperCase() + command.slice(1)} onMouseDown={(event) => event.preventDefault()} onClick={() => applyPromptFormat(command)} className="flex h-9 w-9 items-center justify-center rounded-md font-body-sm-medium text-body-sm-medium text-text-secondary hover:bg-surface-container hover:text-primary"><span className={command === 'bold' ? 'font-bold' : command === 'italic' ? 'italic' : 'underline'}>{command === 'bold' ? 'B' : command === 'italic' ? 'I' : 'U'}</span></button>);
@@ -376,22 +393,22 @@ export default function SeminarEditorPage() {
 
       <section className="rounded-xl border border-border-subtle bg-surface-card p-space-lg shadow-card md:p-space-xl">
         {step === 0 && <div className="flex flex-col gap-space-lg"><div><h2 className="font-title-lg text-title-lg text-on-surface">General information</h2><p className="mt-1 font-body-sm text-body-sm text-text-secondary">Required details are used in the schedule, attendee registration, and certificates.</p></div><div className="grid gap-space-md md:grid-cols-2">
-          <label className="flex flex-col gap-2 font-body-sm-medium text-body-sm-medium text-on-surface md:col-span-2">Seminar title *<input required value={details.title ?? ''} onChange={(e) => updateDetails('title', e.target.value)} className={inputClass} placeholder="Enter seminar title" /></label>
-          <label className="flex flex-col gap-2 font-body-sm-medium text-body-sm-medium text-on-surface">Seminar type *<select value={details.seminarType ?? 'seminar'} onChange={(e) => updateDetails('seminarType', e.target.value)} className={inputClass}><option value="seminar">Seminar</option><option value="webinar">Webinar</option></select></label>
-          <label className="flex flex-col gap-2 font-body-sm-medium text-body-sm-medium text-on-surface md:col-span-2">Seminar description *<textarea required rows={5} value={details.description ?? ''} onChange={(e) => updateDetails('description', e.target.value)} className={textareaClass} placeholder="Describe the seminar, its topics, and who should attend." /></label>
-          <label className="flex flex-col gap-2 font-body-sm-medium text-body-sm-medium text-on-surface">Start date and time *<input type="datetime-local" value={localDateTime(details.startsAt)} onChange={(e) => updateDetails('startsAt', e.target.value ? new Date(e.target.value).toISOString() : undefined)} className={inputClass} /></label>
-          <label className="flex flex-col gap-2 font-body-sm-medium text-on-surface">End date and time *<input type="datetime-local" value={localDateTime(details.endsAt)} onChange={(e) => updateDetails('endsAt', e.target.value ? new Date(e.target.value).toISOString() : undefined)} className={inputClass} /></label>
-          {details.seminarType === 'webinar' ? <label className="flex flex-col gap-2 font-body-sm-medium text-on-surface md:col-span-2">HTTPS join link *<input type="url" inputMode="url" value={details.joinUrl ?? ''} onChange={(e) => updateDetails('joinUrl', e.target.value)} className={inputClass} placeholder="https://…" /></label> : <label className="flex flex-col gap-2 font-body-sm-medium text-on-surface">Venue / hall *<input value={details.venue ?? ''} onChange={(e) => updateDetails('venue', e.target.value)} className={inputClass} placeholder="Room or venue" /></label>}
-          <label className="flex flex-col gap-2 font-body-sm-medium text-on-surface">Target capacity *<input type="number" min={Math.max(1, activeCount)} value={details.capacity ?? ''} onChange={(e) => updateDetails('capacity', e.target.value ? Number(e.target.value) : undefined)} className={inputClass} placeholder="Number of seats" />{activeCount > 0 && <span className="font-caption text-caption text-text-secondary">At least {activeCount} active registrations are already on this seminar.</span>}</label>
-          <label className="flex flex-col gap-2 font-body-sm-medium text-on-surface">Confirmation opens (hours before start)<input type="number" min="2" value={details.confirmationOpensHoursBefore ?? 24} onChange={(e) => updateDetails('confirmationOpensHoursBefore', Number(e.target.value))} className={inputClass} /></label>
-          <label className="flex flex-col gap-2 font-body-sm-medium text-on-surface">Confirmation closes (hours before start)<input type="number" min="1" value={details.confirmationClosesHoursBefore ?? 1} onChange={(e) => updateDetails('confirmationClosesHoursBefore', Number(e.target.value))} className={inputClass} /></label>
-          <label className="flex flex-col gap-2 font-body-sm-medium text-on-surface">Lead speaker name *<input value={details.speakerName ?? ''} onChange={(e) => updateDetails('speakerName', e.target.value)} className={inputClass} placeholder="Full name" /></label>
+          <label className="flex flex-col gap-2 font-body-sm-medium text-body-sm-medium text-on-surface md:col-span-2">Seminar title<input required value={details.title ?? ''} onChange={(e) => updateDetails('title', e.target.value)} className={inputClass} placeholder="Enter seminar title" /></label>
+          <label className="flex flex-col gap-2 font-body-sm-medium text-body-sm-medium text-on-surface">Seminar type<select value={details.seminarType ?? 'seminar'} onChange={(e) => updateDetails('seminarType', e.target.value)} className={inputClass}><option value="seminar">Seminar</option><option value="webinar">Webinar</option></select></label>
+          <label className="flex flex-col gap-2 font-body-sm-medium text-body-sm-medium text-on-surface md:col-span-2">Seminar description<textarea required rows={5} value={details.description ?? ''} onChange={(e) => updateDetails('description', e.target.value)} className={textareaClass} placeholder="Describe the seminar, its topics, and who should attend." /></label>
+          <label className="flex flex-col gap-2 font-body-sm-medium text-body-sm-medium text-on-surface">Start date and time<input required type="datetime-local" value={localDateTime(details.startsAt)} onChange={(e) => updateSchedule('startsAt', e.target.value)} aria-invalid={Boolean(scheduleErrors.startsAt)} aria-describedby={scheduleErrors.startsAt ? 'starts-at-error' : undefined} className={inputClass} />{scheduleErrors.startsAt && <span id="starts-at-error" role="alert" className="font-caption text-caption text-danger">{scheduleErrors.startsAt}</span>}</label>
+          <label className="flex flex-col gap-2 font-body-sm-medium text-on-surface">End date and time<input required type="datetime-local" value={localDateTime(details.endsAt)} onChange={(e) => updateSchedule('endsAt', e.target.value)} aria-invalid={Boolean(scheduleErrors.endsAt || datesOutOfOrder)} aria-describedby={scheduleErrors.endsAt || datesOutOfOrder ? 'ends-at-error' : undefined} className={inputClass} />{(scheduleErrors.endsAt || datesOutOfOrder) && <span id="ends-at-error" role="alert" className="font-caption text-caption text-danger">{scheduleErrors.endsAt ?? 'End date and time must be after the start.'}</span>}</label>
+          {details.seminarType === 'webinar' ? <label className="flex flex-col gap-2 font-body-sm-medium text-on-surface md:col-span-2">HTTPS join link<input required type="url" inputMode="url" value={details.joinUrl ?? ''} onChange={(e) => updateDetails('joinUrl', e.target.value)} className={inputClass} placeholder="https://…" /></label> : <label className="flex flex-col gap-2 font-body-sm-medium text-on-surface">Venue / hall<input required value={details.venue ?? ''} onChange={(e) => updateDetails('venue', e.target.value)} className={inputClass} placeholder="Room or venue" /></label>}
+          <label className="flex flex-col gap-2 font-body-sm-medium text-on-surface">Target capacity<input required type="number" min={Math.max(1, activeCount)} value={details.capacity ?? ''} onChange={(e) => updateDetails('capacity', e.target.value ? Number(e.target.value) : undefined)} className={inputClass} placeholder="Number of seats" />{activeCount > 0 && <span className="font-caption text-caption text-text-secondary">At least {activeCount} active registrations are already on this seminar.</span>}</label>
+          <label className="flex flex-col gap-2 font-body-sm-medium text-on-surface">Confirmation opens (minutes before start)<input type="number" min="1" max="10080" value={details.confirmationOpensMinutesBefore ?? 1440} onChange={(e) => updateDetails('confirmationOpensMinutesBefore', Number(e.target.value))} className={inputClass} /></label>
+          <label className="flex flex-col gap-2 font-body-sm-medium text-on-surface">Confirmation closes (minutes before start)<input type="number" min="1" max="10080" value={details.confirmationClosesMinutesBefore ?? 60} onChange={(e) => updateDetails('confirmationClosesMinutesBefore', Number(e.target.value))} className={inputClass} /></label>
+          <label className="flex flex-col gap-2 font-body-sm-medium text-on-surface">Lead speaker name<input required value={details.speakerName ?? ''} onChange={(e) => updateDetails('speakerName', e.target.value)} className={inputClass} placeholder="Full name" /></label>
           
           <label className="flex flex-col gap-2 font-body-sm-medium text-on-surface">Required attendance (%)<input type="number" min="1" max="100" value={details.requiredAttendancePercent ?? 60} onChange={(e) => updateDetails('requiredAttendancePercent', Number(e.target.value))} className={inputClass} /></label>
           <div className="flex flex-col gap-2 font-body-sm-medium text-on-surface md:col-span-2">Cover image<label className="flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border border-border-subtle bg-surface-light px-3.5 font-body-sm text-body-sm text-text-secondary"><Icon name="upload_file" size={18} />Choose PNG, JPG, or WebP, up to 5 MiB<input type="file" accept="image/png,image/jpeg,image/webp" onChange={(e) => void onImage(e, 'cover')} className="sr-only" /></label><span className="font-caption text-caption text-text-secondary">Cover images are public after upload.</span>{details.coverImageUrl && <img src={details.coverImageUrl} alt="Seminar cover preview" className="max-h-48 rounded-lg border border-border-subtle object-cover" />}</div>
         </div></div>}
 
-        {step === 1 && <CertificateDesigner certificate={draft.certificate} qrValue={`Seminex certificate template: ${draft.id}`} requiredAttendancePercent={details.requiredAttendancePercent ?? 60} onChangeBackground={(event) => void onImage(event, 'certificate')} onUpdateCanvasSize={updateCanvasSize} onUpdateField={updateNameBox} onUpdateGeometry={updateNameBoxGeometry} onUpdateQrCodeGeometry={updateQrCodeGeometry} onSelectSignature={(event, id) => void onSignatureImage(event, id)} onRemoveSignature={removeSignatureBox} onUpdateSignatureGeometry={updateSignatureGeometry} onReset={resetNameBox} />}
+        {step === 1 && <CertificateDesigner certificate={draft.certificate} qrValue={`Seminex certificate template: ${draft.id}`} onChangeBackground={(event) => void onImage(event, 'certificate')} onUpdateCanvasSize={updateCanvasSize} onUpdateField={updateNameBox} onUpdateGeometry={updateNameBoxGeometry} onUpdateQrCodeGeometry={updateQrCodeGeometry} onReset={resetNameBox} />}
 
         {step === 2 && <div className="mx-auto flex w-full max-w-4xl flex-col gap-space-md">
           <div className="grid grid-cols-1 gap-space-md md:grid-cols-[minmax(0,1fr)_3.5rem] md:items-start"><article className="overflow-hidden rounded-xl border border-border-subtle bg-surface-card shadow-sm"><div className="h-2 bg-primary"/><div className="flex flex-col gap-space-md p-space-lg md:p-space-xl"><div className="flex flex-wrap items-center justify-between gap-2"><span className="inline-flex items-center gap-2 rounded-full bg-primary/5 px-3 py-1 font-label-sm text-label-sm text-primary"><Icon name="assignment_turned_in" size={16}/>Evaluation form</span><span className="font-caption text-caption text-text-secondary">{questions.length} {questions.length === 1 ? 'question' : 'questions'}</span></div><input aria-label="Form title" value={draft.survey?.title ?? ''} onChange={(event) => updateSurveyTitle(event.target.value)} className="h-12 border-b border-border-subtle bg-transparent font-title-lg text-title-lg font-bold text-on-surface outline-none placeholder:text-text-subtle focus:border-primary" placeholder="Untitled form"/><textarea aria-label="Form description" rows={2} value={draft.survey?.instructions ?? ''} onChange={(event) => updateSurveyInstructions(event.target.value)} className="resize-y border-b border-border-subtle bg-transparent py-2 font-body-sm text-body-sm text-text-secondary outline-none placeholder:text-text-subtle focus:border-primary" placeholder="Form description"/><p className="font-caption text-caption text-text-subtle">Participants will complete this evaluation after the seminar.</p></div></article><div aria-hidden="true" className="hidden md:block"/></div>

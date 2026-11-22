@@ -115,7 +115,7 @@ export function OngoingSeminarCard({ seminar, registration, now }: OngoingSemina
         {seminar.seminarType === 'webinar' ? <div className="flex min-h-36 w-full flex-col items-center justify-center gap-space-sm rounded-lg bg-surface-card p-space-md"><Icon name="play_circle" size={26} className="text-primary"/><p className="font-body-sm-medium text-body-sm-medium text-on-surface">Webinar attendance proof</p><p className="font-caption text-caption text-text-secondary">Upload Time-In and Time-Out screenshots from your ticket.</p></div> : <>
         <div className="flex h-36 w-36 items-center justify-center rounded-lg bg-white shadow-card">
           {ticket.state.status === 'success' ? (
-            <AttendanceQr seminarId={seminar.id} title={seminar.title} size={128} />
+            <AttendanceQr seminarId={seminar.id} title={seminar.title} size={128} acknowledged={Boolean(registration.attendanceAckAt)} endsAt={seminar.endsAt} serverNow={now} />
           ) : ticket.state.status === 'loading' ? (
             <div role="status">
               <span className="sr-only">Loading your QR code</span>

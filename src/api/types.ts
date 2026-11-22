@@ -12,7 +12,17 @@ export type ApiErrorCode =
   | 'seminar_full'
   | 'not_available'
   | 'forbidden'
-  | 'configuration_error';
+  | 'configuration_error'
+  | 'attendance_already_recorded'
+  | 'attendance_qr_expired'
+  | 'challenge_expired'
+  | 'outside_scan_window'
+  | 'wrong_attendance_step'
+  | 'attendance_already_complete'
+  | 'challenge_replayed'
+  | 'idempotency_conflict'
+  | 'registration_inactive'
+  | 'server_error';
 
 export interface ApiError {
   code: ApiErrorCode;
@@ -138,9 +148,9 @@ export interface Seminar {
   startsAt: string;
   endsAt: string;
   capacity: number;
-  /** Hours before start when registration confirmation opens and closes. */
-  confirmationOpensHoursBefore?: number;
-  confirmationClosesHoursBefore?: number;
+  /** Minutes before start when registration confirmation opens and closes. */
+  confirmationOpensMinutesBefore?: number;
+  confirmationClosesMinutesBefore?: number;
   /** Required for webinars; stores the seminar's join link. */
   joinUrl?: string;
   registeredCount: number;
@@ -226,6 +236,7 @@ interface SurveyQuestionBase {
   id: string;
   prompt: string;
   help?: string;
+  description?: string;
   required: boolean;
 }
 

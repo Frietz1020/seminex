@@ -52,7 +52,13 @@ export default function OrganizationSignUpPage() {
   const navigate = useNavigate();
   const online = useOnlineStatus();
   const session = useSession();
-  const applicantSession = Boolean(session && session.role !== 'adviser');
+  const verifiedIncompleteSignup = Boolean(
+    session && session.role !== 'adviser' && session.onboardingComplete === false,
+  );
+  // Older cached identities may not include onboardingComplete; preserve their existing applicant path.
+  const applicantSession = Boolean(
+    session && session.role !== 'adviser' && session.onboardingComplete !== false,
+  );
   const applicantProfile = useResource<Profile | null>(
     () => applicantSession ? api.getProfile() : Promise.resolve({ ok: true as const, data: null }),
     `org-signup-profile-${session?.studentId ?? 'none'}`,
@@ -61,12 +67,15 @@ export default function OrganizationSignUpPage() {
   const period = now === null ? null : getAcademicPeriod(now);
   const { state: orgState, reload: reloadOrgs } = useResource(() => api.listOrganizations(), 'organizations');
   const organizations = orgState.status === 'success' ? orgState.data.map((item) => ({ value: item.id, label: item.name })) : [];
-  const [step, setStep] = useState<Step>(applicantSession ? 3 : 1);
-  const [values, setValues] = useState<Values>(INITIAL);
+  const [step, setStep] = useState<Step>(applicantSession ? 3 : verifiedIncompleteSignup ? 2 : 1);
+  const [values, setValues] = useState<Values>(() => ({
+    ...INITIAL,
+    ...(verifiedIncompleteSignup && session ? { studentId: session.studentId } : {}),
+  }));
   const [errors, setErrors] = useState<Errors>({});
   const [failure, setFailure] = useState<ApiErrorCode | null>(null);
   const [pending, setPending] = useState(false);
-  const [otpVerified, setOtpVerified] = useState(false);
+  const [otpVerified, setOtpVerified] = useState(verifiedIncompleteSignup);
   const [otpError, setOtpError] = useState('');
   const offlineRef = useRef<HTMLDivElement>(null);
 
@@ -109,7 +118,7 @@ export default function OrganizationSignUpPage() {
   function continueStep(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (step === 1) {
-      if (validateFields(['studentId', 'password', 'confirmPassword'])) return;
+      if (!validateFields(['studentId', 'password', 'confirmPassword'])) return;
       if (!otpVerified) {
         setOtpError('Send and verify an OTP to continue.');
         return;
@@ -118,7 +127,7 @@ export default function OrganizationSignUpPage() {
       return;
     }
     const fields: Field[] = ['firstName', 'lastName', 'program', 'yearLevel', 'block'];
-    if (!validateFields(fields)) setStep(3);
+    if (validateFields(fields)) setStep(3);
   }
 
   async function submitRequest(event: FormEvent<HTMLFormElement>) {
@@ -194,7 +203,7 @@ export default function OrganizationSignUpPage() {
             {visibleSteps.map((item) => <button key={item} type="button" onClick={() => {
               if (item === 1) setStep(1);
               else if (item === 2 && otpVerified) setStep(2);
-              else if (item === 3 && (applicantSession || (otpVerified && !validateFields(personalFields)))) setStep(3);
+              else if (item === 3 && (applicantSession || (otpVerified && validateFields(personalFields)))) setStep(3);
             }} aria-current={step === item ? 'step' : undefined} className={`flex min-h-16 items-center gap-3 rounded-xl border-2 p-3 text-left ${step === item ? 'border-maroon bg-white' : 'border-charcoal-200 bg-white/60'}`}><span className={`flex h-7 w-7 items-center justify-center rounded-lg text-xs font-bold ${step > item ? 'bg-success text-white' : step === item ? 'bg-maroon text-white' : 'bg-charcoal-200 text-charcoal-700'}`}>{step > item ? <Check className="h-4 w-4" /> : item}</span><span><span className="block text-[11px] font-semibold uppercase tracking-wider text-charcoal-500">Step {item}</span><span className="block text-xs font-bold text-charcoal-900">{item === 1 ? 'Credentials + OTP' : item === 2 ? 'Personal Information' : 'Your Organization'}</span></span></button>)}
           </div>
           )}

@@ -208,7 +208,7 @@ export function TicketTab({ seminar, registration, now }: TicketTabProps) {
         {ticketData && (
           <>
             <div className="aspect-square w-full max-w-60 rounded-xl bg-white p-space-md shadow-card [&>div]:block [&>div]:h-full [&>div]:w-full [&_svg]:h-full [&_svg]:w-full">
-              <AttendanceQr seminarId={seminar.id} title={seminar.title} size={240} />
+              <AttendanceQr seminarId={seminar.id} title={seminar.title} size={240} acknowledged={Boolean(registration.attendanceAckAt)} endsAt={seminar.endsAt} serverNow={now} />
             </div>
 
             <p className="mt-space-md max-w-sm text-center font-body-sm text-body-sm text-text-secondary">
@@ -351,7 +351,7 @@ export function TicketTab({ seminar, registration, now }: TicketTabProps) {
         </p>
         {ticketData && (
           <div className="mx-auto my-space-lg aspect-square w-full max-w-[300px] rounded-xl border border-border-subtle bg-white p-space-sm [&>div]:block [&>div]:h-full [&>div]:w-full [&_svg]:h-full [&_svg]:w-full">
-            <AttendanceQr seminarId={seminar.id} title={seminar.title} size={300} />
+            <AttendanceQr seminarId={seminar.id} title={seminar.title} size={300} acknowledged={Boolean(registration.attendanceAckAt)} endsAt={seminar.endsAt} serverNow={now} />
           </div>
         )}
         {profile && (

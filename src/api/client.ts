@@ -418,6 +418,18 @@ async function publishOrgDraft(draftId: string) {
   return result;
 }
 
+async function deleteOrgDraft(draftId: string) {
+  const result = await seminarApi.deleteOrgDraft(draftId);
+  if (result.ok) await listOrgSeminars();
+  return result;
+}
+
+async function archiveOrgSeminar(seminarId: string) {
+  const result = await seminarApi.archiveOrgSeminar(seminarId);
+  if (result.ok) await listOrgSeminars();
+  return result;
+}
+
 async function recordOrgScan(input: RecordOrgScanInput): Promise<ApiResult<RecordOrgScanResult>> {
   return attendanceApi.recordOrgScan(input);
 }
@@ -579,12 +591,15 @@ export const api = {
   getOrgSeminarEvaluation,
   getOrgSeminarCertificates: certificateApi.getOrgSeminarCertificates,
   getOrgCertificate: certificateApi.getOrgCertificate,
+  regenerateOrgCertificate: certificateApi.regenerateOrgCertificate,
   createOrgDraft,
   createOrgEditDraft,
   saveOrgDraft,
   uploadOrgSeminarCover,
   removeOrgSeminarCover,
   publishOrgDraft,
+  deleteOrgDraft,
+  archiveOrgSeminar,
   recordOrgScan,
   issueAttendanceChallenge,
   recordOrgChallengeScan,

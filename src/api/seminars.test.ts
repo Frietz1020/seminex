@@ -7,6 +7,8 @@ vi.mock('./serverTime', () => ({ getServerTime: mocked.getServerTime }));
 
 import {
   createOrgEditDraft,
+  deleteOrgDraft,
+  archiveOrgSeminar,
   getTicket,
   listAvailableSeminars,
   listHistory,
@@ -22,7 +24,7 @@ type Result = { data: unknown; error: null | { code?: string; message: string } 
 function query(result: Result) {
   const calls: Record<string, unknown[][]> = {};
   const builder: Record<string, unknown> = {};
-  for (const method of ['select', 'eq', 'neq', 'in', 'is', 'ilike', 'or', 'order', 'limit', 'range', 'insert', 'update', 'delete', 'lte']) {
+  for (const method of ['select', 'eq', 'neq', 'in', 'is', 'not', 'ilike', 'or', 'order', 'limit', 'range', 'insert', 'update', 'delete', 'lte']) {
     calls[method] = [];
     builder[method] = vi.fn((...args: unknown[]) => {
       calls[method]?.push(args);
@@ -56,8 +58,8 @@ function seminarRow(overrides: Record<string, unknown> = {}) {
     capacity: 40,
     registered_count: 12,
     required_attendance_percent: 60,
-    confirmation_opens_hours_before: 24,
-    confirmation_closes_hours_before: 1,
+    confirmation_opens_minutes_before: 1440,
+    confirmation_closes_minutes_before: 60,
     image_url: null,
     curriculum_credit: null,
     organizing_body: null,
@@ -80,6 +82,81 @@ function makeClient(tables: Record<string, ReturnType<typeof query>>, rpcResult:
 
 describe('Supabase seminar API', () => {
   beforeEach(() => vi.clearAllMocks());
+
+  it('deletes an unpublished draft and only its own cover objects', async () => {
+    const organizationId = '00000000-0000-4000-8000-000000000821';
+    const draftId = '00000000-0000-4000-8000-000000000841';
+    const drafts = query({ data: { id: draftId }, error: null });
+    let remaining = [
+      { name: '00000000-0000-4000-8000-000000000851.png' },
+      { name: '00000000-0000-4000-8000-000000000852.webp' },
+    ];
+    const list = vi.fn(async () => ({ data: [...remaining], error: null }));
+    const remove = vi.fn(async (paths: string[]) => {
+      const names = new Set(paths.map((path) => path.split('/').at(-1)));
+      remaining = remaining.filter((file) => !names.has(file.name));
+      return { data: [], error: null };
+    });
+    const client = makeClient({ seminar_drafts: drafts }, { data: organizationId, error: null });
+    client.storage.from = vi.fn(() => ({ list, remove })) as typeof client.storage.from;
+    mocked.getSupabaseClient.mockReturnValue(client);
+
+    await expect(deleteOrgDraft(draftId)).resolves.toEqual({ ok: true, data: undefined });
+
+    expect(list).toHaveBeenCalledWith(`${organizationId}/${draftId}`, { limit: 100, offset: 0 });
+    expect(client.rpc).toHaveBeenCalledWith('begin_org_draft_deletion', { p_draft_id: draftId });
+    expect(remove).toHaveBeenCalledWith([
+      `${organizationId}/${draftId}/00000000-0000-4000-8000-000000000851.png`,
+      `${organizationId}/${draftId}/00000000-0000-4000-8000-000000000852.webp`,
+    ]);
+    expect(drafts.calls.delete).toHaveLength(1);
+    expect(drafts.calls.is).toContainEqual(['published_seminar_id', null]);
+    expect(drafts.calls.not).toContainEqual(['deletion_requested_at', 'is', null]);
+  });
+
+  it('archives a published seminar through the ownership-checked database function', async () => {
+    const client = makeClient({}, { data: true, error: null });
+    mocked.getSupabaseClient.mockReturnValue(client);
+
+    await expect(archiveOrgSeminar('seminar-1')).resolves.toEqual({ ok: true, data: undefined });
+    expect(client.rpc).toHaveBeenCalledWith('archive_org_seminar', { p_seminar_id: 'seminar-1' });
+  });
+
+  it('restarts cover pagination after removing a full page', async () => {
+    const draftId = '00000000-0000-4000-8000-000000000861';
+    const files = Array.from({ length: 105 }, (_, index) => ({ name: `00000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}.png` }));
+    let remaining = [...files];
+    const list = vi.fn(async (_prefix: string, { offset, limit }: { offset: number; limit: number }) => ({ data: remaining.slice(offset, offset + limit), error: null }));
+    const remove = vi.fn(async (paths: string[]) => {
+      const names = new Set(paths.map((path) => path.split('/').at(-1)));
+      remaining = remaining.filter((file) => !names.has(file.name));
+      return { data: [], error: null };
+    });
+    const drafts = query({ data: { id: draftId }, error: null });
+    const client = makeClient({ seminar_drafts: drafts }, { data: '00000000-0000-4000-8000-000000000821', error: null });
+    client.storage.from = vi.fn(() => ({ list, remove })) as typeof client.storage.from;
+    mocked.getSupabaseClient.mockReturnValue(client);
+
+    await expect(deleteOrgDraft(draftId)).resolves.toMatchObject({ ok: true });
+    expect(list.mock.calls.map(([, options]) => options.offset)).toEqual([0, 0, 0]);
+    expect(remove).toHaveBeenCalledTimes(2);
+    expect(remaining).toHaveLength(0);
+    expect(drafts.calls.delete).toHaveLength(1);
+  });
+
+  it('keeps a claimed draft for retry if cover cleanup fails', async () => {
+    const draftId = '00000000-0000-4000-8000-000000000862';
+    const drafts = query({ data: { id: draftId }, error: null });
+    const list = vi.fn(async () => ({ data: [{ name: '00000000-0000-4000-8000-000000000863.png' }], error: null }));
+    const remove = vi.fn(async () => ({ data: null, error: { message: 'storage unavailable' } }));
+    const client = makeClient({ seminar_drafts: drafts }, { data: '00000000-0000-4000-8000-000000000821', error: null });
+    client.storage.from = vi.fn(() => ({ list, remove })) as typeof client.storage.from;
+    mocked.getSupabaseClient.mockReturnValue(client);
+
+    await expect(deleteOrgDraft(draftId)).resolves.toMatchObject({ ok: false });
+    expect(client.rpc).toHaveBeenCalledWith('begin_org_draft_deletion', { p_draft_id: draftId });
+    expect(drafts.calls.delete).toHaveLength(0);
+  });
 
   it('uploads a cover under the organization and draft returned by RLS', async () => {
     const drafts = query({ data: { organization_id: 'org-1' }, error: null });

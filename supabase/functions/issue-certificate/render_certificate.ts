@@ -6,6 +6,7 @@ import { initWasm, Resvg } from 'npm:@resvg/resvg-wasm@2.6.2';
 
 const wasmBytes = await Deno.readFile(new URL('./resvg.wasm', import.meta.url));
 await initWasm(wasmBytes);
+const outfitFont = await Deno.readFile(new URL('./fonts/Outfit-Variable.ttf', import.meta.url));
 
 type Box = { x: number; y: number; width: number; height: number };
 type Template = {
@@ -17,12 +18,14 @@ type Template = {
     fontSize: number;
     lineHeight?: number;
     fontWeight: 400 | 700;
+    italic?: boolean;
+    underline?: boolean;
+    opacity?: number;
+    textTransform?: 'sentence' | 'lowercase' | 'uppercase' | 'capitalize';
     align: 'left' | 'center' | 'right';
     color: string;
   };
   qrCodeBox?: Box;
-  signatureBox?: Box & { imageUrl: string };
-  signatureBoxes?: Array<Box & { id: string; imageUrl: string; imageName: string }>;
 };
 
 type RenderCertificateInput = {
@@ -42,6 +45,23 @@ const PIXELS_TO_POINTS = 0.75;
 const FONT_FAMILIES = new Set(['Outfit', 'DM Sans', 'Cinzel', 'Playfair Display']);
 
 export async function renderCertificatePdf(input: RenderCertificateInput): Promise<Uint8Array> {
+  const { template } = input;
+  const png = await renderCertificatePng(input);
+  const width = template.canvasWidth ?? 1920;
+  const height = template.canvasHeight ?? 1080;
+
+  const pdf = await PDFDocument.create();
+  const pageWidth = width * PIXELS_TO_POINTS;
+  const pageHeight = height * PIXELS_TO_POINTS;
+  const page = pdf.addPage([pageWidth, pageHeight]);
+  const image = await pdf.embedPng(png);
+  page.drawImage(image, { x: 0, y: 0, width: pageWidth, height: pageHeight });
+  pdf.setTitle('Seminex Certificate');
+  pdf.setSubject(input.seminarTitle.slice(0, 200));
+  return await pdf.save();
+}
+
+export async function renderCertificatePng(input: RenderCertificateInput): Promise<Uint8Array> {
   const { template, studentName, serial } = input;
   const width = template.canvasWidth ?? 1920;
   const height = template.canvasHeight ?? 1080;
@@ -55,15 +75,6 @@ export async function renderCertificatePdf(input: RenderCertificateInput): Promi
     ? await renderSvgDataImage(background.bytes, width, height)
     : template.backgroundUrl;
 
-  const signatureBoxes = template.signatureBoxes ?? (template.signatureBox
-    ? [{ ...template.signatureBox, id: 'legacy-signature', imageName: 'Signature' }]
-    : []);
-  if (signatureBoxes.length > 8) throw new Error('validation_failed');
-  const signatures = signatureBoxes.map((signature) => ({
-    ...signature,
-    image: decodeDataImage(signature.imageUrl, ['image/png', 'image/jpeg', 'image/webp']),
-  }));
-
   const qrSvg = template.qrCodeBox ? qrSvgContents(serial, template.qrCodeBox) : '';
   const nameBox = template.nameBox;
   const centerY = nameBox.y + nameBox.height / 2;
@@ -73,32 +84,25 @@ export async function renderCertificatePdf(input: RenderCertificateInput): Promi
     : nameBox.x + nameBox.width / 2;
   const safeFont = FONT_FAMILIES.has(nameBox.fontFamily) ? nameBox.fontFamily : 'Outfit';
   const safeColor = /^#[0-9a-f]{6}$/i.test(nameBox.color) ? nameBox.color : '#1B365D';
+  const safeOpacity = nameBox.opacity === undefined ? 100 : nameBox.opacity;
+  const safeTransform = nameBox.textTransform ?? 'sentence';
+  const renderedName = transformName(studentName, safeTransform);
   const svg = [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
     `<image href="${escapeAttribute(backgroundUrl)}" x="0" y="0" width="${width}" height="${height}" preserveAspectRatio="none"/>`,
-    `<text x="${textX}" y="${centerY}" dominant-baseline="central" text-anchor="${textAnchor}" font-family="${escapeAttribute(safeFont)}" font-size="${nameBox.fontSize}" font-weight="${nameBox.fontWeight}" fill="${safeColor}">${escapeXml(studentName)}</text>`,
-    ...signatures.map((signature) => `<image href="${imageDataUrl(signature.image)}" x="${signature.x}" y="${signature.y}" width="${signature.width}" height="${signature.height}" preserveAspectRatio="xMidYMid meet"/>`),
+    `<text x="${textX}" y="${centerY}" dominant-baseline="central" text-anchor="${textAnchor}" font-family="${escapeAttribute(safeFont)}" font-size="${nameBox.fontSize}" font-weight="${nameBox.fontWeight}" font-style="${nameBox.italic ? 'italic' : 'normal'}" text-decoration="${nameBox.underline ? 'underline' : 'none'}" fill="${safeColor}" fill-opacity="${safeOpacity / 100}">${escapeXml(renderedName)}</text>`,
     qrSvg,
     '</svg>',
   ].join('');
 
   const renderer = new Resvg(svg, {
     fitTo: { mode: 'original' },
-    font: { defaultFontFamily: safeFont, loadSystemFonts: true },
+    font: { fontBuffers: [outfitFont], defaultFontFamily: 'Outfit', loadSystemFonts: true },
   });
   rejectExternalImages(renderer.imagesToResolve());
   const png = renderer.render().asPng();
   if (png.byteLength > 20 * 1024 * 1024) throw new Error('validation_failed');
-
-  const pdf = await PDFDocument.create();
-  const pageWidth = width * PIXELS_TO_POINTS;
-  const pageHeight = height * PIXELS_TO_POINTS;
-  const page = pdf.addPage([pageWidth, pageHeight]);
-  const image = await pdf.embedPng(png);
-  page.drawImage(image, { x: 0, y: 0, width: pageWidth, height: pageHeight });
-  pdf.setTitle('Seminex Certificate');
-  pdf.setSubject(input.seminarTitle.slice(0, 200));
-  return await pdf.save();
+  return png;
 }
 
 function validateCanvas(width: number, height: number): void {
@@ -121,10 +125,20 @@ function validateTemplate(template: Template, width: number, height: number): vo
     || (template.nameBox.lineHeight !== undefined && (!Number.isFinite(template.nameBox.lineHeight) || template.nameBox.lineHeight < 1 || template.nameBox.lineHeight > 500))
     || ![400, 700].includes(template.nameBox.fontWeight)
     || !['left', 'center', 'right'].includes(template.nameBox.align)
+    || (template.nameBox.italic !== undefined && typeof template.nameBox.italic !== 'boolean')
+    || (template.nameBox.underline !== undefined && typeof template.nameBox.underline !== 'boolean')
+    || (template.nameBox.opacity !== undefined && (!Number.isFinite(template.nameBox.opacity) || template.nameBox.opacity < 0 || template.nameBox.opacity > 100))
+    || (template.nameBox.textTransform !== undefined && !['sentence', 'lowercase', 'uppercase', 'capitalize'].includes(template.nameBox.textTransform))
     || !/^#[0-9a-f]{6}$/i.test(template.nameBox.color)) throw new Error('validation_failed');
   if (template.qrCodeBox) validateBox(template.qrCodeBox, width, height);
-  if (template.signatureBox) validateBox(template.signatureBox, width, height);
-  for (const signature of template.signatureBoxes ?? []) validateBox(signature, width, height);
+}
+
+function transformName(name: string, transform: NonNullable<Template['nameBox']['textTransform']>): string {
+  if (transform === 'uppercase') return name.toLocaleUpperCase();
+  if (transform === 'lowercase') return name.toLocaleLowerCase();
+  if (transform === 'capitalize') return name.replace(/\b\p{L}/gu, (letter) => letter.toLocaleUpperCase());
+  const lower = name.toLocaleLowerCase();
+  return lower ? lower[0]!.toLocaleUpperCase() + lower.slice(1) : lower;
 }
 
 function validateBox(box: Box, canvasWidth: number, canvasHeight: number): void {
@@ -141,18 +155,36 @@ function decodeDataImage(value: string, acceptedMimeTypes: string[]): DataImage 
   const binary = atob(match[2]);
   if (binary.length < 1 || binary.length > MAX_IMAGE_BYTES) throw new Error('validation_failed');
   const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
-  if (match[1].toLowerCase() === 'image/svg+xml') {
+  const mimeType = match[1].toLowerCase();
+  if (!matchesImageSignature(mimeType, bytes)) throw new Error('validation_failed');
+  if (mimeType === 'image/svg+xml') {
     const svg = new TextDecoder().decode(bytes);
     if (/<script\b|<foreignObject\b|javascript:|<!ENTITY/i.test(svg)) throw new Error('validation_failed');
   }
-  return { mimeType: match[1].toLowerCase(), bytes };
+  return { mimeType, bytes };
+}
+
+function matchesImageSignature(mimeType: string, bytes: Uint8Array): boolean {
+  if (mimeType === 'image/png') return bytes.length >= 8
+    && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47
+    && bytes[4] === 0x0d && bytes[5] === 0x0a && bytes[6] === 0x1a && bytes[7] === 0x0a;
+  if (mimeType === 'image/jpeg') return bytes.length >= 3
+    && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+  if (mimeType === 'image/webp') return bytes.length >= 12
+    && bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46
+    && bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50;
+  if (mimeType === 'image/svg+xml') {
+    const text = new TextDecoder().decode(bytes).replace(/^\uFEFF/, '');
+    return /^\s*(?:<\?xml\b[^?]*\?>\s*)?<svg\b/i.test(text);
+  }
+  return false;
 }
 
 async function renderSvgDataImage(bytes: Uint8Array, width: number, height: number): Promise<string> {
   const svg = new TextDecoder().decode(bytes);
   const renderer = new Resvg(svg, {
     fitTo: { mode: 'width', value: width },
-    font: { defaultFontFamily: 'Outfit', loadSystemFonts: true },
+    font: { fontBuffers: [outfitFont], defaultFontFamily: 'Outfit', loadSystemFonts: true },
   });
   rejectExternalImages(renderer.imagesToResolve());
   const png = renderer.render().asPng();
@@ -162,10 +194,6 @@ async function renderSvgDataImage(bytes: Uint8Array, width: number, height: numb
 
 function rejectExternalImages(references: string[]): void {
   if (references.some((reference) => !reference.startsWith('data:image/'))) throw new Error('validation_failed');
-}
-
-function imageDataUrl(image: DataImage): string {
-  return `data:${image.mimeType};base64,${encodeBase64(image.bytes)}`;
 }
 
 function encodeBase64(bytes: Uint8Array): string {

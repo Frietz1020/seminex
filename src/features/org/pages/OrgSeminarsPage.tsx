@@ -101,12 +101,12 @@ function SeminarCard({ seminar, now, ongoing = false }: { seminar: OrgSeminar; n
   );
 }
 
-function DraftCard({ draft }: { draft: SeminarDraft }) {
+function DraftCard({ draft, onDelete }: { draft: SeminarDraft; onDelete: (draft: SeminarDraft) => void }) {
   const readiness = getDraftReadiness(draft);
   return (
     <article className="flex flex-col justify-between gap-space-md rounded-xl border border-border-subtle bg-surface-card p-space-lg shadow-card sm:flex-row sm:items-center">
-      <div className="min-w-0"><div className="flex flex-wrap items-center gap-space-sm"><span className="rounded-md bg-surface-container-high px-2.5 py-1 font-label-sm text-label-sm text-text-secondary">Draft</span><span className="font-caption text-caption text-text-secondary">{readiness.items.filter((item) => item.passed).length} of {readiness.items.length} setup steps complete</span></div><h3 className="mt-space-sm font-title-lg text-title-lg text-on-surface">{draft.details.title || 'Untitled seminar'}</h3><p className="mt-1 font-body-sm text-body-sm text-text-secondary">{readiness.firstBlockingReason || 'Review your seminar details before publishing.'}</p>{draft.details.startsAt && <p className="mt-1 font-caption text-caption text-text-subtle">Proposed date: {dateTime(draft.details.startsAt)}</p>}</div>
-      <Link to={`/org/seminars/${draft.id}/edit`} className={`${actionTonal} shrink-0`}>Continue editing<Icon name="edit" size={16} /></Link>
+      <div className="min-w-0"><div className="flex flex-wrap items-center gap-space-sm"><span className="rounded-md bg-surface-container-high px-2.5 py-1 font-label-sm text-label-sm text-text-secondary">Draft</span><span className="font-caption text-caption text-text-secondary">{readiness.items.filter((item) => item.passed).length} of {readiness.items.length} setup steps complete</span></div><h3 className="mt-space-sm font-title-lg text-title-lg text-on-surface">{draft.details.title || 'Untitled seminar'}</h3><p className="mt-1 font-body-sm text-body-sm text-text-secondary">{draft.deletionRequestedAt ? 'Draft deletion is in progress. Retry deletion to finish cover cleanup.' : readiness.firstBlockingReason || 'Review your seminar details before publishing.'}</p>{draft.details.startsAt && <p className="mt-1 font-caption text-caption text-text-subtle">Proposed date: {dateTime(draft.details.startsAt)}</p>}</div>
+      <div className="flex shrink-0 flex-col gap-space-sm sm:flex-row">{!draft.deletionRequestedAt && <Link to={`/org/seminars/${draft.id}/edit`} className={actionTonal}>Continue editing<Icon name="edit" size={16} /></Link>}<button type="button" onClick={() => onDelete(draft)} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-danger/30 px-4 font-body-sm-medium text-body-sm-medium text-danger hover:bg-danger-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-danger"><Icon name="delete" size={18}/>{draft.deletionRequestedAt ? 'Retry deletion' : 'Delete draft'}</button></div>
     </article>
   );
 }
@@ -119,6 +119,9 @@ export default function OrgSeminarsPage() {
   const [sort, setSort] = useState<Sort>('nearest');
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState(false);
+  const [pendingDraftDelete, setPendingDraftDelete] = useState<SeminarDraft | null>(null);
+  const [deletingDraft, setDeletingDraft] = useState(false);
+  const [deleteError, setDeleteError] = useState(false);
   const query = params.get('q') ?? '';
   const listing = useResource(() => api.listOrgSeminars({
     seminars: { pageSize: 50, search: query },
@@ -130,7 +133,7 @@ export default function OrgSeminarsPage() {
   const draftPage = listing.state.status === 'success' ? listing.state.data.drafts : null;
   const items = useMemo(() => seminarPage ? [...seminarPage.items, ...pageState.seminars] : [], [seminarPage, pageState.seminars]);
   const drafts = useMemo(() => draftPage ? [...draftPage.items, ...pageState.drafts] : [], [draftPage, pageState.drafts]);
-  const searched = useMemo(() => items.filter((item) => matchesQuery(item, query)), [items, query]);
+  const searched = useMemo(() => items.filter((item) => item.publicationStatus !== 'archived' && matchesQuery(item, query)), [items, query]);
   const ongoing = now === null ? [] : searched.filter((item) => getOrgLifecycle(item, now) === 'ongoing').sort((a, b) => a.startsAt.localeCompare(b.startsAt));
   const upcoming = now === null ? [] : searched.filter((item) => getOrgLifecycle(item, now) === 'upcoming').sort((a, b) => a.startsAt.localeCompare(b.startsAt));
   const recentlyFinished = now === null ? [] : searched.filter((item) => isOrgRecentlyFinished(item, now)).sort((a, b) => b.endsAt.localeCompare(a.endsAt));
@@ -209,6 +212,17 @@ export default function OrgSeminarsPage() {
     navigate(`/org/seminars/${result.data.id}/edit`);
   }
 
+  async function deleteDraft() {
+    if (!pendingDraftDelete || deletingDraft) return;
+    setDeletingDraft(true);
+    setDeleteError(false);
+    const result = await api.deleteOrgDraft(pendingDraftDelete.id);
+    setDeletingDraft(false);
+    if (!result.ok) { setDeleteError(true); listing.reload(); return; }
+    setPendingDraftDelete(null);
+    listing.reload();
+  }
+
   return (
     <PageContainer>
       <header className="flex flex-col justify-between gap-space-md md:flex-row md:items-center">
@@ -217,6 +231,7 @@ export default function OrgSeminarsPage() {
       </header>
 
       {createError && <p role="alert" className="rounded-lg border border-danger-soft bg-danger-surface p-space-md text-danger-ink">Could not create a seminar draft. Please try again.</p>}
+      {deleteError && <p role="alert" className="rounded-lg border border-danger-soft bg-danger-surface p-space-md text-danger-ink">Draft deletion could not finish. Retry deletion to complete cover cleanup, or check your connection and try again.</p>}
 
       <section aria-label="Seminar search and filters" className="flex flex-col gap-space-md rounded-xl border border-border-subtle bg-surface-card p-space-md shadow-card">
         <div className="flex flex-col gap-space-md lg:flex-row lg:items-center lg:justify-between">
@@ -247,13 +262,14 @@ export default function OrgSeminarsPage() {
 
         {(filter === 'all' || filter === 'upcoming') && <section className="flex flex-col gap-space-md" aria-labelledby="upcoming-heading"><div className="flex flex-wrap items-center justify-between gap-2"><div className="flex items-center gap-space-sm"><h2 id="upcoming-heading" className="font-title-lg text-title-lg text-on-surface">Upcoming seminars</h2><span className="rounded-full bg-surface-container-high px-2.5 py-1 font-caption text-caption text-text-secondary">{upcoming.length} scheduled</span></div></div>{orderedUpcoming.length ? <div className="grid gap-space-md md:grid-cols-2 xl:grid-cols-3">{orderedUpcoming.map((seminar) => <SeminarCard key={seminar.id} seminar={seminar} now={now} />)}</div> : <StateMessage icon="event_busy" title="No upcoming seminars">Create a draft when you are ready to plan your next session.</StateMessage>}</section>}
 
-        {(filter === 'all' || filter === 'drafts') && <section className="flex flex-col gap-space-md" aria-labelledby="drafts-heading"><div className="flex flex-wrap items-center justify-between gap-2"><div className="flex items-center gap-space-sm"><h2 id="drafts-heading" className="font-title-lg text-title-lg text-on-surface">Drafts</h2><span className="rounded-full bg-surface-container-high px-2.5 py-1 font-caption text-caption text-text-secondary">{visibleDrafts.length} in preparation</span></div><span className="font-caption text-caption text-text-secondary">Not published to the participant catalog</span></div>{visibleDrafts.length ? <div className="grid gap-space-md">{visibleDrafts.map((draft) => <DraftCard key={draft.id} draft={draft} />)}</div> : <StateMessage icon="draft" title="No drafts match your search">Create a seminar to begin a new draft.</StateMessage>}{!pageState.draftsExhausted && (pageState.draftCursor ?? draftPage?.nextCursor) && <button type="button" onClick={() => void loadMoreDrafts()} disabled={pageState.loadingDrafts} className={actionTonal}>{pageState.loadingDrafts ? 'Loading drafts…' : 'Load more drafts'}</button>}</section>}
+        {(filter === 'all' || filter === 'drafts') && <section className="flex flex-col gap-space-md" aria-labelledby="drafts-heading"><div className="flex flex-wrap items-center justify-between gap-2"><div className="flex items-center gap-space-sm"><h2 id="drafts-heading" className="font-title-lg text-title-lg text-on-surface">Drafts</h2><span className="rounded-full bg-surface-container-high px-2.5 py-1 font-caption text-caption text-text-secondary">{visibleDrafts.length} in preparation</span></div><span className="font-caption text-caption text-text-secondary">Not published to the participant catalog</span></div>{visibleDrafts.length ? <div className="grid gap-space-md">{visibleDrafts.map((draft) => <DraftCard key={draft.id} draft={draft} onDelete={setPendingDraftDelete} />)}</div> : <StateMessage icon="draft" title="No drafts match your search">Create a seminar to begin a new draft.</StateMessage>}{!pageState.draftsExhausted && (pageState.draftCursor ?? draftPage?.nextCursor) && <button type="button" onClick={() => void loadMoreDrafts()} disabled={pageState.loadingDrafts} className={actionTonal}>{pageState.loadingDrafts ? 'Loading drafts…' : 'Load more drafts'}</button>}</section>}
 
         {(filter === 'all' || filter === 'recent') && <section className="flex flex-col gap-space-md" aria-labelledby="recent-heading"><div className="flex items-center gap-space-sm"><h2 id="recent-heading" className="font-title-lg text-title-lg text-on-surface">Finished recently</h2><span className="rounded-full bg-surface-container-high px-2.5 py-1 font-caption text-caption text-text-secondary">{recentlyFinished.length}</span></div>{recentlyFinished.length ? <div className="grid gap-space-md md:grid-cols-2 xl:grid-cols-3">{recentlyFinished.map((seminar) => <SeminarCard key={seminar.id} seminar={seminar} now={now} />)}</div> : <StateMessage icon="history" title="No recently finished seminars">Completed seminars are available in History.</StateMessage>}</section>}
 
         {filter === 'all' && cancelled.length > 0 && <section className="flex flex-col gap-space-md" aria-labelledby="cancelled-heading"><h2 id="cancelled-heading" className="font-title-lg text-title-lg text-on-surface">Cancelled seminars</h2><div className="grid gap-space-md md:grid-cols-2 xl:grid-cols-3">{cancelled.map((seminar) => <SeminarCard key={seminar.id} seminar={seminar} now={now} />)}</div></section>}
         {(filter === 'all' || filter === 'ongoing' || filter === 'upcoming' || filter === 'recent') && !pageState.seminarsExhausted && (pageState.seminarCursor ?? seminarPage?.nextCursor) && <button type="button" onClick={() => void loadMoreSeminars()} disabled={pageState.loadingSeminars} className={actionTonal}>{pageState.loadingSeminars ? 'Loading seminars…' : 'Load more seminars'}</button>}
       </div>}
+      {pendingDraftDelete && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4" role="presentation"><section role="alertdialog" aria-modal="true" aria-labelledby="delete-draft-title" aria-describedby="delete-draft-copy" className="w-full max-w-md rounded-2xl bg-surface-card p-space-lg shadow-overlay"><h2 id="delete-draft-title" className="font-title-lg text-title-lg text-on-surface">Delete {pendingDraftDelete.details.title || 'Untitled seminar'}?</h2><p id="delete-draft-copy" className="mt-space-sm font-body-sm text-body-sm text-text-secondary">This permanently removes the unpublished draft and its cover images. It does not affect published seminar records.</p><div className="mt-space-lg flex justify-end gap-space-sm"><button type="button" autoFocus disabled={deletingDraft} onClick={() => setPendingDraftDelete(null)} className={actionTonal}>Keep draft</button><button type="button" disabled={deletingDraft} onClick={() => void deleteDraft()} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-danger px-4 font-body-sm-medium text-body-sm-medium text-white disabled:opacity-60">{deletingDraft ? 'Deleting…' : 'Delete draft'}</button></div></section></div>}
     </PageContainer>
   );
 }

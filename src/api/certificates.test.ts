@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({ getSupabaseClient: vi.fn() }));
 vi.mock('./supabaseClient', () => ({ getSupabaseClient: mocks.getSupabaseClient }));
 
-import { getCertificate, getOrgCertificate, getOrgSeminarCertificates } from './certificates';
+import { getCertificate, getOrgCertificate, getOrgSeminarCertificates, regenerateOrgCertificate } from './certificates';
 
 describe('Supabase certificate adapter', () => {
   beforeEach(() => {
@@ -90,5 +90,36 @@ describe('Supabase certificate adapter', () => {
     expect(await result.data.text()).toContain('%PDF');
     expect(client.from).toHaveBeenCalledWith('certificate_issuances');
     expect(signed).toHaveBeenCalledWith('seminar-1/registration-1.pdf', 60);
+  });
+
+  it('regenerates an issued organization certificate using only its registration ID', async () => {
+    const invoke = vi.fn().mockResolvedValue({ data: { status: 'issued', serial: 'SNX-KEEP-ME' }, error: null });
+    mocks.getSupabaseClient.mockReturnValue({ functions: { invoke } });
+
+    await expect(regenerateOrgCertificate('registration-1')).resolves.toEqual({
+      ok: true,
+      data: { serial: 'SNX-KEEP-ME' },
+    });
+    expect(invoke).toHaveBeenCalledWith('regenerate-certificate', { body: { registrationId: 'registration-1' } });
+  });
+
+  it('maps regeneration authorization and conflict errors from the Edge Function', async () => {
+    const context = new Response(JSON.stringify({ code: 'conflict' }), {
+      status: 409,
+      headers: { 'Content-Type': 'application/json' },
+    });
+    mocks.getSupabaseClient.mockReturnValue({ functions: {
+      invoke: vi.fn().mockResolvedValue({ data: null, error: { message: 'Edge Function returned a non-2xx status code', context } }),
+    } });
+
+    await expect(regenerateOrgCertificate('registration-1')).resolves.toEqual({ ok: false, error: { code: 'conflict' } });
+  });
+
+  it('rejects malformed regeneration responses', async () => {
+    mocks.getSupabaseClient.mockReturnValue({ functions: {
+      invoke: vi.fn().mockResolvedValue({ data: { status: 'issued' }, error: null }),
+    } });
+
+    await expect(regenerateOrgCertificate('registration-1')).resolves.toEqual({ ok: false, error: { code: 'network' } });
   });
 });

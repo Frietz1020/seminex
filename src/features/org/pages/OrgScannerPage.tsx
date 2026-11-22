@@ -6,6 +6,7 @@ import { PageContainer } from '../../../components/shell/PageContainer';
 import { orgActionPrimary as actionPrimary, orgActionTonal as actionTonal } from '../orgActionStyles';
 import { Icon } from '../../../components/ui/Icon';
 import { Avatar } from '../../../components/ui/Avatar';
+import { Dialog } from '../../../components/ui/Dialog';
 import { LoadingRegion, RetryButton, Skeleton, StateMessage } from '../../../components/ui/StateMessage';
 import { useOnlineStatus } from '../../../hooks/useOnlineStatus';
 import { useNow } from '../../../hooks/useNow';
@@ -15,6 +16,32 @@ import { parseAttendanceChallengePayload } from '../../seminars/AttendanceQr';
 
 interface BarcodeDetectorLike { detect(source: CanvasImageSource): Promise<Array<{ rawValue: string }>>; }
 interface BarcodeDetectorConstructor { new (options: { formats: string[] }): BarcodeDetectorLike; }
+
+interface ScanFeedback {
+  kind: 'success' | 'error';
+  title: string;
+  message: string;
+}
+
+function scanFailureMessage(code: string, method: 'qr' | 'manual', scanKind: 'time_in' | 'time_out' | null): string {
+  if (code === 'attendance_already_recorded' && method === 'qr') {
+    return `${scanKind === 'time_out' ? 'Time-Out' : 'Time-In'} is already recorded for this attendee.`;
+  }
+  if (code === 'not_found') return 'This student is not on the active registration list for this seminar.';
+  if (code === 'registration_inactive') return 'This registration is no longer active. Check the seminar roster before scanning again.';
+  if (code === 'challenge_expired') return 'QR challenge expired. Ask the attendee to refresh the live QR, then scan the new code.';
+  if (code === 'outside_scan_window') return 'Attendance is outside the scan window. Check the seminar time and attendance status.';
+  if (code === 'not_available' && method === 'qr') return 'This QR has expired or attendance is outside the scan window. Ask the attendee to refresh the live QR and check the seminar time.';
+  if (code === 'wrong_attendance_step' && method === 'qr') return 'The selected mode does not match this attendee’s next attendance step. Check their attendance status, then choose Time-In or Time-Out.';
+  if (code === 'attendance_already_complete') return 'This attendee already has both Time-In and Time-Out recorded.';
+  if (code === 'challenge_replayed') return 'This QR challenge was already used. Ask the attendee to refresh their live QR before the next scan.';
+  if (code === 'idempotency_conflict') return 'This scan request conflicts with an earlier request. Refresh the attendee QR and try again.';
+  if (code === 'forbidden') return 'Your organization access does not allow this attendance scan. Ask an organization administrator to check your membership.';
+  if (code === 'network') return 'The scan response could not be confirmed because the connection failed. Retry the same scan while the QR is live.';
+  if (code === 'server_error') return 'The attendance service could not process this scan. Check the attendance ledger, then try again with a fresh QR.';
+  if (code === 'conflict' && method === 'qr') return 'The attendance scan conflicted with the current record. Refresh the attendee QR and check the ledger.';
+  return 'The attendance entry could not be saved. Check the seminar status and try again.';
+}
 
 function readStudentCode(value: string) {
   const studentId = value.trim();
@@ -30,7 +57,9 @@ export default function OrgScannerPage() {
   const roster = useResource(() => api.listOrgRoster(id), `scanner-roster-${id}`, (items) => items.length === 0);
   const ledger = useResource(() => api.listLedger(id), `scanner-ledger-${id}`, (items) => items.length === 0);
   const [code, setCode] = useState('');
+  const [scanKind, setScanKind] = useState<'time_in' | 'time_out' | null>(null);
   const [reason, setReason] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<ScanFeedback | null>(null);
   const [manualReason, setManualReason] = useState('');
   const [working, setWorking] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
@@ -38,41 +67,67 @@ export default function OrgScannerPage() {
   const [lastScannedStudent, setLastScannedStudent] = useState<ScannedStudentIdentity | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const lastCameraCode = useRef('');
+  const lastCameraPayload = useRef('');
+  const emptyCameraDetections = useRef(0);
+  const suppressedCameraScans = useRef(new Set<string>());
   const cameraProcessing = useRef(false);
   const processCodeRef = useRef<(value: string) => void>(() => undefined);
   const pendingScan = useRef<{ fingerprint: string; idempotencyKey: string } | null>(null);
+  const feedbackOpen = useRef(false);
+  const operationInFlight = useRef(false);
+
+  function showFeedback(next: ScanFeedback) {
+    feedbackOpen.current = true;
+    setFeedback(next);
+  }
+
+  function closeFeedback() {
+    feedbackOpen.current = false;
+    setFeedback(null);
+  }
 
   const processCode = useCallback(async (raw: string, method: 'qr' | 'manual' = 'qr') => {
-    if (working) return;
+    if (working || operationInFlight.current || feedbackOpen.current) return;
     if (!online) { setReason('No connection. Attendance scanning is unavailable offline.'); return; }
     const challenge = method === 'qr' ? parseAttendanceChallengePayload(raw) : null;
     const studentId = method === 'manual' ? readStudentCode(raw) : '';
     if (method === 'qr' && !challenge) { setReason('This is not a live Seminex attendance QR. Ask the student to refresh it.'); return; }
+    if (method === 'qr' && !scanKind) { setReason('Choose Time-In or Time-Out before scanning an attendance QR.'); return; }
     if (method === 'manual' && !studentId) { setReason('Enter the 9-digit Student ID for a manual attendance entry.'); return; }
-    if (method === 'manual' && manualReason.trim().length < 5) { setReason('Add a short reason before recording a manual attendance entry.'); return; }
-    const fingerprint = `${id}|${challenge ?? studentId}|${method}|${method === 'manual' ? manualReason.trim() : ''}`;
+    const fingerprint = `${id}|${challenge ?? studentId}|${method}|${method === 'qr' ? scanKind : manualReason.trim()}`;
     const idempotencyKey = pendingScan.current?.fingerprint === fingerprint
       ? pendingScan.current.idempotencyKey
       : crypto.randomUUID();
     setWorking(true);
+    operationInFlight.current = true;
     const result = challenge
-      ? await api.recordOrgChallengeScan({ seminarId: id, challenge, idempotencyKey })
-      : await api.recordOrgScan({ seminarId: id, studentId, method: 'manual', idempotencyKey, reason: manualReason.trim() });
+      ? await api.recordOrgChallengeScan({ seminarId: id, challenge, idempotencyKey, kind: scanKind as 'time_in' | 'time_out' })
+      : await api.recordOrgScan({ seminarId: id, studentId, method: 'manual', idempotencyKey, reason: manualReason.trim() || undefined });
     setWorking(false);
+    operationInFlight.current = false;
     if (!result.ok) {
       pendingScan.current = result.error.code === 'network' ? { fingerprint, idempotencyKey } : null;
-      setReason(result.error.code === 'not_found'
-        ? 'This student is not on the active registration list for this seminar.'
-        : 'The attendance entry could not be saved. Check the seminar status and try again.');
+      if (method === 'qr') suppressedCameraScans.current.add(fingerprint);
+      showFeedback({
+        kind: 'error',
+        title: 'Attendance scan needs attention',
+        message: scanFailureMessage(result.error.code, method, scanKind),
+      });
       return;
     }
     pendingScan.current = null;
     setLastScannedStudent(result.data.student);
-    setReason(`${result.data.student.firstName} ${result.data.student.lastName} · ${result.data.entry.kind === 'time_in' ? 'Time-in' : 'Time-out'} recorded.`);
+    if (method === 'qr') suppressedCameraScans.current.add(fingerprint);
+    const modeLabel = result.data.entry.kind === 'time_in' ? 'Time-In' : 'Time-Out';
+    showFeedback({
+      kind: 'success',
+      title: 'Attendance recorded',
+      message: `${method === 'manual' ? 'Manual ' : ''}${modeLabel} recorded successfully.`,
+    });
     setCode('');
     setManualReason('');
     ledger.reload();
-  }, [working, ledger.reload, id, online, manualReason]);
+  }, [working, ledger.reload, id, online, manualReason, scanKind]);
 
   useEffect(() => { processCodeRef.current = (value) => { void processCode(value, 'qr'); }; }, [processCode]);
 
@@ -86,6 +141,7 @@ export default function OrgScannerPage() {
     let active = true;
     const timer = window.setInterval(() => {
       if (!active || cameraProcessing.current || video.readyState < 2) return;
+      if (feedbackOpen.current || operationInFlight.current) return;
       cameraProcessing.current = true;
       const detect = detector
         ? detector.detect(video).then((codes) => codes[0]?.rawValue)
@@ -100,15 +156,33 @@ export default function OrgScannerPage() {
             resolve(jsQR(frame.data, frame.width, frame.height, { inversionAttempts: 'dontInvert' })?.data);
           });
       void detect.then((value) => {
-        if (value && value !== lastCameraCode.current) {
-          lastCameraCode.current = value;
+        if (!value) {
+          emptyCameraDetections.current += 1;
+          lastCameraCode.current = '';
+          if (emptyCameraDetections.current >= 3) {
+            lastCameraPayload.current = '';
+            suppressedCameraScans.current.clear();
+          }
+          return;
+        }
+
+        emptyCameraDetections.current = 0;
+        const payloadKey = `${id}|${parseAttendanceChallengePayload(value) ?? value}`;
+        if (payloadKey !== lastCameraPayload.current) {
+          lastCameraPayload.current = payloadKey;
+          lastCameraCode.current = '';
+          suppressedCameraScans.current.clear();
+        }
+        const scanFingerprint = `${payloadKey}|qr|${scanKind}`;
+        if (scanFingerprint !== lastCameraCode.current && !suppressedCameraScans.current.has(scanFingerprint)) {
+          lastCameraCode.current = scanFingerprint;
           processCodeRef.current(value);
-          window.setTimeout(() => { lastCameraCode.current = ''; }, 2500);
+          window.setTimeout(() => { if (lastCameraCode.current === scanFingerprint) lastCameraCode.current = ''; }, 2500);
         }
       }).catch(() => setCameraError('Could not read the QR code. Adjust the camera and try again.')).finally(() => { cameraProcessing.current = false; });
     }, 350);
     return () => { active = false; window.clearInterval(timer); };
-  }, [cameraStream]);
+  }, [cameraStream, id, scanKind]);
 
   useEffect(() => () => cameraStream?.getTracks().forEach((track) => track.stop()), [cameraStream]);
 
@@ -153,18 +227,31 @@ export default function OrgScannerPage() {
       <div className="grid items-start gap-space-lg lg:grid-cols-[1.2fr_0.8fr]">
         <section className="flex flex-col gap-space-md rounded-xl border border-border-subtle bg-surface-card p-space-lg shadow-card" aria-labelledby="scan-title">
           <div className="flex items-center justify-between gap-3"><div><h2 id="scan-title" className="font-title-lg text-title-lg text-on-surface">Scan attendee</h2><p className="mt-1 font-body-sm text-body-sm text-text-secondary">Aim the camera at the student’s Seminex attendance QR.</p></div><span className={`rounded-full px-3 py-1 font-caption text-caption ${online ? 'bg-status-available-container text-status-available' : 'bg-status-ongoing-container text-status-ongoing'}`}>{online ? 'Online' : 'Offline'}</span></div>
+          <fieldset disabled={working} className="min-w-0">
+            <legend className="mb-2 font-body-sm-medium text-body-sm-medium text-on-surface">Scan mode</legend>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              {([['time_in', 'Time-In'], ['time_out', 'Time-Out']] as const).map(([value, label]) => (
+                <label key={value} className={`flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border px-4 font-body-sm-medium text-body-sm-medium focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-primary disabled:cursor-not-allowed ${scanKind === value ? 'border-primary bg-primary-container/10 text-primary' : 'border-border-subtle bg-surface-card text-on-surface'} ${working ? 'cursor-not-allowed opacity-60' : ''}`}>
+                  <input type="radio" name="scan-mode" value={value} checked={scanKind === value} onChange={() => setScanKind(value)} className="h-5 w-5 accent-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary" />
+                  {label}
+                </label>
+              ))}
+            </div>
+            {scanKind && <p className="mt-2 font-caption text-caption text-text-secondary">Selected QR mode: {scanKind === 'time_in' ? 'Time-In' : 'Time-Out'}</p>}
+          </fieldset>
           <div className="relative isolate aspect-video overflow-hidden rounded-2xl border border-outline-variant/60 bg-charcoal-900 shadow-inner">
-            {cameraStream ? <video ref={videoRef} autoPlay playsInline muted className="h-full w-full object-cover" /> : <div className="flex h-full min-h-52 flex-col items-center justify-center gap-space-sm text-on-primary"><Icon name="qr_code_scanner" size={32} /><p className="font-body-sm text-body-sm">Camera preview</p><button type="button" disabled={!online} onClick={() => void startCamera()} className="min-h-11 rounded-lg bg-surface-card px-4 font-body-sm-medium text-body-sm-medium text-primary disabled:opacity-50">Start camera</button></div>}
+            {cameraStream ? <video ref={videoRef} autoPlay playsInline muted className="h-full w-full object-cover" /> : <div className="flex h-full min-h-52 flex-col items-center justify-center gap-space-sm text-on-primary"><Icon name="qr_code_scanner" size={32} /><p className="font-body-sm text-body-sm">Camera preview</p><button type="button" disabled={!online || !scanKind || feedback !== null || working} onClick={() => void startCamera()} className="min-h-11 rounded-lg bg-surface-card px-4 font-body-sm-medium text-body-sm-medium text-primary disabled:opacity-50">Start camera</button></div>}
             {cameraStream && <div aria-hidden="true" className="pointer-events-none absolute inset-0 grid place-items-center"><div className="relative aspect-square w-[min(58%,18rem)] rounded-2xl border-2 border-white/90 shadow-[0_0_0_999px_rgba(0,0,0,0.28)]"><span className="absolute -left-0.5 -top-0.5 h-7 w-7 rounded-tl-xl border-l-4 border-t-4 border-secondary" /><span className="absolute -right-0.5 -top-0.5 h-7 w-7 rounded-tr-xl border-r-4 border-t-4 border-secondary" /><span className="absolute -bottom-0.5 -left-0.5 h-7 w-7 rounded-bl-xl border-b-4 border-l-4 border-secondary" /><span className="absolute -bottom-0.5 -right-0.5 h-7 w-7 rounded-br-xl border-b-4 border-r-4 border-secondary" /></div></div>}
           </div>
           {cameraStream && <button type="button" onClick={() => { cameraStream.getTracks().forEach((track) => track.stop()); setCameraStream(null); }} className={actionTonal}>Stop camera</button>}
           {cameraError && <p role="status" className="rounded-lg bg-surface-container-low p-space-sm font-caption text-caption text-text-secondary">{cameraError}</p>}
           <form onSubmit={(event) => { event.preventDefault(); void processCode(code, 'manual'); }} className="flex flex-col gap-space-sm">
             <label className="sr-only" htmlFor="attendee-code">Manually enter Student ID</label>
-            <div className="flex flex-col gap-space-sm sm:flex-row"><input id="attendee-code" autoComplete="off" autoCapitalize="off" value={code} onChange={(event) => setCode(event.target.value)} placeholder="Enter Student ID manually" disabled={!online} className="h-12 min-w-0 flex-1 rounded-lg border border-border-subtle bg-surface-light px-4 font-body-base text-body-base outline-none focus:border-primary disabled:opacity-50" /><button type="submit" disabled={!online || working || !code.trim() || manualReason.trim().length < 5} className={actionPrimary}>{working ? 'Recording…' : 'Record manual entry'}</button></div>
-            <label htmlFor="manual-reason" className="font-caption text-caption text-text-secondary">Reason for manual entry</label><input id="manual-reason" value={manualReason} onChange={(event) => setManualReason(event.target.value)} minLength={5} required disabled={!online} placeholder="For example, attendee QR code was damaged" className="h-11 w-full rounded-lg border border-border-subtle bg-surface-light px-3.5 font-body-sm text-body-sm outline-none focus:border-primary disabled:opacity-50" />
+            <input id="attendee-code" autoComplete="off" autoCapitalize="off" value={code} onChange={(event) => setCode(event.target.value)} placeholder="Enter Student ID manually" disabled={!online || feedback !== null || working} className="h-12 w-full rounded-lg border border-border-subtle bg-surface-light px-4 font-body-base text-body-base outline-none focus:border-primary disabled:opacity-50" />
+            <label htmlFor="manual-reason" className="font-caption text-caption text-text-secondary">Reason (optional)</label><input id="manual-reason" value={manualReason} onChange={(event) => setManualReason(event.target.value)} maxLength={500} disabled={!online || feedback !== null || working} placeholder="For example, attendee QR code was damaged" className="h-11 w-full rounded-lg border border-border-subtle bg-surface-light px-3.5 font-body-sm text-body-sm outline-none focus:border-primary disabled:opacity-50" />
+            <button type="submit" disabled={!online || working || feedback !== null || !code.trim()} className={`${actionPrimary} w-full sm:w-auto sm:self-start`}>{working ? 'Recording…' : 'Record manual entry'}</button>
           </form>
-          <p className="font-caption text-caption text-text-secondary">Camera scans require a live, one-use QR challenge. Manual Student ID entries require a reason and are preserved in the attendance ledger.</p>
+          <p className="font-caption text-caption text-text-secondary">Use the attendee’s live QR and choose Time-In or Time-Out. Manual Student ID entries remain available independently; an optional reason is preserved in the attendance ledger.</p>
           {reason && <p role="status" aria-live="polite" className="rounded-lg border border-border-subtle bg-surface-container-low p-space-md font-body-sm-medium text-body-sm-medium text-on-surface">{reason}</p>}
           {lastScannedStudent && <article className="flex items-center gap-space-md rounded-xl border border-outline-variant/50 bg-surface-card p-space-md" aria-label="Scanned student record"><Avatar src={lastScannedStudent.avatarUrl} firstName={lastScannedStudent.firstName} lastName={lastScannedStudent.lastName} size="xl" className="h-16 w-16 text-title-lg" /><div><h3 className="font-title-md text-title-md text-on-surface">{lastScannedStudent.firstName} {lastScannedStudent.middleInitial ? `${lastScannedStudent.middleInitial}. ` : ''}{lastScannedStudent.lastName}</h3><p className="font-body-sm text-body-sm text-text-secondary">{lastScannedStudent.program ?? 'Program not provided'} · Year {lastScannedStudent.yearLevel ?? 'not provided'} · Block {lastScannedStudent.block ?? 'not provided'}</p><p className="font-caption text-caption text-text-secondary">{lastScannedStudent.studentId}</p></div></article>}
         </section>
@@ -174,6 +261,9 @@ export default function OrgScannerPage() {
           <section className="rounded-xl border border-border-subtle bg-surface-card p-space-lg shadow-card"><h2 className="font-title-lg text-title-lg text-on-surface">Recent scans</h2>{latestRows.length ? <ul className="mt-space-sm divide-y divide-border-subtle">{latestRows.map((entry) => <li key={entry.id} className="flex items-center justify-between gap-space-sm py-space-sm"><div><p className="font-body-sm-medium text-body-sm-medium text-on-surface">{entry.studentId}</p><p className="font-caption text-caption capitalize text-text-secondary">{entry.kind.replace('_', ' ')} · {new Intl.DateTimeFormat(undefined, { timeStyle: 'short' }).format(new Date(entry.at))}</p></div><span className="font-caption text-caption text-text-subtle">Recorded</span></li>)}</ul> : <p className="mt-space-sm font-body-sm text-body-sm text-text-secondary">No scans recorded for this seminar yet.</p>}</section>
         </div>
       </div>
+      <Dialog open={feedback !== null} onClose={closeFeedback} title={feedback?.title ?? 'Attendance result'}>
+        {feedback && <p role={feedback.kind === 'success' ? 'status' : 'alert'} className="mt-space-md rounded-lg border border-border-subtle bg-surface-container-low p-space-md font-body-sm-medium text-body-sm-medium text-on-surface">{feedback.message}</p>}
+      </Dialog>
     </PageContainer>
   );
 }

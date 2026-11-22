@@ -18,9 +18,17 @@ function nullableString(row: Row, key: string): string | undefined {
 }
 
 function apiError(error: DbError): ApiErrorCode {
-  const message = error.message.toLowerCase();
-  const codes: ApiErrorCode[] = ['validation_failed', 'conflict', 'rate_limited', 'not_available', 'not_found', 'forbidden', 'session_expired', 'network'];
-  return codes.find((code) => message.includes(code)) ?? (error.code === '42501' ? 'forbidden' : 'network');
+  const message = error.message.trim().toLowerCase();
+  if (error.code === '42501') return 'forbidden';
+  if (error.code?.startsWith('08')) return 'network';
+  const codes: ApiErrorCode[] = [
+    'validation_failed', 'conflict', 'rate_limited', 'invalid_credentials', 'student_id_taken',
+    'session_expired', 'not_found', 'seminar_full', 'not_available', 'forbidden', 'configuration_error',
+    'attendance_already_recorded', 'attendance_qr_expired',
+    'challenge_expired', 'outside_scan_window', 'wrong_attendance_step', 'attendance_already_complete',
+    'challenge_replayed', 'idempotency_conflict', 'registration_inactive', 'server_error',
+  ];
+  return codes.find((code) => message === code) ?? 'server_error';
 }
 
 async function functionErrorCode(error: { message: string; context?: unknown }): Promise<ApiErrorCode> {
@@ -241,6 +249,7 @@ export async function recordOrgChallengeScan(input: RecordOrgChallengeScanInput)
       p_seminar_id: input.seminarId,
       p_challenge: input.challenge,
       p_idempotency_key: input.idempotencyKey,
+      p_kind: input.kind,
     });
     if (error) return failure(apiError(error));
     if (!isRow(data) || !isRow(data.entry) || !isRow(data.student)) return failure('network');

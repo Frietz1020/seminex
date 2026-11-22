@@ -5,8 +5,9 @@ import { actionPrimary, actionTonal } from '../ui/actionStyles';
 import { useNow } from '../../hooks/useNow';
 import { useResource } from '../../hooks/useResource';
 import { useOnlineStatus } from '../../hooks/useOnlineStatus';
+import { getConfirmationWindow } from '../../features/seminars/confirmationWindow';
 
-/** Prompts confirmed participants at the configured one-hour point while the app is open. */
+/** Prompts confirmed participants at the one-hour point, or immediately after a late signup. */
 export function AttendancePrompt() {
   const now = useNow(1000);
   const online = useOnlineStatus();
@@ -27,7 +28,20 @@ export function AttendancePrompt() {
     };
   }, [seminars.reload]);
   const due = useMemo(() => seminars.state.status === 'success'
-    ? seminars.state.data.find(({ seminar, registration }) => Boolean(now !== null && seminar.id !== dismissedId && registration && registration.status !== 'released' && registration.status !== 'cancelled' && !registration.attendanceAckAt && registration.confirmedAt && now >= Date.parse(seminar.startsAt) - 60 * 60_000)) ?? null
+    ? seminars.state.data.find(({ seminar, registration }) => {
+      if (now === null || seminar.id === dismissedId || !registration
+        || registration.status === 'released' || registration.status === 'cancelled'
+        || registration.attendanceAckAt || !registration.confirmedAt) return false;
+      const startsAt = Date.parse(seminar.startsAt);
+      const confirmedAt = Date.parse(registration.confirmedAt);
+      const { closesAt } = getConfirmationWindow(
+        seminar.startsAt,
+        seminar.confirmationOpensMinutesBefore,
+        seminar.confirmationClosesMinutesBefore,
+      );
+      const lateSignup = Number.isFinite(confirmedAt) && confirmedAt >= closesAt;
+      return now >= startsAt - 60 * 60_000 || lateSignup;
+    }) ?? null
     : null, [seminars.state, now, dismissedId]);
 
   async function answer(attending: boolean) {

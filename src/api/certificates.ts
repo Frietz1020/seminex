@@ -74,7 +74,17 @@ function certificateTemplate(value: unknown): CertificateTemplate | null {
   if (![box.x, box.y, box.width, box.height, box.fontSize].every((part) => typeof part === 'number' && Number.isFinite(part))
     || typeof box.fontFamily !== 'string' || (box.fontWeight !== 400 && box.fontWeight !== 700)
     || !['left', 'center', 'right'].includes(String(box.align)) || typeof box.color !== 'string') return null;
-  return value as unknown as CertificateTemplate;
+  const saved = { ...value };
+  delete saved.signatureBox;
+  delete saved.signatureBoxes;
+  const safeNameBox = {
+    ...box,
+    italic: box.italic === true,
+    underline: box.underline === true,
+    opacity: Number.isInteger(box.opacity) && Number(box.opacity) >= 0 && Number(box.opacity) <= 100 ? Number(box.opacity) : 100,
+    textTransform: ['sentence', 'lowercase', 'uppercase', 'capitalize'].includes(String(box.textTransform)) ? box.textTransform : 'sentence',
+  };
+  return { ...saved, nameBox: safeNameBox } as unknown as CertificateTemplate;
 }
 
 function certificateRecord(value: unknown): CertificateRecord | null {
@@ -123,6 +133,21 @@ export async function getOrgCertificate(seminarId: string, registrationId: strin
     if (error) return failure(apiError(error));
     if (!isRow(data) || data.status !== 'issued' || typeof data.object_path !== 'string') return failure('not_found');
     return await downloadPdf(supabase, data.object_path);
+  } catch {
+    return failure('network');
+  }
+}
+
+export async function regenerateOrgCertificate(registrationId: string): Promise<ApiResult<{ serial: string }>> {
+  const supabase = getSupabaseClient();
+  if (!supabase) return failure('configuration_error');
+  try {
+    const { data, error } = await supabase.functions.invoke('regenerate-certificate', {
+      body: { registrationId },
+    });
+    if (error) return failure(await functionErrorCode(error));
+    if (!isRow(data) || data.status !== 'issued' || typeof data.serial !== 'string') return failure('network');
+    return { ok: true, data: { serial: data.serial } };
   } catch {
     return failure('network');
   }
