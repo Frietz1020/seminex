@@ -104,7 +104,18 @@ select ok(exists (
     and qual like '%published_seminar_id%'
 ), 'delete policy requires active organization officer and unpublished draft');
 select is((select count(*)::integer from pg_policies where schemaname = 'storage' and tablename = 'objects' and cmd = 'UPDATE' and with_check like '%seminar-covers%'), 0, 'cover objects cannot be overwritten through Storage update');
-select is((select count(*)::integer from pg_policies where schemaname = 'storage' and tablename = 'objects' and cmd = 'SELECT' and qual like '%seminar-covers%'), 0, 'public cover reads use only the public bucket behavior');
+select ok(exists (
+  select 1 from pg_policies
+  where schemaname = 'storage' and tablename = 'objects'
+    and policyname = 'Organization officers list their draft seminar covers'
+    and cmd = 'SELECT' and roles @> array['authenticated']::name[]
+    and qual like '%seminar-covers%'
+    and qual like '%organization_memberships%'
+    and qual like '%status%'
+    and qual like '%org_member%'
+    and qual like '%seminar_drafts%'
+    and qual like '%published_seminar_id%'
+), 'draft cover listing is restricted to active organization officers');
 
 select * from finish();
 rollback;

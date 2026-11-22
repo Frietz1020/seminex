@@ -35,7 +35,7 @@ vi.mock('./evaluations', () => ({
   submitEvaluation: vi.fn(),
   getOrgSeminarEvaluation: vi.fn(),
 }));
-vi.mock('./certificates', () => ({ getCertificate: vi.fn(), getOrgSeminarCertificates: vi.fn(), getOrgCertificate: vi.fn() }));
+vi.mock('./certificates', () => ({ getCertificate: vi.fn(), getOrgSeminarCertificates: vi.fn(), getOrgCertificate: vi.fn(), regenerateOrgCertificate: vi.fn() }));
 vi.mock('./adviser', () => ({
   listAdviserOrgRequests: vi.fn(),
   listAdviserOrgMembers: vi.fn(),
