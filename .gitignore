@@ -22,6 +22,7 @@ coverage/
 # Supabase CLI runtime and cache files
 .supabase-home/
 supabase/.temp/
+/.supabase-home-attendance/
 
 # Local database exports can contain production or student data.
 /backups/
