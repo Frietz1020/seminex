@@ -4,6 +4,7 @@ node_modules
 # Local-only archive of files removed from the active project.
 /redundant/
 /SecureBackups/
+/docs/
 
 # Build output
 dist
