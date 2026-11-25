@@ -1,5 +1,6 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
-import { renderCertificatePdf } from './render_certificate.ts';
+import { CertificateValidationError, renderCertificatePdf } from './render_certificate.ts';
+import { certificateFailureEvent, parseIssueCertificateRequest } from './request.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -37,10 +38,6 @@ function errorStatus(code: ApiCode): number {
   return 502;
 }
 
-function validUuid(value: unknown): value is string {
-  return typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
-}
-
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (request.method !== 'POST') return jsonResponse({ code: 'validation_failed' }, 405);
@@ -64,29 +61,35 @@ Deno.serve(async (request) => {
   try {
     body = await request.json();
   } catch {
+    console.error('Certificate issuance failed.', certificateFailureEvent('request_json', 'validation_failed'));
     return jsonResponse({ code: 'validation_failed' }, 400);
   }
-  if (!isObject(body) || !validUuid(body.seminarId) || Object.keys(body).some((key) => key !== 'seminarId')) {
+  const issueRequest = parseIssueCertificateRequest(body);
+  if (!issueRequest) {
+    console.error('Certificate issuance failed.', certificateFailureEvent('request_shape', 'validation_failed'));
     return jsonResponse({ code: 'validation_failed' }, 400);
   }
 
   const { data: generationInput, error: inputError } = await sessionClient.rpc('get_certificate_generation_input', {
-    p_seminar_id: body.seminarId,
+    p_seminar_id: issueRequest.seminarId,
   });
   if (inputError) {
     const code = errorCode(inputError.message);
+    console.error('Certificate issuance failed.', certificateFailureEvent('generation_input', code, code === 'validation_failed' ? 'database_rejected' : undefined));
     return jsonResponse({ code }, errorStatus(code));
   }
   if (!isObject(generationInput) || typeof generationInput.registrationId !== 'string'
     || typeof generationInput.serial !== 'string' || typeof generationInput.status !== 'string'
     || !isObject(generationInput.template) || typeof generationInput.studentName !== 'string'
     || typeof generationInput.seminarTitle !== 'string') {
+    console.error('Certificate issuance failed.', certificateFailureEvent('generation_input', 'network', 'unclassified'));
     return jsonResponse({ code: 'network' }, 502);
   }
   if (generationInput.status === 'issued') {
     return jsonResponse({ status: 'issued', serial: generationInput.serial }, 200);
   }
-  if (generationInput.status !== 'pending' || !validUuid(generationInput.registrationId)) {
+  if (generationInput.status !== 'pending' || typeof generationInput.registrationId !== 'string'
+    || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(generationInput.registrationId)) {
     return jsonResponse({ code: 'not_available' }, 409);
   }
 
@@ -100,10 +103,12 @@ Deno.serve(async (request) => {
     });
   } catch (error) {
     const code = error instanceof Error && error.message.includes('validation_failed') ? 'validation_failed' : 'network';
+    const reason = error instanceof CertificateValidationError ? error.reason : undefined;
+    console.error('Certificate issuance failed.', certificateFailureEvent('render', code, reason));
     return jsonResponse({ code }, errorStatus(code));
   }
 
-  const objectPath = `${body.seminarId}/${generationInput.registrationId}.pdf`;
+  const objectPath = `${issueRequest.seminarId}/${generationInput.registrationId.toLowerCase()}.pdf`;
   const serviceClient = createClient(projectUrl, serviceRoleKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
@@ -113,7 +118,7 @@ Deno.serve(async (request) => {
     upsert: true,
   });
   if (uploadError) {
-    console.error('Certificate PDF upload failed.', uploadError.message);
+    console.error('Certificate issuance failed.', certificateFailureEvent('storage_upload', 'network'));
     return jsonResponse({ code: 'network' }, 502);
   }
 
@@ -123,7 +128,7 @@ Deno.serve(async (request) => {
   });
   if (finalizeError) {
     const { data: currentIssuance, error: currentError } = await sessionClient.rpc('get_my_certificate', {
-      p_seminar_id: body.seminarId,
+      p_seminar_id: issueRequest.seminarId,
     });
     if (!currentError && isObject(currentIssuance) && currentIssuance.status === 'issued'
       && currentIssuance.object_path === objectPath) {
@@ -131,12 +136,14 @@ Deno.serve(async (request) => {
     }
     if (!currentError && isObject(currentIssuance) && currentIssuance.status === 'pending') {
       const { error: cleanupError } = await serviceClient.storage.from('certificates').remove([objectPath]);
-      if (cleanupError) console.error('Pending certificate object cleanup failed.', cleanupError.message);
+      if (cleanupError) console.error('Certificate issuance cleanup failed.', certificateFailureEvent('storage_upload', 'network'));
     }
     const code = errorCode(finalizeError.message);
+    console.error('Certificate issuance failed.', certificateFailureEvent('finalize', code, code === 'validation_failed' ? 'database_rejected' : undefined));
     return jsonResponse({ code }, errorStatus(code));
   }
   if (!isObject(finalized) || finalized.status !== 'issued' || finalized.object_path !== objectPath) {
+    console.error('Certificate issuance failed.', certificateFailureEvent('finalize', 'network', 'unclassified'));
     return jsonResponse({ code: 'network' }, 502);
   }
 

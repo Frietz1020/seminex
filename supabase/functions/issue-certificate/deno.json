@@ -1,6 +1,7 @@
 {
   "nodeModulesDir": "auto",
   "imports": {
+    "@jsquash/webp/decode": "npm:@jsquash/webp@1.5.0/decode.js",
     "jpeg-js": "npm:jpeg-js@0.4.4",
     "pngjs": "npm:pngjs@7.0.0"
   },

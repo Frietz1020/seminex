@@ -5,11 +5,11 @@ verify_jwt = true
 
 [functions.issue-certificate]
 verify_jwt = true
-static_files = ["./functions/issue-certificate/resvg.wasm", "./functions/issue-certificate/fonts/Outfit-Variable.ttf"]
+static_files = ["./functions/issue-certificate/resvg.wasm", "./functions/issue-certificate/webp_dec.wasm", "./functions/issue-certificate/fonts/Outfit-Variable.ttf"]
 
 [functions.regenerate-certificate]
 verify_jwt = true
-static_files = ["./functions/issue-certificate/resvg.wasm", "./functions/issue-certificate/fonts/Outfit-Variable.ttf"]
+static_files = ["./functions/issue-certificate/resvg.wasm", "./functions/issue-certificate/webp_dec.wasm", "./functions/issue-certificate/fonts/Outfit-Variable.ttf"]
 
 [api]
 enabled = true

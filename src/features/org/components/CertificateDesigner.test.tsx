@@ -21,6 +21,27 @@ function renderDesigner(value: CertificateTemplate | null = certificate) {
 }
 
 describe('certificate designer', () => {
+  it('limits custom dimensions to the renderer contract and reports the pair atomically', () => {
+    const updateCanvasSize = vi.fn();
+    render(<CertificateDesigner certificate={certificate} qrValue="preview" onChangeBackground={vi.fn()} onUpdateCanvasSize={updateCanvasSize} onUpdateField={vi.fn()} onUpdateGeometry={vi.fn()} onUpdateQrCodeGeometry={vi.fn()} onReset={vi.fn()} />);
+
+    const width = screen.getByRole('spinbutton', { name: 'Canvas width (px)' });
+    fireEvent.change(width, { target: { value: '20000' } });
+    fireEvent.blur(width);
+
+    expect(updateCanvasSize).toHaveBeenCalledWith(8192, 1080);
+  });
+
+  it('reports a preset width and height together', () => {
+    const updateCanvasSize = vi.fn();
+    render(<CertificateDesigner certificate={certificate} qrValue="preview" onChangeBackground={vi.fn()} onUpdateCanvasSize={updateCanvasSize} onUpdateField={vi.fn()} onUpdateGeometry={vi.fn()} onUpdateQrCodeGeometry={vi.fn()} onReset={vi.fn()} />);
+
+    fireEvent.change(screen.getByRole('combobox', { name: 'Canvas preset' }), { target: { value: '3' } });
+
+    expect(updateCanvasSize).toHaveBeenCalledTimes(1);
+    expect(updateCanvasSize).toHaveBeenCalledWith(3508, 2480);
+  });
+
   it('keeps the canvas useful without obsolete help, coordinates, or signature paths', () => {
     renderDesigner({ ...certificate, signatureBox: { x: 1, y: 1, width: 10, height: 10, imageUrl: 'data:image/png;base64,AA==' } } as unknown as CertificateTemplate);
 
