@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ChangeEvent, type KeyboardEvent, type PointerEvent } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import type { CertificateTemplate, NameBox } from '../../../api/orgTypes';
+import { CERTIFICATE_RENDER_LIMITS } from '../../../../supabase/functions/_shared/certificateConstraints';
 import { CERTIFICATE_CANVAS_HEIGHT, CERTIFICATE_CANVAS_WIDTH } from '../../../api/orgTypes';
 import { Icon } from '../../../components/ui/Icon';
 
@@ -19,7 +20,7 @@ const inputClass = 'h-10 w-full rounded-lg border border-border-subtle bg-surfac
 interface Props {
   certificate: CertificateTemplate | null;
   qrValue: string;
-  onUpdateCanvasSize: (field: 'canvasWidth' | 'canvasHeight', value: number) => void;
+  onUpdateCanvasSize: (width: number, height: number) => void;
   onChangeBackground: (event: ChangeEvent<HTMLInputElement>) => void;
   onUpdateField: (field: NameBoxField, value: string | number | boolean) => void;
   onUpdateGeometry: (value: Geometry) => void;
@@ -179,7 +180,7 @@ const CANVAS_PRESETS = [
   { label: 'A4 portrait · 2480 × 3508', width: 2480, height: 3508 },
 ];
 
-function CanvasSizeControls({ width, height, disabled, onChange }: { width: number; height: number; disabled: boolean; onChange: (field: 'canvasWidth' | 'canvasHeight', value: number) => void }) {
+function CanvasSizeControls({ width, height, disabled, onChange }: { width: number; height: number; disabled: boolean; onChange: (width: number, height: number) => void }) {
   const [widthInput, setWidthInput] = useState(String(width));
   const [heightInput, setHeightInput] = useState(String(height));
   useEffect(() => setWidthInput(String(width)), [width]);
@@ -187,17 +188,23 @@ function CanvasSizeControls({ width, height, disabled, onChange }: { width: numb
   function commit(field: 'canvasWidth' | 'canvasHeight', raw: string) {
     const current = field === 'canvasWidth' ? width : height;
     const value = Number(raw);
-    const safe = Number.isFinite(value) && value > 0 ? Math.min(20000, Math.max(1, Math.round(value))) : current;
+    const other = field === 'canvasWidth' ? height : width;
+    const limit = Math.min(CERTIFICATE_RENDER_LIMITS.maxSide, Math.floor(CERTIFICATE_RENDER_LIMITS.maxPixels / other));
+    const safe = Number.isFinite(value) && value > 0 ? Math.min(limit, Math.max(1, Math.round(value))) : current;
+    const nextWidth = field === 'canvasWidth' ? safe : width;
+    const nextHeight = field === 'canvasHeight' ? safe : height;
     if (field === 'canvasWidth') setWidthInput(String(safe)); else setHeightInput(String(safe));
-    onChange(field, safe);
+    onChange(nextWidth, nextHeight);
   }
   function preset(value: string) {
     const item = CANVAS_PRESETS[Number(value)];
     if (!item) return;
     setWidthInput(String(item.width)); setHeightInput(String(item.height));
-    onChange('canvasWidth', item.width); onChange('canvasHeight', item.height);
+    onChange(item.width, item.height);
   }
-  return <div className="flex flex-col gap-space-sm rounded-lg border border-border-subtle bg-surface-light p-space-sm"><label className="flex flex-col gap-1 font-caption text-caption text-text-secondary">Canvas preset<select disabled={disabled} value={CANVAS_PRESETS.findIndex((item) => item.width === width && item.height === height)} onChange={(event) => preset(event.target.value)} className={inputClass}><option value={-1}>Custom size</option>{CANVAS_PRESETS.map((item, index) => <option key={item.label} value={index}>{item.label}</option>)}</select></label><div className="grid grid-cols-2 gap-space-sm">{([['Canvas width (px)', widthInput, setWidthInput, 'canvasWidth'], ['Canvas height (px)', heightInput, setHeightInput, 'canvasHeight']] as const).map(([label, value, setter, field]) => <label key={field} className="flex min-w-0 flex-col gap-1 font-caption text-caption text-text-secondary">{label}<input type="number" min={1} max={20000} disabled={disabled} value={value} onChange={(event) => setter(event.target.value)} onBlur={(event) => commit(field, event.target.value)} className={inputClass}/></label>)}</div><button type="button" disabled={disabled} onClick={() => { onChange('canvasWidth', CERTIFICATE_CANVAS_WIDTH); onChange('canvasHeight', CERTIFICATE_CANVAS_HEIGHT); }} className="min-h-10 rounded-lg border border-border-subtle px-3 font-body-sm-medium text-body-sm-medium text-primary disabled:opacity-50">Reset to 1920 × 1080</button></div>;
+  const widthMax = Math.min(CERTIFICATE_RENDER_LIMITS.maxSide, Math.floor(CERTIFICATE_RENDER_LIMITS.maxPixels / height));
+  const heightMax = Math.min(CERTIFICATE_RENDER_LIMITS.maxSide, Math.floor(CERTIFICATE_RENDER_LIMITS.maxPixels / width));
+  return <div className="flex flex-col gap-space-sm rounded-lg border border-border-subtle bg-surface-light p-space-sm"><label className="flex flex-col gap-1 font-caption text-caption text-text-secondary">Canvas preset<select disabled={disabled} value={CANVAS_PRESETS.findIndex((item) => item.width === width && item.height === height)} onChange={(event) => preset(event.target.value)} className={inputClass}><option value={-1}>Custom size</option>{CANVAS_PRESETS.map((item, index) => <option key={item.label} value={index}>{item.label}</option>)}</select></label><div className="grid grid-cols-2 gap-space-sm"><label className="flex min-w-0 flex-col gap-1 font-caption text-caption text-text-secondary">Canvas width (px)<input type="number" min={1} max={widthMax} disabled={disabled} value={widthInput} onChange={(event) => setWidthInput(event.target.value)} onBlur={(event) => commit('canvasWidth', event.target.value)} className={inputClass}/></label><label className="flex min-w-0 flex-col gap-1 font-caption text-caption text-text-secondary">Canvas height (px)<input type="number" min={1} max={heightMax} disabled={disabled} value={heightInput} onChange={(event) => setHeightInput(event.target.value)} onBlur={(event) => commit('canvasHeight', event.target.value)} className={inputClass}/></label></div><button type="button" disabled={disabled} onClick={() => { onChange(CERTIFICATE_CANVAS_WIDTH, CERTIFICATE_CANVAS_HEIGHT); }} className="min-h-10 rounded-lg border border-border-subtle px-3 font-body-sm-medium text-body-sm-medium text-primary disabled:opacity-50">Reset to 1920 × 1080</button></div>;
 }
 
 function NumberField({ label, value, min, max, disabled, onChange }: { label: string; value: number; min: number; max: number; disabled: boolean; onChange: (value: number) => void }) {

@@ -71,6 +71,40 @@ describe('SeminarEditorPage cover persistence', () => {
 
   afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
+  it('clamps saved certificate placements when the canvas is reduced without mutating the loaded draft', async () => {
+    const draft = makeDraft();
+    draft.certificate = {
+      ...draft.certificate!,
+      canvasWidth: 1920,
+      canvasHeight: 1080,
+      nameBox: { ...draft.certificate!.nameBox, x: 1500, y: 900, width: 400, height: 200 },
+      qrCodeBox: { x: 1800, y: 1000, width: 100, height: 80 },
+    };
+    const originalNameBox = { ...draft.certificate.nameBox };
+    const originalQrBox = { ...draft.certificate.qrCodeBox! };
+    const user = userEvent.setup();
+    renderPage(draft);
+    await user.click(await screen.findByRole('button', { name: /Certificate/ }));
+
+    const width = screen.getByRole('spinbutton', { name: 'Canvas width (px)' });
+    await user.clear(width);
+    await user.type(width, '1000');
+    fireEvent.blur(width);
+    const height = screen.getByRole('spinbutton', { name: 'Canvas height (px)' });
+    await user.clear(height);
+    await user.type(height, '500');
+    fireEvent.blur(height);
+    await user.click(screen.getByRole('button', { name: 'Save draft' }));
+
+    await waitFor(() => expect(mocks.saveDraft).toHaveBeenCalled());
+    const saved = mocks.saveDraft.mock.calls.at(-1)?.[0] as SeminarDraft;
+    expect(saved.certificate).toMatchObject({ canvasWidth: 1000, canvasHeight: 500 });
+    expect(saved.certificate?.nameBox).toMatchObject({ x: 600, y: 300, width: 400, height: 200 });
+    expect(saved.certificate?.qrCodeBox).toEqual({ x: 900, y: 420, width: 100, height: 80 });
+    expect(draft.certificate?.nameBox).toEqual(originalNameBox);
+    expect(draft.certificate?.qrCodeBox).toEqual(originalQrBox);
+  });
+
   it('uploads and saves a legacy cover URL before publishing', async () => {
     renderPage();
     fireEvent.click(await screen.findByRole('button', { name: /Review & Publish/ }));

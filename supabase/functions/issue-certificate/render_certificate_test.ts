@@ -1,7 +1,8 @@
 import { Buffer } from 'node:buffer';
 import * as jpeg from 'jpeg-js';
 import { PNG } from 'pngjs';
-import { renderCertificatePdf, renderCertificatePng } from './render_certificate.ts';
+import { CertificateValidationError, renderCertificatePdf, renderCertificatePng } from './render_certificate.ts';
+import { isCertificateCanvasWithinLimits } from '../_shared/certificateConstraints.ts';
 
 type PngData = { width: number; height: number; data: Uint8Array };
 type PngConstructor = new (options: { width: number; height: number }) => PngData;
@@ -89,6 +90,33 @@ Deno.test('accepts and renders a valid JPEG background', async () => {
   if (!near(pixelAt(image, 0, 0), [240, 230, 220], 12)) throw new Error('Expected JPEG background pixels in output');
 });
 
+Deno.test('renders legacy PNG-labelled WebP background data as WebP', async () => {
+  const webp = 'UklGRh4AAABXRUJQVlA4TBEAAAAvAUAAAAdQ88KXu/+BiOh/AAA=';
+  const png = await renderCertificatePng({
+    template: withBackground(`data:image/png;base64,${webp}`),
+    studentName: 'Ana Cruz',
+    seminarTitle: 'Seminex Test Seminar',
+    serial: 'SNX-ABC123',
+  });
+  const image = PngSync.read(Buffer.from(png));
+  if (!near(pixelAt(image, 0, 0), [240, 230, 220], 1)) {
+    throw new Error('Expected the legacy PNG-labelled WebP background in output');
+  }
+});
+
+Deno.test('reports malformed WebP image data as a background validation failure', async () => {
+  const incompleteWebp = new Uint8Array([
+    0x52, 0x49, 0x46, 0x46, 0x11, 0, 0, 0, 0x57, 0x45, 0x42, 0x50,
+    0x56, 0x50, 0x38, 0x4c, 0x05, 0, 0, 0, 0x2f, 0x01, 0, 0, 0,
+  ]);
+  await expectValidationReason(renderCertificatePng({
+    template: withBackground(`data:image/png;base64,${encodeBase64(incompleteWebp)}`),
+    studentName: 'Ana Cruz',
+    seminarTitle: 'Seminex Test Seminar',
+    serial: 'SNX-ABC123',
+  }), 'background');
+});
+
 Deno.test('accepts and renders an SVG background', async () => {
   const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="200"><rect width="400" height="200" fill="#f0e6dc"/></svg>';
   const png = await renderCertificatePng({
@@ -131,12 +159,25 @@ Deno.test('rejects non-data template image URLs instead of fetching them', async
 });
 
 Deno.test('rejects malformed or out-of-bounds name geometry', async () => {
-  await expectRejected(renderCertificatePdf({
+  await expectValidationReason(renderCertificatePdf({
     template: { ...withBackground(solidPngDataUrl()), nameBox: { ...template.nameBox, x: 500 } },
     studentName: 'Ana Cruz',
     seminarTitle: 'Seminex Test Seminar',
     serial: 'SNX-ABC123',
-  }));
+  }), 'name_box');
+});
+
+Deno.test('rejects renderer canvas side and pixel limit violations', async () => {
+  if (!isCertificateCanvasWithinLimits(8192, 1) || !isCertificateCanvasWithinLimits(6000, 4000)
+    || isCertificateCanvasWithinLimits(8193, 1) || isCertificateCanvasWithinLimits(6000, 4001)) {
+    throw new Error('Shared canvas boundary contract mismatch');
+  }
+  for (const [canvasWidth, canvasHeight] of [[8193, 1], [1, 8193], [6000, 4001]]) {
+    await expectValidationReason(renderCertificatePng({
+      template: { ...withBackground(solidPngDataUrl()), canvasWidth, canvasHeight },
+      studentName: 'Ana Cruz', seminarTitle: 'Seminex Test Seminar', serial: 'SNX-ABC123',
+    }), 'canvas');
+  }
 });
 
 function pixelAt(image: PngData, x: number, y: number): [number, number, number, number] {
@@ -163,4 +204,14 @@ async function expectRejected(operation: Promise<unknown>): Promise<void> {
     return;
   }
   throw new Error('Expected operation to reject');
+}
+
+async function expectValidationReason(operation: Promise<unknown>, reason: CertificateValidationError['reason']): Promise<void> {
+  try {
+    await operation;
+  } catch (error) {
+    if (error instanceof CertificateValidationError && error.code === 'validation_failed' && error.reason === reason) return;
+    throw new Error(`Expected safe validation reason ${reason}`);
+  }
+  throw new Error(`Expected ${reason} validation to reject`);
 }

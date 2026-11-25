@@ -11,6 +11,7 @@ import { useResource } from '../../../hooks/useResource';
 import { getDraftReadiness } from '../readiness';
 import { sanitizeRichText } from '../../evaluation/richText';
 import { legacyCoverDataUrlToFile } from '../coverImage';
+import { CERTIFICATE_RENDER_LIMITS, clampCertificateBox, isCertificateCanvasWithinLimits } from '../../../../supabase/functions/_shared/certificateConstraints';
 
 const STEPS = ['Details', 'Certificate', 'Evaluation', 'Review & Publish'] as const;
 const inputClass = 'h-11 w-full rounded-lg border border-border-subtle bg-surface-light px-3.5 font-body-sm text-body-sm text-on-surface outline-none transition-colors placeholder:text-text-subtle focus:border-primary focus:bg-surface-card focus:ring-2 focus:ring-primary/20';
@@ -38,19 +39,14 @@ function fileAsDataUrl(file: File): Promise<string> {
   });
 }
 
-const MAX_CERTIFICATE_IMAGE_BYTES = 5 * 1024 * 1024;
-const MAX_CERTIFICATE_IMAGE_SIDE = 8192;
-const MAX_CERTIFICATE_IMAGE_PIXELS = 24_000_000;
-
 async function certificateImageAsDataUrl(file: File): Promise<string> {
-  if (!file.size || file.size > MAX_CERTIFICATE_IMAGE_BYTES) throw new Error('validation_failed');
+  if (!file.size || file.size > CERTIFICATE_RENDER_LIMITS.maxImageBytes) throw new Error('validation_failed');
   if (file.type === 'image/svg+xml') return await fileAsDataUrl(file);
   if (file.type !== 'image/png' && file.type !== 'image/jpeg') throw new Error('validation_failed');
 
   const bitmap = await createImageBitmap(file);
   try {
-    if (!bitmap.width || !bitmap.height || bitmap.width > MAX_CERTIFICATE_IMAGE_SIDE
-      || bitmap.height > MAX_CERTIFICATE_IMAGE_SIDE || bitmap.width * bitmap.height > MAX_CERTIFICATE_IMAGE_PIXELS) {
+    if (!isCertificateCanvasWithinLimits(bitmap.width, bitmap.height)) {
       throw new Error('validation_failed');
     }
     const canvas = document.createElement('canvas');
@@ -61,7 +57,7 @@ async function certificateImageAsDataUrl(file: File): Promise<string> {
     context.drawImage(bitmap, 0, 0);
     const normalized = await new Promise<Blob>((resolve, reject) => {
       canvas.toBlob((blob) => {
-        if (!blob || blob.type !== 'image/png' || !blob.size || blob.size > MAX_CERTIFICATE_IMAGE_BYTES) {
+        if (!blob || blob.type !== 'image/png' || !blob.size || blob.size > CERTIFICATE_RENDER_LIMITS.maxImageBytes) {
           reject(new Error('validation_failed'));
           return;
         }
@@ -202,8 +198,22 @@ export default function SeminarEditorPage() {
     });
   }
 
-  function updateCanvasSize(field: 'canvasWidth' | 'canvasHeight', value: number) {
-    setDraft((current) => current?.certificate ? { ...current, certificate: { ...current.certificate, [field]: Math.max(1, Math.min(20000, value)), updatedAt: new Date().toISOString() } } : current);
+  function updateCanvasSize(width: number, height: number) {
+    setDraft((current) => {
+      const certificate = current?.certificate;
+      if (!current || !certificate || !isCertificateCanvasWithinLimits(width, height)) return current;
+      return {
+        ...current,
+        certificate: {
+          ...certificate,
+          canvasWidth: width,
+          canvasHeight: height,
+          nameBox: clampCertificateBox(certificate.nameBox, width, height),
+          ...(certificate.qrCodeBox ? { qrCodeBox: clampCertificateBox(certificate.qrCodeBox, width, height) } : {}),
+          updatedAt: new Date().toISOString(),
+        },
+      };
+    });
   }
 
   function updateNameBox(field: keyof NonNullable<SeminarDraft['certificate']>['nameBox'], value: string | number | boolean) {
