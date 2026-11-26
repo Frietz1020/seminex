@@ -37,7 +37,7 @@ export function SeminarContextCard({ item, record, questionCount, headingRef }: 
             <h1
               ref={headingRef}
               tabIndex={-1}
-              className="font-headline-md text-headline-md tracking-tight text-on-surface outline-offset-4"
+              className="font-headline-md text-headline-md text-on-surface outline-offset-4"
             >
               {seminar.title}
             </h1>

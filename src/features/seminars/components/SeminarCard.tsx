@@ -56,7 +56,7 @@ export function SeminarCard({
       : null;
 
   return (
-    <article className="group relative flex flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface-card shadow-card transition-shadow hover:shadow-card-hover">
+    <article className="group relative flex flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface-card shadow-card transition duration-150 hover:shadow-card-hover motion-safe:active:scale-[0.97]">
       <Link
         to={`/seminars/${seminar.id}`}
         aria-label={`View seminar details: ${seminar.title}`}
@@ -182,7 +182,7 @@ export function SeminarCard({
             <div className="flex flex-col gap-1.5">
               <div className="flex items-center justify-between gap-2 font-caption text-caption">
                 <span className="text-text-secondary">Seat availability</span>
-                <span className={cx('font-medium', remainingSeats > 0 ? 'text-status-available' : 'text-status-full')}>
+                <span className={cx('font-medium tabular-nums', remainingSeats > 0 ? 'text-status-available' : 'text-status-full')}>
                   {remainingSeats > 0 ? `${remainingSeats} ${remainingSeats === 1 ? 'seat' : 'seats'} left` : 'Fully booked'}
                 </span>
               </div>
@@ -220,7 +220,7 @@ export function SeminarCard({
               type="button"
               onClick={() => onRegister(seminar.id)}
               aria-disabled={registering || locked || undefined}
-              className={cx(actionPrimary, 'pointer-events-auto w-full active:scale-[0.99]', (registering || locked) && 'cursor-wait')}
+              className={cx(actionPrimary, 'pointer-events-auto w-full', (registering || locked) && 'cursor-wait')}
             >
               {registering ? (
                 <>

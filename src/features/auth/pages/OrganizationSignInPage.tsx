@@ -106,7 +106,7 @@ export default function OrganizationSignInPage() {
           Back to portal selection
         </Link>
       </div>
-      <h1 className="font-heading text-2xl font-bold tracking-tight text-charcoal-900 md:text-3xl">Organization sign in</h1>
+      <h1 className="font-heading text-2xl font-bold text-charcoal-900 md:text-3xl">Organization sign in</h1>
       <p className="mt-2 text-sm leading-relaxed text-charcoal-700">
         Create and streamline your organization's seminars, coordinate events, and support student participation with Seminex.
       </p>
@@ -152,13 +152,13 @@ export default function OrganizationSignInPage() {
       <form noValidate onSubmit={submit} aria-busy={pending} className="space-y-5 rounded-2xl bg-white p-5 shadow-control md:p-7">
         <TextField
           id="organization-identifier"
-          label="Student ID"
+          label="Student ID or faculty email"
           required
           type="text"
           autoComplete="username"
           autoCapitalize="none"
           spellCheck={false}
-          placeholder="Student ID"
+          placeholder="Student ID or name@gordoncollege.edu.ph"
           value={values.identifier}
           error={errors.identifier}
           readOnly={pending}
@@ -178,7 +178,7 @@ export default function OrganizationSignInPage() {
             onBlur={() => setErrors((current) => ({ ...current, password: validateSignInPassword(values.password) }))}
           />
           <div className="mt-1 flex justify-end">
-            <Link to="/forgot-password" className="inline-flex min-h-11 items-center text-sm font-semibold text-maroon hover:underline">
+            <Link to="/forgot-password" state={{ returnTo: '/organization/sign-in' }} className="inline-flex min-h-11 items-center text-sm font-semibold text-maroon hover:underline">
               Forgot password?
             </Link>
           </div>

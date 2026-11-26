@@ -111,7 +111,7 @@ export default function SignInPage() {
         Back to portal selection
       </Link>
       <div className="mb-6 md:mb-8">
-        <h1 className="font-heading text-2xl font-bold tracking-tight text-charcoal-900 md:text-3xl">Sign in</h1>
+        <h1 className="font-heading text-2xl font-bold text-charcoal-900 md:text-3xl">Sign in</h1>
         <p className="mt-1.5 text-base text-charcoal-700 md:mt-2">Use your student ID to continue.</p>
       </div>
 

@@ -13,17 +13,19 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const BASE =
-  'inline-flex min-h-12 w-full items-center justify-center gap-2.5 rounded-control px-6 py-3 text-base font-medium shadow-control transition-colors disabled:cursor-not-allowed';
+  'inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg px-5 py-3 text-base font-medium shadow-control transition duration-150 disabled:cursor-not-allowed';
+
+const PRESSABLE = 'motion-safe:active:scale-[0.97]';
 
 const IDLE: Record<Variant, string> = {
   primary:
-    'bg-maroon text-white hover:bg-maroon-dark active:bg-maroon-dark disabled:bg-charcoal-200 disabled:text-charcoal-500',
+    `${PRESSABLE} bg-primary-container text-on-primary hover:bg-maroon-dark active:bg-maroon-dark disabled:bg-charcoal-200 disabled:text-charcoal-500`,
   secondary:
-    'border border-charcoal-300 bg-white text-charcoal-900 hover:border-charcoal-500 disabled:opacity-60',
+    `${PRESSABLE} border border-charcoal-300 bg-white text-charcoal-900 hover:border-charcoal-500 disabled:opacity-60`,
 };
 
 const LOADING: Record<Variant, string> = {
-  primary: 'cursor-wait bg-maroon/80 text-white',
+  primary: 'cursor-wait bg-primary-container/80 text-on-primary',
   secondary: 'cursor-wait border border-charcoal-300 bg-white text-charcoal-900',
 };
 

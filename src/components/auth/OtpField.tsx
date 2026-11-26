@@ -3,7 +3,7 @@ import { api } from '../../api/client';
 import { RESEND_COOLDOWN_SECONDS, STUDENT_EMAIL_DOMAIN } from '../../config';
 import { useCooldown } from '../../hooks/useCooldown';
 import { useOnlineStatus } from '../../hooks/useOnlineStatus';
-import { validateStudentId } from '../../features/auth/validation';
+import { validatePasswordResetIdentifier, validateStudentId } from '../../features/auth/validation';
 import { Button } from '../ui/Button';
 import { TextField } from '../ui/TextField';
 
@@ -28,7 +28,9 @@ function otpFailureMessage(code: string): string {
 export function OtpField({ id, studentId, password, verified, onVerifiedChange, purpose = 'signup' }: OtpFieldProps) {
   const online = useOnlineStatus();
   const { remaining, start } = useCooldown(RESEND_COOLDOWN_SECONDS, false);
-  const validStudentId = !validateStudentId(studentId);
+  const validIdentifier = purpose === 'signup'
+    ? !validateStudentId(studentId)
+    : !validatePasswordResetIdentifier(studentId);
   const [sent, setSent] = useState(false);
   const [value, setValue] = useState('');
   const [busy, setBusy] = useState(false);
@@ -52,7 +54,9 @@ export function OtpField({ id, studentId, password, verified, onVerifiedChange, 
     setSent(true);
     setValue('');
     start();
-    setMessage('OTP sent. Enter the 6-digit code to verify your account.');
+    setMessage(purpose === 'signup'
+      ? 'OTP sent. Enter the 6-digit code to verify your account.'
+      : 'Recovery code sent. Enter the 6-digit code to verify your account.');
   }
 
   async function verifyOtp() {
@@ -73,7 +77,7 @@ export function OtpField({ id, studentId, password, verified, onVerifiedChange, 
   return (
     <div className="space-y-3 rounded-xl bg-cream-50 p-4">
       <div className="flex flex-wrap items-center gap-2">
-        <Button variant="secondary" type="button" onClick={() => void sendOtp()} disabled={!validStudentId || (purpose === 'signup' && !sent && !password) || !online || busy || remaining > 0 || verified}>
+        <Button variant="secondary" type="button" onClick={() => void sendOtp()} disabled={!validIdentifier || (purpose === 'signup' && !sent && !password) || !online || busy || remaining > 0 || verified}>
           {busy ? 'Sending…' : sent ? remaining > 0 ? `Resend OTP in ${remaining}s` : 'Resend OTP' : 'Send OTP'}
         </Button>
         {sent && <span className="font-caption text-caption text-text-secondary">A code was sent to your institutional email.</span>}

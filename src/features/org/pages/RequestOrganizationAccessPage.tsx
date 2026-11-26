@@ -87,7 +87,7 @@ export default function RequestOrganizationAccessPage() {
           <header className="mb-5 flex items-center justify-between"><Link to="/home" className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-charcoal-700 hover:text-maroon"><ArrowLeft className="h-4 w-4" />Back to participant portal</Link><span className="inline-flex items-center gap-1 rounded-full bg-cream-100 px-3 py-1 text-xs font-semibold text-charcoal-700"><CalendarDays className="h-4 w-4" />{period ? `AY ${period.academicYear}` : 'Checking academic calendar…'}</span></header>
           <div className="mb-5 flex items-center gap-3 md:hidden"><BrandMark size={40} /><span><strong className="block font-heading text-xl text-charcoal-900">Seminex CCS</strong><small className="text-xs text-burnt">Administrative &amp; Org Core</small></span></div>
           <div className="mb-5 inline-flex items-center gap-2 rounded-md bg-cream-100 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-maroon"><Building2 className="h-4 w-4" />Seminex CCS Gordon College</div>
-          <h2 className="font-heading text-2xl font-bold tracking-tight text-charcoal-900 md:text-3xl">Request Organization Access</h2>
+          <h2 className="font-heading text-2xl font-bold text-charcoal-900 md:text-3xl">Request Organization Access</h2>
           <p className="mt-2 text-sm leading-relaxed text-charcoal-700">Submit your officer appointment details for faculty adviser endorsement and organization permissions.</p>
 
           {!online && <div className="my-4"><Alert ref={offlineRef} variant="neutral" role="status" icon={WifiOff} title="You are offline">Connect to the internet to submit your request. Your information is kept.</Alert></div>}

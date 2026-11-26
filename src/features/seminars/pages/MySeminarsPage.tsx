@@ -216,7 +216,7 @@ export default function MySeminarsPage() {
   return (
     <PageContainer>
       <header className="flex flex-col gap-space-xs">
-        <h1 className="font-headline-xl text-headline-xl-mobile tracking-tight text-primary md:text-headline-xl">
+        <h1 className="font-headline-xl text-headline-xl-mobile text-primary md:text-headline-xl">
           My seminars
         </h1>
       </header>
@@ -249,16 +249,16 @@ export default function MySeminarsPage() {
       </aside>
 
       {view && (
-        <dl className="grid grid-cols-1 gap-space-sm sm:grid-cols-3">
-          <div className="flex items-center justify-between gap-space-sm rounded-xl border border-border-subtle bg-surface-card px-space-md py-space-sm shadow-card">
+        <dl className="grid grid-cols-1 gap-space-md tabular-nums sm:grid-cols-3 sm:gap-space-lg">
+          <div className="flex flex-col gap-1">
             <dt className="font-body-sm text-body-sm text-text-secondary">Registered seminars</dt>
             <dd className="font-headline-sm text-headline-sm text-primary">{view.registeredCount}</dd>
           </div>
-          <div className="flex items-center justify-between gap-space-sm rounded-xl border border-border-subtle bg-surface-card px-space-md py-space-sm shadow-card">
+          <div className="flex flex-col gap-1">
             <dt className="font-body-sm text-body-sm text-text-secondary">Upcoming</dt>
             <dd className="font-headline-sm text-headline-sm text-on-surface">{groupCount('upcoming')}</dd>
           </div>
-          <div className="flex items-center justify-between gap-space-sm rounded-xl border border-border-subtle bg-surface-card px-space-md py-space-sm shadow-card">
+          <div className="flex flex-col gap-1">
             <dt className="font-body-sm text-body-sm text-text-secondary">Evaluation due</dt>
             <dd className="font-headline-sm text-headline-sm text-secondary">{groupCount('evaluation')}</dd>
           </div>

@@ -37,7 +37,7 @@ interface StatusBadgeProps {
   elevated?: boolean;
 }
 
-/** The label is always text. The icon and the pulsing dot are decorative. */
+/** The label is always text. The icon or status dot is decorative. */
 export function StatusBadge({ status, shape = 'tag', elevated = false }: StatusBadgeProps) {
   const config = CONFIG[status];
   return (
@@ -50,7 +50,7 @@ export function StatusBadge({ status, shape = 'tag', elevated = false }: StatusB
       )}
     >
       {config.icon === 'dot' ? (
-        <span aria-hidden="true" className="h-2 w-2 rounded-full bg-status-ongoing motion-safe:animate-pulse" />
+        <span aria-hidden="true" className="h-2 w-2 rounded-full bg-status-ongoing" />
       ) : (
         <Icon name={config.icon} size={14} />
       )}

@@ -12,7 +12,7 @@ export function GreetingHeader() {
   return (
     <div className="flex flex-col gap-space-md lg:flex-row lg:items-center lg:justify-between">
       <div className="flex flex-col gap-space-xs">
-        <h1 className="font-headline-xl text-headline-xl-mobile tracking-tight text-on-surface md:text-headline-xl">
+        <h1 className="font-headline-xl text-headline-xl-mobile text-on-surface md:text-headline-xl">
           {profile ? `Welcome back, ${profile.firstName}` : 'Welcome back'}
         </h1>
         {profile ? (

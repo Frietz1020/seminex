@@ -295,7 +295,7 @@ export default function SignUpPage() {
       </div>
 
       <div className="mb-5 md:mb-6">
-        <h1 className="font-heading text-2xl font-bold tracking-tight text-charcoal-900 md:text-3xl">
+        <h1 className="font-heading text-2xl font-bold text-charcoal-900 md:text-3xl">
           Create an account
         </h1>
         <p className="mt-1 text-sm text-charcoal-700 md:mt-1.5 md:text-base">{subtitle}</p>
@@ -333,7 +333,7 @@ export default function SignUpPage() {
                 {complete ? <Check aria-hidden="true" className="h-4 w-4" strokeWidth={3} /> : item}
               </span>
               <span className="min-w-0">
-                <span className={`block text-[11px] font-semibold uppercase tracking-wider ${active ? 'text-maroon' : 'text-charcoal-500'}`}>Step {item}</span>
+                <span className={`block font-label-sm text-label-sm font-semibold uppercase tracking-wider ${active ? 'text-maroon' : 'text-charcoal-500'}`}>Step {item}</span>
                 <span className="block truncate text-xs font-bold text-charcoal-900">{item === 1 ? 'Credentials' : 'Personal information'}</span>
               </span>
             </button>

@@ -77,7 +77,7 @@ export default function OrgProfilePage() {
 
   return <PageContainer>
     <header>
-      <h1 className="font-headline-xl text-headline-xl-mobile tracking-tight text-primary md:text-headline-xl">Profile</h1>
+      <h1 className="font-headline-xl text-headline-xl-mobile text-primary md:text-headline-xl">Profile</h1>
     </header>
 
     <div className="grid grid-cols-1 items-start gap-space-lg lg:grid-cols-12">

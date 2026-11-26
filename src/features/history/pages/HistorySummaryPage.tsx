@@ -229,7 +229,7 @@ export default function HistorySummaryPage() {
         </Link>
         <div className="flex flex-col gap-space-xs">
           <div className="flex flex-wrap items-center gap-space-sm">
-            <h1 className="font-headline-lg text-headline-lg-mobile tracking-tight text-on-surface md:text-headline-lg">{seminar.title}</h1>
+            <h1 className="font-headline-lg text-headline-lg-mobile text-on-surface md:text-headline-lg">{seminar.title}</h1>
             <span className="inline-flex items-center gap-1.5 rounded-full bg-status-finished-container px-2.5 py-1 font-label-sm text-label-sm uppercase tracking-wider text-status-finished">
               <Icon name="flag" size={14} />Finished
             </span>
@@ -339,7 +339,7 @@ export default function HistorySummaryPage() {
             {certificateReady ? (
               <div className="flex flex-col items-center gap-3 rounded-lg bg-surface-light p-6 text-center">
                 <span className="font-caption text-caption uppercase tracking-widest text-text-subtle">Certificate of attendance</span>
-                <span className="font-headline-md text-headline-md tracking-tight text-maroon-dark">
+                <span className="font-headline-md text-headline-md text-maroon-dark">
                   {profile ? `${profile.firstName} ${profile.lastName}` : 'Seminex Student'}
                 </span>
                 <p className="max-w-xs font-body-sm text-body-sm leading-snug text-text-secondary">for completing {seminar.title}</p>

@@ -195,7 +195,7 @@ export default function OrganizationSignUpPage() {
             <span className="rounded-full bg-maroon/10 px-3 py-1 text-xs font-semibold text-maroon">Step {step} of 3</span>
           </header>
           <div className="mb-6 flex items-center gap-3 md:hidden"><BrandMark size={40} /><span><p className="font-heading text-xl font-bold text-charcoal-900">Seminex</p><p className="text-xs uppercase tracking-wide text-burnt">CCS Gordon College</p></span></div>
-          <h2 className="font-heading text-2xl font-bold tracking-tight text-charcoal-900 md:text-3xl">{stepTitle}</h2>
+          <h2 className="font-heading text-2xl font-bold text-charcoal-900 md:text-3xl">{stepTitle}</h2>
           <p className="mt-2 text-sm leading-relaxed text-charcoal-700">Create and streamline your organization's seminars, coordinate events, and support student participation with Seminex.</p>
 
           {!applicantSession && (
@@ -204,7 +204,7 @@ export default function OrganizationSignUpPage() {
               if (item === 1) setStep(1);
               else if (item === 2 && otpVerified) setStep(2);
               else if (item === 3 && (applicantSession || (otpVerified && validateFields(personalFields)))) setStep(3);
-            }} aria-current={step === item ? 'step' : undefined} className={`flex min-h-16 items-center gap-3 rounded-xl border-2 p-3 text-left ${step === item ? 'border-maroon bg-white' : 'border-charcoal-200 bg-white/60'}`}><span className={`flex h-7 w-7 items-center justify-center rounded-lg text-xs font-bold ${step > item ? 'bg-success text-white' : step === item ? 'bg-maroon text-white' : 'bg-charcoal-200 text-charcoal-700'}`}>{step > item ? <Check className="h-4 w-4" /> : item}</span><span><span className="block text-[11px] font-semibold uppercase tracking-wider text-charcoal-500">Step {item}</span><span className="block text-xs font-bold text-charcoal-900">{item === 1 ? 'Credentials + OTP' : item === 2 ? 'Personal Information' : 'Your Organization'}</span></span></button>)}
+            }} aria-current={step === item ? 'step' : undefined} className={`flex min-h-16 items-center gap-3 rounded-xl border-2 p-3 text-left ${step === item ? 'border-maroon bg-white' : 'border-charcoal-200 bg-white/60'}`}><span className={`flex h-7 w-7 items-center justify-center rounded-lg text-xs font-bold ${step > item ? 'bg-success text-white' : step === item ? 'bg-maroon text-white' : 'bg-charcoal-200 text-charcoal-700'}`}>{step > item ? <Check className="h-4 w-4" /> : item}</span><span><span className="block font-label-sm text-label-sm font-semibold uppercase tracking-wider text-charcoal-500">Step {item}</span><span className="block text-xs font-bold text-charcoal-900">{item === 1 ? 'Credentials + OTP' : item === 2 ? 'Personal Information' : 'Your Organization'}</span></span></button>)}
           </div>
           )}
 

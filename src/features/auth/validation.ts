@@ -1,4 +1,4 @@
-import { STUDENT_ID_LENGTH } from '../../config';
+import { STUDENT_EMAIL_DOMAIN, STUDENT_ID_LENGTH } from '../../config';
 
 /** Keeps digits only and caps the length, so pasted text such as an email still works. */
 export function sanitizeStudentId(value: string): string {
@@ -7,6 +7,15 @@ export function sanitizeStudentId(value: string): string {
 
 export function validateStudentId(value: string): string | undefined {
   return /^20\d{7}$/.test(value) ? undefined : 'Student ID must be 9 digits and start with 20.';
+}
+
+export function validatePasswordResetIdentifier(value: string): string | undefined {
+  const identifier = value.trim();
+  if (/^20\d{7}$/.test(identifier)) return undefined;
+  const escapedDomain = STUDENT_EMAIL_DOMAIN.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`^[^\\s@]+@${escapedDomain}$`, 'i').test(identifier)
+    ? undefined
+    : `Enter your 9-digit Student ID or a faculty email ending in @${STUDENT_EMAIL_DOMAIN}.`;
 }
 
 export function validateSignInPassword(value: string): string | undefined {

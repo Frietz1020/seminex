@@ -63,7 +63,7 @@ export function MySeminarCard({ item, group, now, onCancel }: MySeminarCardProps
   return (
     <article
       aria-labelledby={titleId}
-      className="relative flex flex-col gap-space-lg rounded-xl border border-border-subtle bg-surface-card p-space-lg shadow-card transition-shadow hover:shadow-card-hover md:flex-row"
+      className="relative flex flex-col gap-space-lg rounded-xl border border-border-subtle bg-surface-card p-space-lg shadow-card transition duration-150 hover:shadow-card-hover motion-safe:active:scale-[0.97] md:flex-row"
     >
       <Link
         to={`/my-seminars/${seminar.id}`}

@@ -89,7 +89,7 @@ export function RecordCard({ record }: { record: HistoryRecord }) {
           <RecordStatusBadge status={status} />
           <span className="font-caption text-caption text-text-secondary">{seminar.venue}</span>
         </div>
-        <h2 id={titleId} className="font-headline-sm text-headline-sm tracking-tight text-on-surface">
+        <h2 id={titleId} className="font-headline-sm text-headline-sm text-on-surface">
           <Link to={`/history/${seminar.id}`} className="rounded-sm underline-offset-2 hover:text-primary hover:underline focus-visible:outline-primary">
             {seminar.title}
           </Link>
