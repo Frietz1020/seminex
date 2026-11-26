@@ -1,4 +1,5 @@
-import { Outlet } from 'react-router-dom';
+import { useEffect, useRef } from 'react';
+import { Outlet, useLocation } from 'react-router-dom';
 import { api, type OrgIdentity } from '../../api/client';
 import { useResource } from '../../hooks/useResource';
 import { useSession } from '../../session/useSession';
@@ -11,6 +12,9 @@ import { AttendancePrompt } from './AttendancePrompt';
 
 /** Signed-in layout: sidebar and top bar on desktop, condensed top bar and bottom nav below lg. */
 export function AppShell() {
+  const { pathname } = useLocation();
+  const mainRef = useRef<HTMLElement>(null);
+  const firstRender = useRef(true);
   const session = useSession();
   const organization = useResource<OrgIdentity | null>(
     () => session?.role === 'org_member'
@@ -19,6 +23,14 @@ export function AppShell() {
     session?.studentId ?? 'no-session',
   );
   const workspaceIdentity = organization.state.status === 'success' ? organization.state.data : null;
+
+  useEffect(() => {
+    if (firstRender.current) {
+      firstRender.current = false;
+      return;
+    }
+    mainRef.current?.focus();
+  }, [pathname]);
 
   return (
     <ProfileProvider>
@@ -35,6 +47,7 @@ export function AppShell() {
           <TopBar workspaceIdentity={workspaceIdentity} />
           <main
             id="main"
+            ref={mainRef}
             tabIndex={-1}
             className="min-h-dvh pb-[calc(5rem+env(safe-area-inset-bottom))] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] pt-[calc(3.5rem+env(safe-area-inset-top))] outline-none lg:pb-0 lg:pl-64 lg:pr-0 lg:pt-16"
           >

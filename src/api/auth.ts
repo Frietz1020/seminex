@@ -61,6 +61,13 @@ function emailForStudentId(studentId: string): string {
   return `${studentId.trim()}@${STUDENT_EMAIL_DOMAIN}`.toLowerCase();
 }
 
+function emailForRecoveryIdentifier(identifier: string): string | null {
+  const value = identifier.trim();
+  if (/^20\d{7}$/.test(value)) return emailForStudentId(value);
+  const escapedDomain = STUDENT_EMAIL_DOMAIN.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`^[^\\s@]+@${escapedDomain}$`, 'i').test(value) ? value.toLowerCase() : null;
+}
+
 function toSafeIdentity(
   profile: {
     student_id: string | null;
@@ -535,18 +542,22 @@ export async function withdrawOrgAccessRequest(): Promise<ApiResult<void>> {
   return { ok: true, data: undefined };
 }
 
-export async function sendPasswordResetOtp(studentId: string): Promise<ApiResult<void>> {
+export async function sendPasswordResetOtp(identifier: string): Promise<ApiResult<void>> {
   const client = clientOrError();
   if (isApiFailure(client)) return client;
-  const { error } = await client.auth.resetPasswordForEmail(emailForStudentId(studentId));
+  const email = emailForRecoveryIdentifier(identifier);
+  if (!email) return failure('invalid_credentials');
+  const { error } = await client.auth.resetPasswordForEmail(email);
   return error ? mapError(error) : { ok: true, data: undefined };
 }
 
-export async function verifyPasswordResetOtp(studentId: string, code: string): Promise<ApiResult<void>> {
+export async function verifyPasswordResetOtp(identifier: string, code: string): Promise<ApiResult<void>> {
   const client = clientOrError();
   if (isApiFailure(client)) return client;
+  const email = emailForRecoveryIdentifier(identifier);
+  if (!email) return failure('invalid_credentials');
   const { error } = await client.auth.verifyOtp({
-    email: emailForStudentId(studentId),
+    email,
     token: code,
     type: 'recovery',
   });

@@ -124,7 +124,7 @@ export function ProfileForm({ profile, onSaved }: ProfileFormProps) {
     <section aria-labelledby="student-information" className="rounded-xl bg-surface-card p-space-lg shadow-card md:p-space-xl">
       <div className="flex flex-col justify-between gap-space-md sm:flex-row sm:items-center">
         <div className="flex flex-col gap-space-xs">
-          <h2 id="student-information" className="font-headline-md text-headline-md tracking-tight text-on-surface">
+          <h2 id="student-information" className="font-headline-md text-headline-md text-on-surface">
             Student information
           </h2>
           <p className="font-body-sm text-body-sm text-text-secondary">
@@ -162,7 +162,7 @@ export function ProfileForm({ profile, onSaved }: ProfileFormProps) {
         <section aria-labelledby="record-heading" className="flex flex-col gap-space-md rounded-xl border border-border-subtle p-space-lg">
           <div className="flex items-center gap-space-sm">
             <Icon name="badge" size={20} className="text-secondary" />
-            <h3 id="record-heading" className="font-title-md text-title-md tracking-tight text-primary">
+            <h3 id="record-heading" className="font-title-md text-title-md text-primary">
               Enrollment record
             </h3>
           </div>
@@ -185,7 +185,7 @@ export function ProfileForm({ profile, onSaved }: ProfileFormProps) {
         <section aria-labelledby="personal-heading" className="flex flex-col gap-space-md rounded-xl border border-border-subtle p-space-lg">
           <div className="flex items-center gap-space-sm">
             <Icon name="account_circle" size={20} className="text-secondary" />
-            <h3 id="personal-heading" className="font-title-md text-title-md tracking-tight text-primary">
+            <h3 id="personal-heading" className="font-title-md text-title-md text-primary">
               Name and program
             </h3>
           </div>

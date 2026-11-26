@@ -116,9 +116,11 @@ export default function SeminarDetailsPage() {
         {seminar.imageUrl ? (
           <img src={seminar.imageUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
         ) : (
-          <div aria-hidden="true" className="absolute inset-0 bg-linear-to-br from-primary-container via-maroon-dark to-inverse-surface" />
+          <div aria-hidden="true" className="absolute inset-0 flex items-center justify-center">
+            <Icon name="event_available" size={56} className="text-white/25" />
+          </div>
         )}
-        <div aria-hidden="true" className="absolute inset-0 bg-linear-to-t from-inverse-surface/95 via-inverse-surface/35 to-transparent" />
+        {seminar.imageUrl && <div aria-hidden="true" className="absolute inset-0 bg-linear-to-t from-inverse-surface/95 via-inverse-surface/35 to-transparent" />}
         <div className="relative z-10 flex w-full flex-col gap-space-md p-space-lg sm:p-space-xl lg:p-8">
           <div className="flex flex-wrap items-center gap-2">
             <StatusBadge status={status} elevated />
@@ -127,7 +129,7 @@ export default function SeminarDetailsPage() {
               {seminar.reference}
             </span>
           </div>
-          <h1 className="max-w-4xl font-headline-lg text-headline-lg-mobile leading-tight tracking-tight text-white md:text-headline-lg">
+          <h1 className="max-w-4xl font-headline-lg text-headline-lg-mobile leading-tight text-white md:text-headline-lg">
             {seminar.title}
           </h1>
           <div className="flex flex-wrap gap-2">

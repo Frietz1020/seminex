@@ -22,7 +22,7 @@ function SeminarCard({ seminar, now }: { seminar: OrgSeminar; now: number }) {
   const remaining = Math.max(0, seminar.capacity - seminar.registeredCount);
   return (
     <article className="group flex min-w-0 flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface-card shadow-card transition hover:shadow-overlay">
-      <div className="relative flex h-36 items-center justify-center overflow-hidden bg-gradient-to-br from-surface-container-low via-surface-container to-primary-fixed/60">
+      <div className="relative flex h-36 items-center justify-center overflow-hidden bg-surface-container-low">
         {seminar.imageUrl ? <img src={seminar.imageUrl} alt="" className="h-full w-full object-cover" /> : <Icon name="school" size={32} className="text-primary/70" />}
         <span className="absolute left-3 top-3"><OrgStatusBadge status={status} /></span>
       </div>
@@ -36,9 +36,9 @@ function SeminarCard({ seminar, now }: { seminar: OrgSeminar; now: number }) {
           </div>
         </div>
         <div>
-          <div className="mb-1.5 flex items-center justify-between gap-2 font-caption text-caption"><span className="text-text-secondary">Slots reserved</span><span className="font-semibold text-primary">{seminar.registeredCount} of {seminar.capacity}</span></div>
+          <div className="mb-1.5 flex items-center justify-between gap-2 font-caption text-caption tabular-nums"><span className="text-text-secondary">Slots reserved</span><span className="font-semibold text-primary">{seminar.registeredCount} of {seminar.capacity}</span></div>
           <ProgressBar value={seminar.registeredCount} max={seminar.capacity} label={`${seminar.title}: ${seminar.registeredCount} of ${seminar.capacity} seats reserved`} />
-          <div className="mt-1.5 flex items-center justify-between gap-2 font-caption text-caption text-text-secondary"><span>{remaining} {remaining === 1 ? 'slot' : 'slots'} remaining</span><span>Limit: {seminar.capacity}</span></div>
+          <div className="mt-1.5 flex items-center justify-between gap-2 font-caption text-caption text-text-secondary tabular-nums"><span>{remaining} {remaining === 1 ? 'slot' : 'slots'} remaining</span><span>Limit: {seminar.capacity}</span></div>
         </div>
         <div className="flex gap-space-sm">
           <Link to={`/org/my-seminars/${seminar.id}`} className={`${actionTonal} flex-1 justify-center`}>Open seminar<Icon name="arrow_forward" size={16} /></Link>
@@ -99,7 +99,7 @@ export default function OrgHomePage() {
     <PageContainer>
       <header className="flex flex-col justify-between gap-space-lg md:flex-row md:items-end">
         <div>
-          <h1 className="font-headline-xl text-headline-xl-mobile tracking-tight text-on-surface md:text-headline-xl">Welcome back{identity.status === 'success' ? `, ${identity.data.firstName}` : ''}</h1>
+          <h1 className="font-headline-xl text-headline-xl-mobile text-on-surface md:text-headline-xl">Welcome back{identity.status === 'success' ? `, ${identity.data.firstName}` : ''}</h1>
         </div>
         <button type="button" onClick={() => void createSeminar()} disabled={creating} className={actionPrimary}><Icon name="add" size={20} />{creating ? 'Creating draft…' : 'Create seminar'}</button>
       </header>

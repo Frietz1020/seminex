@@ -71,7 +71,7 @@ export default function LandingPage() {
             <div className="flex w-full max-w-[560px] flex-col">
               <div>
                 <MobileBrandHeader />
-                <h2 className="font-headline-lg text-headline-lg font-bold tracking-tight text-on-surface">Welcome to Seminex</h2>
+                <h2 className="font-headline-lg text-headline-lg font-bold text-on-surface">Welcome to Seminex</h2>
                 <p className="mt-2 font-body-lg text-body-lg text-on-surface-variant">Select your portal to continue.</p>
               </div>
 
@@ -93,7 +93,7 @@ export default function LandingPage() {
                   <UsersRound aria-hidden="true" className="h-7 w-7" />
                 </PortalCard>
                 <PortalCard
-                  title="Admin"
+                  title="Faculty Adviser"
                   audience="Faculty & Advisers"
                   description="Manage who belongs to your organization. For advisers and faculty."
                   to="/admin/sign-in"

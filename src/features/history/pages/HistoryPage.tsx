@@ -47,7 +47,7 @@ export default function HistoryPage() {
     <PageContainer>
       <header className="flex flex-col justify-between gap-space-lg lg:flex-row lg:items-end">
         <div className="flex max-w-2xl flex-col gap-space-xs">
-          <h1 className="font-headline-xl text-headline-xl-mobile tracking-tight text-primary md:text-headline-xl">
+          <h1 className="font-headline-xl text-headline-xl-mobile text-primary md:text-headline-xl">
             History
           </h1>
         </div>

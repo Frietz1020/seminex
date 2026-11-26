@@ -119,7 +119,7 @@ export default function OrgHistoryPage() {
   return <PageContainer>
     {!online && <aside role="status" className="flex items-start gap-space-sm rounded-xl border border-outline-variant/50 bg-surface-container-highest p-space-md"><Icon name="cloud_off" size={20} className="mt-0.5 shrink-0 text-secondary" /><div><p className="font-body-sm-medium text-body-sm-medium text-on-surface">Offline archive view</p><p className="font-caption text-caption text-text-secondary">Showing saved organization records from this device. Reconnect to refresh the archive.</p></div></aside>}
     <header className="flex flex-col gap-space-xs">
-      <div className="flex flex-wrap items-end justify-between gap-space-md"><div><h1 className="font-headline-xl text-headline-xl-mobile tracking-tight text-primary md:text-headline-xl">Seminar History &amp; Archives</h1></div>
+      <div className="flex flex-wrap items-end justify-between gap-space-md"><div><h1 className="font-headline-xl text-headline-xl-mobile text-primary md:text-headline-xl">Seminar History &amp; Archives</h1></div>
         <button type="button" onClick={() => exportCsv(visible)} disabled={!visible.length} className={actionTonal}><Icon name="download" size={18} />Export archive CSV</button>
       </div>
     </header>

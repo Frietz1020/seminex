@@ -17,7 +17,7 @@ export function StubPage({ title, children, linkTo = '/sign-in', linkLabel = 'Ba
 
   return (
     <AuthLayout>
-      <h1 className="font-heading text-2xl font-bold tracking-tight text-charcoal-900 md:text-3xl">{title}</h1>
+      <h1 className="font-heading text-2xl font-bold text-charcoal-900 md:text-3xl">{title}</h1>
       <p className="mt-2 text-base text-charcoal-700">{children}</p>
       <Link
         to={linkTo}

@@ -45,7 +45,7 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(function T
         className={cx(
           'relative flex items-center rounded-control border shadow-control transition-colors',
           error
-            ? 'border-danger-border bg-danger-surface/50 ring-2 ring-danger-border/20 focus-within:ring-danger-border/40'
+            ? 'motion-safe:animate-[field-invalid_180ms_ease-out] border-danger-border bg-danger-surface/50 ring-2 ring-danger-border/20 focus-within:ring-danger-border/40'
             : 'border-charcoal-300 bg-white focus-within:border-maroon focus-within:ring-2 focus-within:ring-maroon/30',
         )}
       >

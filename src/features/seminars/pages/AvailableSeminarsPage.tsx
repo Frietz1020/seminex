@@ -168,7 +168,7 @@ export default function AvailableSeminarsPage() {
     <PageContainer>
       <header className="flex flex-col justify-between gap-space-lg md:flex-row md:items-end">
         <div className="flex max-w-2xl flex-col gap-space-xs">
-          <h1 className="font-headline-xl text-headline-xl-mobile tracking-tight text-primary md:text-headline-xl">
+          <h1 className="font-headline-xl text-headline-xl-mobile text-primary md:text-headline-xl">
             Available seminars
           </h1>
         </div>

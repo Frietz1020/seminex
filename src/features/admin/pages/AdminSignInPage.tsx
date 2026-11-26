@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { Link, Navigate, useNavigate } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, CircleAlert, TriangleAlert, WifiOff } from 'lucide-react';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { ArrowLeft, ArrowRight, CheckCircle2, CircleAlert, TriangleAlert, WifiOff } from 'lucide-react';
 import { api, type ApiErrorCode } from '../../../api/client';
 import { BrandPanel } from '../../../components/auth/BrandPanel';
 import { BrandMark } from '../../../components/shell/BrandMark';
@@ -16,6 +16,7 @@ type Errors = Partial<Record<'email' | 'password', string>>;
 
 export default function AdminSignInPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const online = useOnlineStatus();
   const session = useSession();
   const [values, setValues] = useState({ email: '', password: '' });
@@ -23,8 +24,9 @@ export default function AdminSignInPage() {
   const [failure, setFailure] = useState<ApiErrorCode | 'not_adviser' | null>(null);
   const [pending, setPending] = useState(false);
   const offlineRef = useRef<HTMLDivElement>(null);
+  const successMessage = typeof location.state?.message === 'string' ? location.state.message : null;
 
-  useEffect(() => { document.title = 'Admin sign in - Seminex'; }, []);
+  useEffect(() => { document.title = 'Faculty adviser sign in - Seminex'; }, []);
 
   if (session?.role === 'adviser') return <Navigate to="/org/adviser" replace />;
   if (session?.role === 'org_member') return <Navigate to="/org" replace />;
@@ -62,21 +64,22 @@ export default function AdminSignInPage() {
             <Link to="/" className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-charcoal-700 hover:text-maroon"><ArrowLeft className="h-4 w-4" />Back to portal selection</Link>
           </div>
           <div className="mb-5 flex items-center gap-3 md:hidden"><BrandMark size={40} /><span><strong className="block font-heading text-xl text-charcoal-900">Seminex CCS</strong><small className="text-xs uppercase tracking-wide text-burnt">Gordon College Identity Gateway</small></span></div>
-          <h2 className="font-heading text-3xl font-bold tracking-tight text-charcoal-900">Admin Sign in</h2>
+          <h2 className="font-heading text-3xl font-bold text-charcoal-900">Faculty adviser sign in</h2>
           <p className="mt-2 text-sm leading-relaxed text-charcoal-700">Enter your faculty credentials to manage organization memberships.</p>
 
           <div className="my-5 space-y-3">
+            {successMessage && <Alert variant="neutral" role="status" icon={CheckCircle2} title="Password updated">{successMessage}</Alert>}
             {!online && <Alert ref={offlineRef} variant="neutral" role="status" icon={WifiOff} title="You are offline">Connect to the internet to verify faculty credentials.</Alert>}
             {failure === 'invalid_credentials' && <Alert variant="error" icon={TriangleAlert} title="Authentication failed">Invalid faculty credentials. Check your email and password.</Alert>}
             {failure === 'network' && online && <Alert variant="error" icon={TriangleAlert} title="Connection problem">Seminex could not be reached. Check your connection and try again.</Alert>}
-            {failure === 'not_adviser' && <Alert variant="error" icon={TriangleAlert} title="Admin access required">This account does not have faculty adviser access.</Alert>}
+            {failure === 'not_adviser' && <Alert variant="error" icon={TriangleAlert} title="Faculty adviser access required">This account does not have faculty adviser access.</Alert>}
             {failure !== null && failure !== 'invalid_credentials' && failure !== 'network' && failure !== 'not_adviser' && <Alert variant="error" icon={TriangleAlert} title="Sign in failed">Something went wrong. Try again.</Alert>}
           </div>
 
           <form noValidate onSubmit={submit} aria-busy={pending} className="space-y-5 rounded-2xl bg-white p-5 shadow-control md:p-7">
             <TextField id="admin-email" label="Faculty email address" required type="email" autoComplete="username" autoCapitalize="none" spellCheck={false} placeholder="name@gordoncollege.edu.ph" value={values.email} error={errors.email} readOnly={pending} onChange={(email) => setValues((current) => ({ ...current, email }))} onBlur={() => setErrors((current) => ({ ...current, email: /^[^\s@]+@gordoncollege\.edu\.ph$/i.test(values.email.trim()) ? undefined : 'Enter your Gordon College faculty email.' }))} />
-            <div><PasswordField id="admin-password" label="Password" required autoComplete="current-password" value={values.password} error={errors.password} readOnly={pending} onChange={(password) => setValues((current) => ({ ...current, password }))} onBlur={() => setErrors((current) => ({ ...current, password: validateSignInPassword(values.password) }))} /><div className="mt-1 flex justify-end"><Link to="/forgot-password" className="inline-flex min-h-11 items-center text-sm font-semibold text-maroon hover:underline">Forgot password?</Link></div></div>
-            <Button type="submit" loading={pending} loadingLabel="Signing in..." icon={<ArrowRight className="h-4 w-4" />}>Sign in as Admin</Button>
+            <div><PasswordField id="admin-password" label="Password" required autoComplete="current-password" value={values.password} error={errors.password} readOnly={pending} onChange={(password) => setValues((current) => ({ ...current, password }))} onBlur={() => setErrors((current) => ({ ...current, password: validateSignInPassword(values.password) }))} /><div className="mt-1 flex justify-end"><Link to="/forgot-password" state={{ returnTo: '/admin/sign-in' }} className="inline-flex min-h-11 items-center text-sm font-semibold text-maroon hover:underline">Forgot password?</Link></div></div>
+            <Button type="submit" loading={pending} loadingLabel="Signing in..." icon={<ArrowRight className="h-4 w-4" />}>Sign in as faculty adviser</Button>
             <div className="-mx-5 -mb-5 flex items-start gap-2 rounded-b-2xl bg-cream-100 px-5 py-4 text-xs leading-relaxed text-charcoal-700 md:-mx-7 md:-mb-7 md:px-7"><CircleAlert className="mt-0.5 h-4 w-4 shrink-0 text-maroon" /><span><strong>Controlled faculty access.</strong> Registration is disabled. Accounts are provisioned for authorized Gordon College CCS advisers and faculty administrators.</span></div>
           </form>
           <div className="mt-5 flex items-center justify-center gap-2 text-xs text-charcoal-500"><WifiOff className="h-4 w-4" /><span>Offline access is unavailable. Sign-in resumes when the network is restored.</span></div>

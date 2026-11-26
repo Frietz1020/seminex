@@ -84,7 +84,7 @@ export function SeminarHeader({ seminar, registration, primaryStatus }: SeminarH
               Registration reference: {registration.reference}
             </span>
           </div>
-          <h1 className="font-headline-lg text-headline-lg-mobile tracking-tight text-on-surface md:text-headline-lg">
+          <h1 className="font-headline-lg text-headline-lg-mobile text-on-surface md:text-headline-lg">
             {seminar.title}
           </h1>
           <ul className="mt-1 flex flex-wrap items-center gap-x-6 gap-y-2 font-body-sm text-body-sm text-text-secondary">

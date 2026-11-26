@@ -21,7 +21,7 @@ export default function ProfilePage() {
     <PageContainer>
       <header className="flex flex-col justify-between gap-space-md md:flex-row md:items-end">
         <div className="flex flex-col gap-space-xs">
-          <h1 className="font-headline-xl text-headline-xl-mobile tracking-tight text-primary md:text-headline-xl">
+          <h1 className="font-headline-xl text-headline-xl-mobile text-primary md:text-headline-xl">
             Profile
           </h1>
         </div>

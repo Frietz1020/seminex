@@ -70,7 +70,7 @@ function SeminarCard({ seminar, now, ongoing = false }: { seminar: OrgSeminar; n
   const percent = seminar.capacity ? Math.min(100, Math.round(seminar.registeredCount / seminar.capacity * 100)) : 0;
   return (
     <article className={`group flex min-w-0 flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface-card shadow-card transition hover:shadow-overlay ${ongoing ? 'lg:flex-row' : ''}`}>
-      <div className={`relative flex items-center justify-center overflow-hidden bg-gradient-to-br from-surface-container-low via-surface-container to-primary-fixed/60 ${ongoing ? 'h-40 lg:h-auto lg:min-h-60 lg:w-5/12' : 'h-40'}`}>
+      <div className={`relative flex items-center justify-center overflow-hidden bg-surface-container-low ${ongoing ? 'h-40 lg:h-auto lg:min-h-60 lg:w-5/12' : 'h-40'}`}>
         {seminar.imageUrl ? <img src={seminar.imageUrl} alt="" className="h-full w-full object-cover" /> : <Icon name="school" size={32} className="text-primary/70" />}
         <span className="absolute left-3 top-3"><OrgStatusBadge status={status} /></span>
       </div>
@@ -226,7 +226,7 @@ export default function OrgSeminarsPage() {
   return (
     <PageContainer>
       <header className="flex flex-col justify-between gap-space-md md:flex-row md:items-center">
-        <div className="max-w-3xl"><h1 className="font-headline-xl text-headline-xl-mobile tracking-tight text-on-surface md:text-headline-xl">My Seminars</h1></div>
+        <div className="max-w-3xl"><h1 className="font-headline-xl text-headline-xl-mobile text-on-surface md:text-headline-xl">My Seminars</h1></div>
         <button type="button" onClick={() => void createDraft()} disabled={creating} className={actionPrimary}><Icon name="add" size={20} />{creating ? 'Creating draft…' : 'Create seminar'}</button>
       </header>
 
@@ -258,7 +258,7 @@ export default function OrgSeminarsPage() {
       {listing.state.status === 'empty' && <StateMessage icon="event_note" title="No seminars or drafts yet" action={<button type="button" onClick={() => void createDraft()} className={actionPrimary}><Icon name="add" size={18} />Create a seminar</button>}>Start a seminar draft to add its details, certificate, and evaluation.</StateMessage>}
 
       {listing.state.status === 'success' && <div className="flex flex-col gap-space-xl">
-        {(filter === 'all' || filter === 'ongoing') && <section className="flex flex-col gap-space-md" aria-labelledby="ongoing-heading"><div className="flex flex-wrap items-center justify-between gap-2"><div className="flex items-center gap-space-sm"><span className="h-3 w-3 animate-pulse rounded-full bg-secondary" /><h2 id="ongoing-heading" className="font-title-lg text-title-lg text-on-surface">Ongoing today</h2><span className="rounded-full bg-secondary-fixed px-2.5 py-1 font-caption text-caption text-on-secondary-fixed">{ongoing.length} active</span></div><span className="font-caption text-caption text-text-secondary">Live check-in available</span></div>{ongoing.length ? <div className="grid gap-space-md">{ongoing.map((seminar) => <SeminarCard key={seminar.id} seminar={seminar} now={now} ongoing />)}</div> : <StateMessage icon="event_busy" title="No seminars are ongoing right now">Upcoming sessions will appear below.</StateMessage>}</section>}
+        {(filter === 'all' || filter === 'ongoing') && <section className="flex flex-col gap-space-md" aria-labelledby="ongoing-heading"><div className="flex flex-wrap items-center justify-between gap-2"><div className="flex items-center gap-space-sm"><span className="h-3 w-3 rounded-full bg-secondary" /><h2 id="ongoing-heading" className="font-title-lg text-title-lg text-on-surface">Ongoing today</h2><span className="rounded-full bg-secondary-fixed px-2.5 py-1 font-caption text-caption text-on-secondary-fixed">{ongoing.length} active</span></div><span className="font-caption text-caption text-text-secondary">Live check-in available</span></div>{ongoing.length ? <div className="grid gap-space-md">{ongoing.map((seminar) => <SeminarCard key={seminar.id} seminar={seminar} now={now} ongoing />)}</div> : <StateMessage icon="event_busy" title="No seminars are ongoing right now">Upcoming sessions will appear below.</StateMessage>}</section>}
 
         {(filter === 'all' || filter === 'upcoming') && <section className="flex flex-col gap-space-md" aria-labelledby="upcoming-heading"><div className="flex flex-wrap items-center justify-between gap-2"><div className="flex items-center gap-space-sm"><h2 id="upcoming-heading" className="font-title-lg text-title-lg text-on-surface">Upcoming seminars</h2><span className="rounded-full bg-surface-container-high px-2.5 py-1 font-caption text-caption text-text-secondary">{upcoming.length} scheduled</span></div></div>{orderedUpcoming.length ? <div className="grid gap-space-md md:grid-cols-2 xl:grid-cols-3">{orderedUpcoming.map((seminar) => <SeminarCard key={seminar.id} seminar={seminar} now={now} />)}</div> : <StateMessage icon="event_busy" title="No upcoming seminars">Create a draft when you are ready to plan your next session.</StateMessage>}</section>}
 
@@ -273,3 +273,4 @@ export default function OrgSeminarsPage() {
     </PageContainer>
   );
 }
+

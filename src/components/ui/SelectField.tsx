@@ -40,7 +40,7 @@ export const SelectField = forwardRef<HTMLSelectElement, SelectFieldProps>(funct
         )}
       </label>
 
-      <div className="relative">
+      <div className={cx('relative', error && 'motion-safe:animate-[field-invalid_180ms_ease-out]')}>
         <select
           {...selectProps}
           ref={ref}

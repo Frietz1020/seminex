@@ -17,7 +17,7 @@ export function IdentityCard({ profile, onAvatarUploaded }: IdentityCardProps) {
     >
       <AvatarUpload profile={profile} onUploaded={onAvatarUploaded} />
 
-      <h2 id="identity-name" className="mt-space-md font-headline-md text-headline-md leading-tight tracking-tight text-on-surface">
+      <h2 id="identity-name" className="mt-space-md font-headline-md text-headline-md leading-tight text-on-surface">
         {formatFullName(profile)}
       </h2>
       <p className="mt-space-sm inline-flex flex-wrap items-center justify-center gap-x-1 rounded-md bg-surface-container px-2.5 py-1 font-caption text-caption">

@@ -31,7 +31,7 @@ export function OrgSidebar({ items, identity }: { items: readonly NavItem[]; ide
         <BrandMark size={40} />
         <div className="flex flex-col">
           <span className="font-title-md text-title-md tracking-tight text-primary">Seminex</span>
-          <span className="font-caption text-caption tracking-wider text-text-subtle">{adviser ? 'ADMIN PORTAL' : 'Organization portal'}</span>
+          <span className="font-caption text-caption tracking-wider text-text-subtle">{adviser ? 'FACULTY ADVISER PORTAL' : 'Organization portal'}</span>
         </div>
       </div>
 
