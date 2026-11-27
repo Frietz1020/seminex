@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { CircleAlert } from 'lucide-react';
 import { api, type Profile } from '../../../api/client';
 import { Alert } from '../../../components/ui/Alert';
 import { actionPrimary, actionTonal } from '../../../components/ui/actionStyles';
@@ -31,8 +30,6 @@ interface ProfileFormProps {
 }
 
 type FieldElement = HTMLInputElement | HTMLSelectElement | null;
-
-const ENROLLMENT_TEXT = { active: 'Active student', inactive: 'Not currently enrolled' } as const;
 
 /**
  * Student information. View mode shows read-only values; "Edit profile" swaps in the same boxes
@@ -121,7 +118,7 @@ export function ProfileForm({ profile, onSaved }: ProfileFormProps) {
   const saved = toFormValues(profile);
 
   return (
-    <section aria-labelledby="student-information" className="rounded-xl bg-surface-card p-space-lg shadow-card md:p-space-xl">
+    <section aria-labelledby="student-information" className="rounded-xl border border-border-subtle bg-surface-card p-space-lg md:p-space-xl">
       <div className="flex flex-col justify-between gap-space-md sm:flex-row sm:items-center">
         <div className="flex flex-col gap-space-xs">
           <h2 id="student-information" className="font-headline-md text-headline-md text-on-surface">
@@ -169,15 +166,9 @@ export function ProfileForm({ profile, onSaved }: ProfileFormProps) {
           <p className="-mt-2 font-caption text-caption text-text-secondary">
             These details come from your enrollment record and cannot be changed here.
           </p>
-          <dl className="grid grid-cols-1 gap-space-md md:grid-cols-2">
-            <ReadOnlyField label="Student ID · Institutional email" locked className="md:col-span-2">
+          <dl className="grid grid-cols-1 gap-space-md">
+            <ReadOnlyField label="Student ID · Institutional email" locked>
               {profile.studentId}@{STUDENT_EMAIL_DOMAIN}
-            </ReadOnlyField>
-            <ReadOnlyField label="Enrollment status" locked>
-              {profile.enrollmentStatus ? ENROLLMENT_TEXT[profile.enrollmentStatus] : 'Not provided'}
-            </ReadOnlyField>
-            <ReadOnlyField label="College" locked>
-              {profile.college ?? 'Not provided'}
             </ReadOnlyField>
           </dl>
         </section>
@@ -320,7 +311,7 @@ export function ProfileForm({ profile, onSaved }: ProfileFormProps) {
         {editing && (
           <div className="flex flex-col gap-space-md">
             {saveError && (
-              <Alert variant="error" title="Changes not saved" icon={CircleAlert}>
+              <Alert variant="error" title="Changes not saved" icon="error">
                 {saveError}
               </Alert>
             )}

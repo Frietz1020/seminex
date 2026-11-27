@@ -166,12 +166,20 @@ export async function submitEvaluation(
       submittedAt: data.submittedAt,
       ...(typeof data.certificateSerial === 'string' ? { certificateSerial: data.certificateSerial } : {}),
     };
-    if (result.certificateSerial) {
-      try {
-        await supabase.functions.invoke('issue-certificate', { body: { seminarId } });
-      } catch {
-        // Evaluation is committed already; a later certificate download retries generation.
+    // Immediately invoke the certificate issuance Edge Function now that all conditions
+    // (validated attendance + submitted evaluation) are satisfied.
+    try {
+      const { data: issuedData, error: issueError } = await supabase.functions.invoke('issue-certificate', {
+        body: { seminarId },
+      });
+      if (!issueError && isRow(issuedData) && typeof issuedData.serial === 'string') {
+        result.certificateSerial = issuedData.serial;
       }
+    } catch {
+      // Evaluation is committed already; opening History retries generation automatically.
+    }
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('seminex:registrations-changed'));
     }
     return { ok: true, data: result };
   } catch {

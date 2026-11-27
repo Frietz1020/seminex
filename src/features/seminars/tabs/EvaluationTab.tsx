@@ -16,20 +16,24 @@ export function EvaluationTab({ item, now }: { item: SeminarListItem; now: numbe
 
   if (access.state === 'submitted') {
     return (
-      <div className="flex flex-col items-center justify-center rounded-xl bg-surface-card px-space-xl py-16 text-center shadow-card">
+      <div className="flex flex-col items-center justify-center rounded-xl border border-border-subtle bg-surface-card px-space-xl py-16 text-center">
         <div
           aria-hidden="true"
           className="mb-space-md flex h-16 w-16 items-center justify-center rounded-full bg-status-available-container text-status-available"
         >
-          <Icon name="check_circle" size={32} />
+          <Icon name="workspace_premium" size={32} />
         </div>
         <h2 className="font-headline-md text-headline-md text-on-surface">Evaluation submitted</h2>
         <p className="mt-space-xs max-w-md font-body-base text-body-base text-text-secondary">
           You submitted your evaluation on {formatDate(access.submittedAt)}.{' '}
           {registration?.certificateIssuedAt
-            ? 'Your certificate is available in History.'
-            : 'Your certificate is issued once all conditions are met.'}
+            ? 'Your certificate is ready in History.'
+            : 'Open History to view or download your certificate.'}
         </p>
+        <Link to={`/history/${seminar.id}`} className={`${actionPrimary} mt-space-lg`}>
+          <Icon name="workspace_premium" size={18} />
+          <span>View certificate</span>
+        </Link>
       </div>
     );
   }

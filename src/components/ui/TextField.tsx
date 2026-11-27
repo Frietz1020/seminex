@@ -1,6 +1,6 @@
 import { forwardRef, type InputHTMLAttributes, type ReactNode } from 'react';
-import { CircleAlert, Info } from 'lucide-react';
 import { cx } from './cx';
+import { Icon } from './Icon';
 
 export interface TextFieldProps
   extends Omit<InputHTMLAttributes<HTMLInputElement>, 'id' | 'onChange' | 'required'> {
@@ -78,12 +78,12 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(function T
 
       {error ? (
         <p id={errorId} role="alert" className="mt-1.5 flex items-start gap-1.5 text-sm font-medium text-danger">
-          <CircleAlert aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
+          <Icon name="error" size={16} className="mt-0.5" />
           <span>{error}</span>
         </p>
       ) : hint ? (
         <p id={hintId} className="mt-1.5 flex items-start gap-1.5 text-sm text-charcoal-500">
-          <Info aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
+          <Icon name="info" size={16} className="mt-0.5" />
           <span>{hint}</span>
         </p>
       ) : null}

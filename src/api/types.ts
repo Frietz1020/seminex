@@ -252,6 +252,7 @@ export type SurveyQuestion = SurveyQuestionBase &
 export interface SurveySection {
   id: string;
   title: string;
+  description?: string;
   questions: SurveyQuestion[];
 }
 

@@ -10,8 +10,18 @@ import { BrandMark } from '../BrandMark';
 import { isNavItemActive, type NavItem } from '../navItems';
 import { WorkspaceSwitcher } from './WorkspaceSwitcher';
 
-/** Desktop sidebar (lg and up) for the organization portal. */
-export function OrgSidebar({ items, identity }: { items: readonly NavItem[]; identity: OrgIdentity | null }) {
+/** Collapsible desktop sidebar (lg and up) for the organization portal. */
+export function OrgSidebar({
+  items,
+  identity,
+  collapsed,
+  onToggleCollapse,
+}: {
+  items: readonly NavItem[];
+  identity: OrgIdentity | null;
+  collapsed: boolean;
+  onToggleCollapse: () => void;
+}) {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const [confirmingSignOut, setConfirmingSignOut] = useState(false);
@@ -26,16 +36,42 @@ export function OrgSidebar({ items, identity }: { items: readonly NavItem[]; ide
   }
 
   return (
-    <aside className={`fixed left-0 top-0 z-50 hidden h-dvh ${adviser ? 'w-72' : 'w-64'} flex-col bg-surface-container-low pb-space-lg pt-space-lg shadow-shell lg:flex`}>
-      <div className="mb-space-xl flex items-center gap-space-sm px-space-lg">
-        <BrandMark size={40} />
-        <div className="flex flex-col">
-          <span className="font-title-md text-title-md tracking-tight text-primary">Seminex</span>
-          <span className="font-caption text-caption tracking-wider text-text-subtle">{adviser ? 'FACULTY ADVISER PORTAL' : 'Organization portal'}</span>
+    <aside
+      className={cx(
+        'fixed left-0 top-0 z-50 hidden h-dvh flex-col border-r border-border-subtle bg-surface-card pb-space-lg pt-space-md transition-[width] duration-200 lg:flex',
+        collapsed ? 'w-[72px]' : adviser ? 'w-72' : 'w-64',
+      )}
+    >
+      <div
+        className={cx(
+          'mb-space-lg flex items-center',
+          collapsed ? 'flex-col gap-2 px-2' : 'justify-between gap-space-sm px-space-md',
+        )}
+      >
+        <div className={cx('flex min-w-0 items-center gap-space-sm', collapsed && 'justify-center')}>
+          <BrandMark size={collapsed ? 34 : 38} />
+          {!collapsed && (
+            <div className="flex min-w-0 flex-col">
+              <span className="truncate font-title-md text-title-md tracking-tight text-primary">Seminex</span>
+              <span className="truncate font-caption text-caption text-text-subtle">
+                {adviser ? 'Faculty adviser portal' : 'Organization portal'}
+              </span>
+            </div>
+          )}
         </div>
+        <button
+          type="button"
+          onClick={onToggleCollapse}
+          aria-expanded={!collapsed}
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-on-surface-variant transition-colors hover:bg-surface-container hover:text-on-surface"
+        >
+          <Icon name={collapsed ? 'left_panel_open' : 'left_panel_close'} size={20} />
+        </button>
       </div>
 
-      <nav aria-label="Main" className="flex flex-1 flex-col gap-space-xs px-space-md">
+      <nav aria-label="Main" className={cx('flex flex-1 flex-col gap-space-xs', collapsed ? 'px-2' : 'px-space-sm')}>
         {items.map((item) => {
           const active = isNavItemActive(item, pathname);
           return (
@@ -43,32 +79,51 @@ export function OrgSidebar({ items, identity }: { items: readonly NavItem[]; ide
               key={item.to}
               to={item.to}
               aria-current={active ? 'page' : undefined}
+              aria-label={collapsed ? item.label : undefined}
+              title={collapsed ? item.label : undefined}
               className={cx(
-                'flex min-h-11 items-center gap-space-sm rounded-lg px-space-md py-2.5 transition-colors',
+                'flex min-h-11 items-center rounded-lg py-2.5 transition-colors',
+                collapsed ? 'justify-center px-0' : 'gap-space-sm px-space-md',
                 active
-                  ? 'bg-primary-container font-body-base-medium text-on-primary shadow-card'
-                  : 'font-body-base text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface',
+                  ? 'bg-primary-container font-body-base-medium text-on-primary'
+                  : 'font-body-base text-on-surface-variant hover:bg-surface-container hover:text-on-surface',
               )}
             >
               <Icon name={item.icon} size={20} />
-              <span>{item.label}</span>
+              {!collapsed && <span className="truncate">{item.label}</span>}
             </Link>
           );
         })}
       </nav>
 
-      <div className="px-space-md">
-        {adviser ? <div className="flex flex-col gap-space-xs rounded-xl bg-surface-container p-space-md"><span className="font-label-sm text-label-sm uppercase tracking-wider text-text-secondary">Adviser workspace</span><span className="font-body-sm-medium text-body-sm-medium text-on-surface">{identity?.organization.department ?? 'Gordon College · CCS'}</span></div> : <WorkspaceSwitcher identity={identity} variant="menu" />}
-      </div>
+      {!collapsed && (
+        <div className="px-space-sm">
+          {adviser ? (
+            <div className="flex flex-col gap-0.5 rounded-xl bg-surface-container p-space-md">
+              <span className="font-body-sm-medium text-body-sm-medium text-on-surface">
+                {identity?.organization.department ?? 'Gordon College · CCS'}
+              </span>
+              <span className="font-caption text-caption text-text-secondary">Faculty adviser</span>
+            </div>
+          ) : (
+            <WorkspaceSwitcher identity={identity} variant="menu" />
+          )}
+        </div>
+      )}
 
-      <div className="mx-space-md mt-space-md border-t border-outline-variant/50 pt-space-md">
+      <div className={cx('mt-space-md border-t border-border-subtle pt-space-md', collapsed ? 'mx-2' : 'mx-space-sm')}>
         <button
           type="button"
           onClick={() => setConfirmingSignOut(true)}
-          className="flex min-h-11 w-full items-center gap-space-sm rounded-lg px-space-md py-2.5 font-body-base text-on-surface-variant transition-colors hover:bg-danger-ink hover:text-on-error"
+          aria-label={collapsed ? 'Sign out' : undefined}
+          title={collapsed ? 'Sign out' : undefined}
+          className={cx(
+            'flex min-h-11 w-full items-center rounded-lg py-2.5 font-body-base text-on-surface-variant transition-colors hover:bg-danger-surface hover:text-danger-ink',
+            collapsed ? 'justify-center px-0' : 'gap-space-sm px-space-md',
+          )}
         >
           <Icon name="logout" size={20} />
-          <span>Sign out</span>
+          {!collapsed && <span>Sign out</span>}
         </button>
       </div>
 

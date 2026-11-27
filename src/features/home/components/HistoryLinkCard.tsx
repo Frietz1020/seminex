@@ -42,14 +42,14 @@ export function HistoryLinkCard({ state, items, now, onRetry }: HistoryLinkCardP
   return (
     <Link
       to="/history"
-      className="group flex w-full flex-col justify-between gap-space-md rounded-xl border border-border-subtle bg-surface-card p-space-lg shadow-card transition-colors hover:bg-surface-container-low sm:flex-row sm:items-center"
+      className="group flex w-full flex-col justify-between gap-space-md rounded-xl border border-border-subtle bg-surface-card p-space-lg transition duration-200 hover:-translate-y-0.5 hover:border-outline-variant hover:shadow-card sm:flex-row sm:items-center"
     >
       <div className="flex items-center gap-space-md">
         <div
           aria-hidden="true"
-          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-surface-container text-primary-container"
+          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-maroon-container text-primary"
         >
-          <Icon name="history_edu" size={26} />
+          <Icon name="history_edu" size={24} />
         </div>
         <div className="flex flex-col">
           <span className="font-headline-sm text-headline-sm text-on-surface">Recent seminar history</span>
@@ -64,12 +64,12 @@ export function HistoryLinkCard({ state, items, now, onRetry }: HistoryLinkCardP
       <div className="flex shrink-0 items-center gap-space-lg">
         <div className="flex items-center gap-space-md">
           <div className="flex flex-col text-left sm:text-right">
-            <span className="font-headline-sm text-headline-sm text-on-surface">{completed}</span>
+            <span className="font-headline-sm text-headline-sm tabular-nums text-on-surface">{completed}</span>
             <span className="font-caption text-caption text-text-subtle">Completed</span>
           </div>
           <div aria-hidden="true" className="h-8 w-px bg-border-subtle" />
           <div className="flex flex-col text-left sm:text-right">
-            <span className="font-headline-sm text-headline-sm text-primary-container">{certificates}</span>
+            <span className="font-headline-sm text-headline-sm tabular-nums text-primary-container">{certificates}</span>
             <span className="font-caption text-caption text-text-subtle">Certificates available</span>
           </div>
         </div>

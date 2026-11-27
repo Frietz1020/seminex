@@ -43,7 +43,24 @@ type RenderCertificateInput = {
 type DataImage = { mimeType: string; bytes: Uint8Array };
 
 const PIXELS_TO_POINTS = 0.75;
-const FONT_FAMILIES = new Set(['Outfit', 'DM Sans', 'Cinzel', 'Playfair Display']);
+const FONT_FAMILIES = new Set([
+  'Outfit',
+  'DM Sans',
+  'Montserrat',
+  'Plus Jakarta Sans',
+  'Raleway',
+  'Playfair Display',
+  'Cinzel',
+  'Cormorant Garamond',
+  'Libre Baskerville',
+  'Merriweather',
+  'EB Garamond',
+  'Lora',
+  'Great Vibes',
+  'Alex Brush',
+  'Allura',
+  'Dancing Script',
+]);
 
 export type CertificateValidationReason = 'canvas' | 'name_box' | 'qr_box' | 'background' | 'text' | 'output_size';
 

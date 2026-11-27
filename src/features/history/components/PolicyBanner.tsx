@@ -6,7 +6,7 @@ export function PolicyBanner() {
 
   return (
     <section aria-labelledby="policy-heading" className="flex items-start gap-space-md rounded-lg bg-surface-container p-space-lg">
-      <span aria-hidden="true" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-surface-card text-primary shadow-card">
+      <span aria-hidden="true" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-maroon-container text-primary">
         <Icon name="verified" size={20} />
       </span>
       <div className="flex min-w-0 flex-1 flex-col">

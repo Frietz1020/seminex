@@ -1,5 +1,5 @@
-import { Check, Circle } from 'lucide-react';
 import { cx } from '../ui/cx';
+import { Icon } from '../ui/Icon';
 import { PASSWORD_RULES } from '../../features/auth/validation';
 
 /** Live checklist. Each rule is shown by icon and by text that assistive technology reads. */
@@ -19,9 +19,9 @@ export function PasswordRules({ password }: { password: string }) {
               )}
             >
               {met ? (
-                <Check aria-hidden="true" className="h-4 w-4 shrink-0" strokeWidth={2.5} />
+                <Icon name="check" size={16} />
               ) : (
-                <Circle aria-hidden="true" className="h-4 w-4 shrink-0 text-charcoal-500" />
+                <Icon name="radio_button_unchecked" size={16} className="text-charcoal-500" />
               )}
               <span>
                 {rule.label}

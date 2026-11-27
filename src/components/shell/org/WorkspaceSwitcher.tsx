@@ -93,7 +93,7 @@ export function WorkspaceSwitcher({ identity, variant }: WorkspaceSwitcherProps)
 
   const label = (
     <span className="flex min-w-0 flex-col text-left">
-      <span className="font-label-sm text-label-sm uppercase tracking-wider text-text-secondary">Workspace</span>
+      <span className="font-caption text-caption text-text-secondary">Workspace</span>
       <span className="truncate font-body-sm-medium text-body-sm-medium text-on-surface">
         {current === 'organization' ? 'Organization' : 'Participant'}
       </span>

@@ -1,5 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
-import { CircleAlert } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState, type FormEvent, type MouseEvent } from 'react';
 import { api } from '../../../api/client';
 import type { EvaluationAnswers, SeminarListItem, SubmitEvaluationResult, Survey } from '../../../api/types';
 import { Alert } from '../../../components/ui/Alert';
@@ -39,8 +38,13 @@ export function EvaluationForm({ item, survey, onSubmitted }: EvaluationFormProp
   const [failedAttempts, setFailedAttempts] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [sectionIndex, setSectionIndex] = useState(0);
 
   const numbered = useMemo(() => numberQuestions(survey), [survey]);
+  const totalSections = survey.sections.length;
+  const isMultiSection = totalSections > 1;
+  const safeSectionIndex = Math.min(sectionIndex, Math.max(0, totalSections - 1));
+  const isLastSection = safeSectionIndex >= totalSections - 1;
 
   useEffect(() => {
     if (failedAttempts > 0) summaryRef.current?.focus();
@@ -75,13 +79,42 @@ export function EvaluationForm({ item, survey, onSubmitted }: EvaluationFormProp
     );
   }
 
+  function handleNextSection(event?: MouseEvent<HTMLButtonElement>) {
+    event?.preventDefault();
+    const currentSection = survey.sections[safeSectionIndex];
+    if (!currentSection) return;
+    const sectionErrors = validateSurvey({ ...survey, sections: [currentSection] }, answers);
+    if (Object.keys(sectionErrors).length > 0) {
+      setErrors((prev) => ({ ...prev, ...sectionErrors }));
+      setFailedAttempts((count) => count + 1);
+      return;
+    }
+    setSectionIndex((idx) => Math.min(totalSections - 1, idx + 1));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function handlePreviousSection() {
+    setSectionIndex((idx) => Math.max(0, idx - 1));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (submitting) return;
+    if (isMultiSection && !isLastSection) {
+      handleNextSection();
+      return;
+    }
 
     const found = validateSurvey(survey, answers);
     setErrors(found);
     if (Object.keys(found).length > 0) {
+      if (isMultiSection) {
+        const firstErrorSection = survey.sections.findIndex((sec) =>
+          sec.questions.some((q) => Boolean(found[q.id])),
+        );
+        if (firstErrorSection >= 0) setSectionIndex(firstErrorSection);
+      }
       setFailedAttempts((count) => count + 1);
       return;
     }
@@ -132,18 +165,35 @@ export function EvaluationForm({ item, survey, onSubmitted }: EvaluationFormProp
       )}
 
       <fieldset disabled={submitting} className="m-0 flex min-w-0 flex-col gap-space-xl border-0 p-0">
+        {isMultiSection && (
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between font-caption text-caption text-text-secondary tabular-nums">
+              <span>
+                Page {safeSectionIndex + 1} of {totalSections}
+              </span>
+              <span>{Math.round(((safeSectionIndex + 1) / totalSections) * 100)}%</span>
+            </div>
+            <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-container-highest">
+              <div
+                className="h-full rounded-full bg-primary transition-all duration-200"
+                style={{ width: `${((safeSectionIndex + 1) / totalSections) * 100}%` }}
+              />
+            </div>
+          </div>
+        )}
         <SurveyForm
           survey={survey}
           speaker={seminar.speaker.name}
           answers={answers}
           errors={errors}
           onAnswer={handleAnswer}
+          activeSectionIndex={isMultiSection ? safeSectionIndex : undefined}
         />
       </fieldset>
 
       <div className="flex flex-col gap-space-md rounded-xl bg-surface-card p-space-lg shadow-card">
         {submitError && (
-          <Alert variant="error" title="Evaluation not submitted" icon={CircleAlert}>
+          <Alert variant="error" title="Evaluation not submitted" icon="error">
             {submitError}
           </Alert>
         )}
@@ -157,15 +207,35 @@ export function EvaluationForm({ item, survey, onSubmitted }: EvaluationFormProp
               <Icon name="save" size={18} />
               <span>Save draft</span>
             </button>
-            <button
-              type="submit"
-              aria-disabled={submitting || undefined}
-              aria-busy={submitting || undefined}
-              className={cx(actionPrimary, submitting && 'cursor-wait opacity-90')}
-            >
-              {submitting ? <Spinner /> : <Icon name="send" size={18} />}
-              <span>{submitting ? 'Submitting evaluation' : 'Submit evaluation'}</span>
-            </button>
+            {isMultiSection && safeSectionIndex > 0 && (
+              <button type="button" onClick={handlePreviousSection} disabled={submitting} className={actionTonal}>
+                <Icon name="arrow_back" size={18} />
+                <span>Back</span>
+              </button>
+            )}
+            {isMultiSection && !isLastSection ? (
+              <button
+                key="next-section"
+                type="button"
+                onClick={handleNextSection}
+                disabled={submitting}
+                className={actionPrimary}
+              >
+                <span>Next</span>
+                <Icon name="arrow_forward" size={18} />
+              </button>
+            ) : (
+              <button
+                key="submit-evaluation"
+                type="submit"
+                aria-disabled={submitting || undefined}
+                aria-busy={submitting || undefined}
+                className={cx(actionPrimary, submitting && 'cursor-wait opacity-90')}
+              >
+                {submitting ? <Spinner /> : <Icon name="send" size={18} />}
+                <span>{submitting ? 'Submitting evaluation' : 'Submit evaluation'}</span>
+              </button>
+            )}
           </div>
         </div>
       </div>

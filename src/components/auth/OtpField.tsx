@@ -5,6 +5,7 @@ import { useCooldown } from '../../hooks/useCooldown';
 import { useOnlineStatus } from '../../hooks/useOnlineStatus';
 import { validatePasswordResetIdentifier, validateStudentId } from '../../features/auth/validation';
 import { Button } from '../ui/Button';
+import { Icon } from '../ui/Icon';
 import { TextField } from '../ui/TextField';
 
 interface OtpFieldProps {
@@ -33,75 +34,111 @@ export function OtpField({ id, studentId, password, verified, onVerifiedChange, 
     : !validatePasswordResetIdentifier(studentId);
   const [sent, setSent] = useState(false);
   const [value, setValue] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState('');
+  const [busy, setBusy] = useState<'send' | 'verify' | null>(null);
+  const [error, setError] = useState('');
 
   async function sendOtp() {
     if (!online || busy || remaining > 0) return;
-    setBusy(true);
-    setMessage('');
+    setBusy('send');
+    setError('');
     onVerifiedChange(false);
     const result = purpose === 'signup'
       ? sent
         ? await api.resendVerification(`${studentId}@${STUDENT_EMAIL_DOMAIN}`)
         : await api.sendSignupOtp(studentId, password ?? '')
       : await api.sendPasswordResetOtp(studentId);
-    setBusy(false);
+    setBusy(null);
     if (!result.ok) {
-      setMessage(otpFailureMessage(result.error.code));
+      setError(otpFailureMessage(result.error.code));
       return;
     }
     setSent(true);
     setValue('');
     start();
-    setMessage(purpose === 'signup'
-      ? 'OTP sent. Enter the 6-digit code to verify your account.'
-      : 'Recovery code sent. Enter the 6-digit code to verify your account.');
   }
 
   async function verifyOtp() {
     if (!online || busy || value.length !== 6) return;
-    setBusy(true);
-    setMessage('');
+    setBusy('verify');
+    setError('');
     const result = purpose === 'signup' ? await api.verifySignupOtp(studentId, value) : await api.verifyPasswordResetOtp(studentId, value);
-    setBusy(false);
+    setBusy(null);
     if (!result.ok) {
       onVerifiedChange(false);
-      setMessage(otpFailureMessage(result.error.code));
+      setError(otpFailureMessage(result.error.code));
       return;
     }
     onVerifiedChange(true);
-    setMessage('OTP verified.');
   }
 
+  const canSend = validIdentifier && (purpose !== 'signup' || sent || Boolean(password)) && online && !busy && remaining === 0 && !verified;
+
   return (
-    <div className="space-y-3 rounded-xl bg-cream-50 p-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <Button variant="secondary" type="button" onClick={() => void sendOtp()} disabled={!validIdentifier || (purpose === 'signup' && !sent && !password) || !online || busy || remaining > 0 || verified}>
-          {busy ? 'Sending…' : sent ? remaining > 0 ? `Resend OTP in ${remaining}s` : 'Resend OTP' : 'Send OTP'}
+    <div className="space-y-3 border-t border-border-subtle pt-4">
+      {!sent ? (
+        <Button variant="secondary" type="button" onClick={() => void sendOtp()} disabled={!canSend}>
+          {busy === 'send' ? 'Sending OTP…' : 'Send OTP'}
         </Button>
-        {sent && <span className="font-caption text-caption text-text-secondary">A code was sent to your institutional email.</span>}
-      </div>
-      {sent && (
-        <>
-          <TextField
-            id={id}
-            label="One-time password"
-            required
-            inputMode="numeric"
-            autoComplete="one-time-code"
-            maxLength={6}
-            placeholder="Enter 6-digit OTP"
-            value={value}
-            onChange={(next) => setValue(next.replace(/\D/g, '').slice(0, 6))}
-            disabled={verified || !online}
-          />
-          <Button variant="secondary" type="button" onClick={() => void verifyOtp()} disabled={verified || busy || !online || value.length !== 6}>
-            {verified ? 'OTP verified' : busy ? 'Verifying…' : 'Verify OTP'}
-          </Button>
-        </>
+      ) : (
+        <div className="space-y-3">
+          <div className="relative">
+            {!verified && (
+              <div className="absolute right-0 top-0 flex items-center">
+                <button
+                  type="button"
+                  onClick={() => void sendOtp()}
+                  disabled={!canSend}
+                  className="inline-flex min-h-6 items-center font-body-sm-medium text-body-sm-medium tabular-nums text-primary transition-colors hover:text-maroon-dark disabled:cursor-not-allowed disabled:text-text-subtle"
+                >
+                  {busy === 'send' ? 'Sending…' : remaining > 0 ? `Resend in ${remaining}s` : 'Resend OTP'}
+                </button>
+              </div>
+            )}
+            <TextField
+              id={id}
+              label="One-time password"
+              required
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              maxLength={6}
+              placeholder="Enter 6-digit code"
+              value={value}
+              error={error || undefined}
+              onChange={(next) => {
+                setValue(next.replace(/\D/g, '').slice(0, 6));
+                if (error) setError('');
+              }}
+              disabled={verified || !online}
+            />
+          </div>
+
+          {verified ? (
+            <p
+              role="status"
+              aria-live="polite"
+              className="flex items-center gap-2 rounded-lg bg-status-available-container px-3 py-2.5 font-body-sm-medium text-body-sm-medium text-status-available"
+            >
+              <Icon name="check_circle" size={18} />
+              <span>OTP verified</span>
+            </p>
+          ) : (
+            <Button
+              variant="secondary"
+              type="button"
+              onClick={() => void verifyOtp()}
+              disabled={busy !== null || !online || value.length !== 6}
+            >
+              {busy === 'verify' ? 'Verifying…' : 'Verify OTP'}
+            </Button>
+          )}
+        </div>
       )}
-      {message && <p role="status" aria-live="polite" className="font-caption text-caption text-text-secondary">{message}</p>}
+
+      {!sent && error && (
+        <p role="alert" className="font-body-sm text-body-sm font-medium text-danger">
+          {error}
+        </p>
+      )}
     </div>
   );
 }

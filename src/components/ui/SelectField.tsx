@@ -1,6 +1,6 @@
 import { forwardRef, type SelectHTMLAttributes } from 'react';
-import { ChevronDown, CircleAlert } from 'lucide-react';
 import { cx } from './cx';
+import { Icon } from './Icon';
 
 export interface SelectOption {
   value: string;
@@ -67,15 +67,16 @@ export const SelectField = forwardRef<HTMLSelectElement, SelectFieldProps>(funct
             </option>
           ))}
         </select>
-        <ChevronDown
-          aria-hidden="true"
-          className="pointer-events-none absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-charcoal-500"
+        <Icon
+          name="keyboard_arrow_down"
+          size={20}
+          className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-charcoal-500"
         />
       </div>
 
       {error && (
         <p id={errorId} role="alert" className="mt-1.5 flex items-start gap-1.5 text-sm font-medium text-danger">
-          <CircleAlert aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
+          <Icon name="error" size={16} className="mt-0.5" />
           <span>{error}</span>
         </p>
       )}

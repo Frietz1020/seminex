@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../../../api/client';
 import { PageContainer } from '../../../components/shell/PageContainer';
+import { PageHeader } from '../../../components/shell/PageHeader';
 import { actionPrimary } from '../../../components/ui/actionStyles';
 import { errorText } from '../../../components/ui/errorText';
 import { Icon } from '../../../components/ui/Icon';
@@ -13,6 +14,10 @@ import { SeminarCard } from '../components/SeminarCard';
 import { SeminarToolbar } from '../components/SeminarToolbar';
 import { useRegistration } from '../useRegistration';
 import type { SeminarListItem } from '../../../api/types';
+
+function isUnregistered(item: SeminarListItem): boolean {
+  return !item.registration || item.registration.status === 'cancelled' || item.registration.status === 'released';
+}
 
 export default function AvailableSeminarsPage() {
   const now = useNow();
@@ -30,18 +35,22 @@ export default function AvailableSeminarsPage() {
   const seminars = useResource(
     () => api.listAvailableSeminars({ pageSize: 50 }),
     'available-seminars',
-    (page) => now !== null && getOpenItems(page.items, now).length === 0 && page.nextCursor === null,
+    (page) => now !== null && getOpenItems(page.items, now).filter(isUnregistered).length === 0 && page.nextCursor === null,
   );
-  const baseItems = seminars.state.status === 'success'
-    ? [...seminars.state.data.items, ...additionalPages.flatMap((page) => page.items)]
-    : null;
+  const baseItems = useMemo(
+    () =>
+      seminars.state.status === 'success'
+        ? [...seminars.state.data.items, ...additionalPages.flatMap((page) => page.items)]
+        : null,
+    [seminars.state, additionalPages],
+  );
   const nextCursor = additionalPages.length > 0
     ? additionalPages[additionalPages.length - 1]?.nextCursor ?? null
     : seminars.state.status === 'success' ? seminars.state.data.nextCursor : null;
   const registration = useRegistration(baseItems);
 
   const openItems = useMemo(
-    () => (registration.items && now !== null ? getOpenItems(registration.items, now) : []),
+    () => (registration.items && now !== null ? getOpenItems(registration.items, now).filter(isUnregistered) : []),
     [registration.items, now],
   );
   const departments = useMemo(() => getDepartments(openItems), [openItems]);
@@ -95,18 +104,20 @@ export default function AvailableSeminarsPage() {
         {errorText(seminars.state.code)}
       </StateMessage>
     );
-  } else if (seminars.state.status === 'empty') {
+  } else if (seminars.state.status === 'empty' || openItems.length === 0) {
     content = (
       <StateMessage
         icon="event_available"
         title="No seminars are open right now"
         action={
-          <Link to="/home" className={actionPrimary}>
-            Back to home
-          </Link>
+          <div className="flex flex-wrap justify-center gap-space-sm">
+            <Link to="/my-seminars" className={actionPrimary}>
+              View my seminars
+            </Link>
+          </div>
         }
       >
-        New seminars appear here as soon as the council schedules them.
+        Seminars you register for move to My seminars. New sessions appear here as soon as they are scheduled.
       </StateMessage>
     );
   } else if (visible.length === 0) {
@@ -166,58 +177,22 @@ export default function AvailableSeminarsPage() {
 
   return (
     <PageContainer>
-      <header className="flex flex-col justify-between gap-space-lg md:flex-row md:items-end">
-        <div className="flex max-w-2xl flex-col gap-space-xs">
-          <h1 className="font-headline-xl text-headline-xl-mobile text-primary md:text-headline-xl">
-            Available seminars
-          </h1>
-        </div>
+      <PageHeader
+        title="Available seminars"
+        subtitle="Discover open CCS seminars and reserve your seat."
+        meta={
+          seminars.state.status === 'loading' ? (
+            <Skeleton className="h-7 w-32 rounded-full" />
+          ) : seminars.state.status === 'error' ? null : (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-maroon-container px-3 py-1 font-label-sm text-label-sm tabular-nums text-primary">
+              <Icon name="event_available" size={14} />
+              {metrics.sessions} {metrics.sessions === 1 ? 'active session' : 'active sessions'}
+            </span>
+          )
+        }
+      />
 
-        {seminars.state.status === 'loading' ? (
-          <Skeleton className="h-20 w-64 self-start md:self-auto" />
-        ) : seminars.state.status === 'error' ? null : (
-          <dl className="flex items-center gap-space-md self-start rounded-xl bg-surface-card p-space-md shadow-card md:self-auto">
-            <div className="flex flex-col pr-space-md">
-              <dt className="font-caption text-caption font-semibold text-text-subtle">Active sessions</dt>
-              <dd className="font-headline-sm text-headline-sm text-on-surface">
-                {metrics.sessions} {metrics.sessions === 1 ? 'session' : 'sessions'}
-              </dd>
-            </div>
-          </dl>
-        )}
-      </header>
-
-      <aside
-        aria-labelledby="notice-heading"
-        className="flex flex-col items-start justify-between gap-space-md rounded-xl bg-surface-container-low p-space-lg md:flex-row md:items-center"
-      >
-        <div className="flex items-start gap-space-md">
-          <div
-            aria-hidden="true"
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-surface-card text-primary shadow-card"
-          >
-            <Icon name="info" size={20} />
-          </div>
-          <div className="flex flex-col">
-            <h2 id="notice-heading" className="font-body-base-medium text-body-base-medium text-on-surface">
-              Attendance and certification notice
-            </h2>
-            <p className="mt-0.5 font-body-sm text-body-sm text-text-secondary">
-              Registering reserves your seat. Your certificate is issued once your attendance is verified by QR
-              scan at the venue entrance.
-            </p>
-          </div>
-        </div>
-        <Link
-          to="/guidelines"
-          className="inline-flex min-h-11 shrink-0 items-center gap-1 font-body-sm-medium text-body-sm-medium text-primary transition-colors hover:text-maroon-dark"
-        >
-          <span>Registration guidelines</span>
-          <Icon name="arrow_forward" size={16} />
-        </Link>
-      </aside>
-
-      {seminars.state.status === 'success' && (
+      {seminars.state.status === 'success' && openItems.length > 0 && (
         <SeminarToolbar
           query={query}
           onQueryChange={setQuery}
@@ -240,7 +215,7 @@ export default function AvailableSeminarsPage() {
       {nextCursor && (
         <div className="flex flex-col items-center gap-space-sm">
           <p className="sr-only" role="status" aria-live="polite">{loadingMore ? 'Loading more seminars' : `${visible.length} seminars currently shown`}</p>
-          <button type="button" onClick={() => void loadMore()} disabled={loadingMore} className="inline-flex min-h-11 items-center justify-center rounded-lg border border-border-subtle bg-surface-card px-space-lg font-body-sm-medium text-body-sm-medium text-primary shadow-card disabled:opacity-60">
+          <button type="button" onClick={() => void loadMore()} disabled={loadingMore} className="inline-flex min-h-11 items-center justify-center rounded-lg border border-border-subtle bg-surface-card px-space-lg font-body-sm-medium text-body-sm-medium text-primary transition-shadow hover:shadow-card disabled:opacity-60">
             {loadingMore ? 'Loading…' : 'Load more seminars'}
           </button>
         </div>

@@ -1,17 +1,6 @@
 import type { Seminar } from '../../../api/types';
 import { Icon } from '../../../components/ui/Icon';
 
-function getInitials(name: string): string {
-  const words = name
-    .replace(/^(dr|prof|engr|mr|ms|mrs|atty)\.?\s+/i, '')
-    .split(/\s+/)
-    .filter(Boolean);
-  return words
-    .slice(0, 2)
-    .map((word) => word[0]?.toUpperCase() ?? '')
-    .join('');
-}
-
 export function DetailsTab({ seminar }: { seminar: Seminar }) {
   const { speaker } = seminar;
   const specifications = [
@@ -21,80 +10,102 @@ export function DetailsTab({ seminar }: { seminar: Seminar }) {
   ].filter((row) => Boolean(row.value));
 
   return (
-    <div className="grid grid-cols-1 gap-space-lg lg:grid-cols-3">
-      <div className="flex flex-col gap-space-md rounded-xl bg-surface-card p-space-xl shadow-card lg:col-span-2">
-        <h2 className="font-headline-sm text-headline-sm text-on-surface">Seminar overview</h2>
-        <p className="font-body-base text-body-base leading-relaxed text-text-secondary">
+    <div className="grid items-start gap-space-lg lg:grid-cols-[minmax(0,1.4fr)_minmax(18rem,0.8fr)]">
+      <section
+        className="flex flex-col gap-space-md rounded-xl border border-border-subtle bg-surface-card p-space-lg"
+        aria-labelledby="seminar-overview-heading"
+      >
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 id="seminar-overview-heading" className="font-headline-sm text-headline-sm text-on-surface">
+            Collegiate syllabus &amp; description
+          </h2>
+          <span className="rounded-md bg-surface-container-low px-2.5 py-1 font-caption text-caption tabular-nums text-text-secondary">
+            {seminar.reference}
+          </span>
+        </div>
+
+        <p className="whitespace-pre-wrap font-body-base text-body-base leading-relaxed text-text-secondary">
           {seminar.overview ?? seminar.description}
         </p>
 
         {seminar.objectives && seminar.objectives.length > 0 && (
-          <>
-            <h3 className="mt-space-sm font-title-md text-title-md text-on-surface">Key learning objectives</h3>
-            <ul className="flex flex-col gap-space-xs font-body-base text-body-base text-text-secondary">
-              {seminar.objectives.map((objective) => (
-                <li key={objective} className="flex items-start gap-space-xs">
-                  <Icon name="check_circle" size={18} className="mt-0.5 text-primary-container" />
-                  <span>{objective}</span>
+          <div className="border-t border-border-subtle pt-space-md">
+            <h3 className="font-body-sm-medium text-body-sm-medium text-on-surface">Learning objectives</h3>
+            <ul className="mt-space-sm flex flex-col gap-space-sm">
+              {seminar.objectives.map((objective, index) => (
+                <li key={`${index}-${objective}`} className="flex items-start gap-space-sm font-body-sm text-body-sm text-text-secondary">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-surface-container-low font-label-sm text-label-sm tabular-nums text-primary">
+                    {index + 1}
+                  </span>
+                  {objective}
                 </li>
               ))}
             </ul>
-          </>
+          </div>
         )}
 
-        <h3 className="mt-space-sm font-title-md text-title-md text-on-surface">Venue guidelines</h3>
-        <div className="flex flex-col gap-space-xs rounded-lg bg-surface-container-low p-space-md font-body-sm text-body-sm text-text-secondary">
-          <p className="flex items-center gap-space-xs font-body-sm-medium text-body-sm-medium text-on-surface">
-            <Icon name="location_on" size={18} className="text-primary-container" />
-            <span>{seminar.venue}</span>
-          </p>
-          {seminar.venueGuidelines && <p>{seminar.venueGuidelines}</p>}
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-space-lg">
-        <section
-          aria-labelledby="speaker-heading"
-          className="flex flex-col gap-space-md rounded-xl bg-surface-card p-space-lg shadow-card"
-        >
-          <h2 id="speaker-heading" className="font-label-sm text-label-sm text-text-subtle">
-            Resource speaker
-          </h2>
-          <div className="flex items-center gap-space-md">
-            {speaker.photoUrl ? (
-              <img src={speaker.photoUrl} alt="" className="h-16 w-16 shrink-0 rounded-full object-cover" />
-            ) : (
-              <span
-                aria-hidden="true"
-                className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-maroon-container font-title-md text-title-md text-primary-container"
-              >
-                {getInitials(speaker.name)}
-              </span>
-            )}
-            <div className="flex min-w-0 flex-col">
-              <span className="font-title-md text-title-md text-on-surface">{speaker.name}</span>
-              <span className="font-body-sm text-body-sm text-text-secondary">{speaker.role}</span>
+        <div className="grid gap-space-sm border-t border-border-subtle pt-space-md sm:grid-cols-2">
+          <div className="flex items-start gap-space-sm rounded-xl bg-surface-container-low p-space-md">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-surface-container-lowest text-primary">
+              <Icon name="record_voice_over" size={22} />
+            </span>
+            <div className="min-w-0">
+              <h3 className="font-body-sm-medium text-body-sm-medium text-on-surface">Resource speaker</h3>
+              <p className="mt-1 font-body-sm-medium text-body-sm-medium text-on-surface">{speaker.name}</p>
+              {speaker.role && <p className="font-caption text-caption text-text-secondary">{speaker.role}</p>}
               {speaker.organization && (
-                <span className="font-caption text-caption text-text-subtle">{speaker.organization}</span>
+                <p className="font-caption text-caption text-text-subtle">{speaker.organization}</p>
+              )}
+              {speaker.bio && <p className="mt-1 font-caption text-caption text-text-secondary">{speaker.bio}</p>}
+            </div>
+          </div>
+
+          <div className="flex items-start gap-space-sm rounded-xl bg-surface-container-low p-space-md">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-surface-container-lowest text-primary">
+              <Icon name="location_on" size={22} />
+            </span>
+            <div className="min-w-0">
+              <h3 className="font-body-sm-medium text-body-sm-medium text-on-surface">Venue</h3>
+              <p className="mt-1 font-body-sm-medium text-body-sm-medium text-on-surface">{seminar.venue}</p>
+              {seminar.venueGuidelines && (
+                <p className="mt-1 font-caption text-caption text-text-secondary">{seminar.venueGuidelines}</p>
               )}
             </div>
           </div>
-          {speaker.bio && (
-            <p className="pt-space-xs font-body-sm text-body-sm leading-relaxed text-text-secondary">
-              {speaker.bio}
+        </div>
+      </section>
+
+      <div className="flex flex-col gap-space-lg">
+        <section
+          className="flex flex-col gap-space-sm rounded-xl border border-border-subtle bg-surface-card p-space-lg"
+          aria-labelledby="student-requirements-heading"
+        >
+          <div className="flex items-center gap-space-sm">
+            <Icon name="verified_user" size={20} className="text-primary" />
+            <h2 id="student-requirements-heading" className="font-title-md text-title-md text-on-surface">
+              Attendance &amp; certificate requirements
+            </h2>
+          </div>
+          <p className="font-body-sm text-body-sm text-text-secondary">
+            Meet the attendance threshold, have your time-in and time-out recorded, and submit the evaluation to receive your certificate.
+          </p>
+          <div className="rounded-xl bg-surface-container-low p-space-md">
+            <p className="font-caption text-caption text-text-secondary">Required attendance</p>
+            <p className="mt-1 font-headline-sm text-headline-sm tabular-nums text-primary">
+              {seminar.requiredAttendancePercent}% of seminar duration
             </p>
-          )}
+          </div>
         </section>
 
         {specifications.length > 0 && (
           <section
             aria-labelledby="specifications-heading"
-            className="flex flex-col gap-space-sm rounded-xl bg-surface-card p-space-lg shadow-card"
+            className="flex flex-col gap-space-sm rounded-xl border border-border-subtle bg-surface-card p-space-lg"
           >
-            <h2 id="specifications-heading" className="font-label-sm text-label-sm text-text-subtle">
+            <h2 id="specifications-heading" className="font-title-md text-title-md text-on-surface">
               Registration specifications
             </h2>
-            <dl>
+            <dl className="divide-y divide-border-subtle">
               {specifications.map((row) => (
                 <div key={row.label} className="flex items-center justify-between gap-space-md py-2">
                   <dt className="font-body-sm text-body-sm text-text-secondary">{row.label}</dt>

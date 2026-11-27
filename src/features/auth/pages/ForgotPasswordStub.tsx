@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { OtpField } from '../../../components/auth/OtpField';
 import { PasswordField } from '../../../components/ui/PasswordField';
@@ -21,6 +21,10 @@ export default function ForgotPasswordPage() {
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
 
+  useEffect(() => {
+    document.title = 'Reset password - Seminex';
+  }, []);
+
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     const error = validateNewPassword(password);
@@ -34,6 +38,12 @@ export default function ForgotPasswordPage() {
 
   return (
     <AuthLayout brandMessage="Reset your password" brandSupportingText="Verify your Student ID or faculty email, then choose a new password.">
+      <div className="mb-6 md:mb-8">
+        <h1 className="font-heading text-2xl font-bold text-charcoal-900 md:text-3xl">Reset your password</h1>
+        <p className="mt-1.5 text-base text-charcoal-700 md:mt-2">
+          Verify your Student ID or faculty email, then choose a new password.
+        </p>
+      </div>
       <form onSubmit={(event) => void submit(event)} className="space-y-5">
         <TextField id="reset-account-identifier" label="Student ID or faculty email" required autoComplete="username" autoCapitalize="none" spellCheck={false} placeholder="Student ID or name@gordoncollege.edu.ph" value={identifier} onChange={(value) => { setIdentifier(value); setVerified(false); }} error={identifier ? validatePasswordResetIdentifier(identifier) : undefined} />
         <OtpField key={identifier} id="reset-otp" studentId={identifier} verified={verified} onVerifiedChange={setVerified} purpose="password-reset" />

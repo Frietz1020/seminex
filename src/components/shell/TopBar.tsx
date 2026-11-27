@@ -13,7 +13,13 @@ import { WorkspaceSwitcher } from './org/WorkspaceSwitcher';
  * Desktop: bell, name with student number and program, avatar (the logo lives only in the
  * sidebar). Below lg, where there is no sidebar: logo, bell, avatar, and the name block from sm up.
  */
-export function TopBar({ workspaceIdentity }: { workspaceIdentity: OrgIdentity | null }) {
+export function TopBar({
+  workspaceIdentity,
+  sidebarCollapsed = false,
+}: {
+  workspaceIdentity: OrgIdentity | null;
+  sidebarCollapsed?: boolean;
+}) {
   const { state } = useProfile();
   const [notificationsOpen, setNotificationsOpen] = useState(false);
 
@@ -23,7 +29,9 @@ export function TopBar({ workspaceIdentity }: { workspaceIdentity: OrgIdentity |
   const bellLabel = unread > 0 ? `Notifications, ${unread} unread` : 'Notifications';
 
   return (
-    <header className="fixed inset-x-0 top-0 z-40 flex h-[calc(3.5rem+env(safe-area-inset-top))] items-center justify-between bg-surface-light/90 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pt-[env(safe-area-inset-top)] shadow-shell backdrop-blur-xl lg:left-64 lg:h-16 lg:pl-space-xl lg:pr-space-xl lg:pt-0">
+    <header
+      className={`fixed inset-x-0 top-0 z-40 flex h-[calc(3.5rem+env(safe-area-inset-top))] items-center justify-between border-b border-border-subtle bg-surface-card/95 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pt-[env(safe-area-inset-top)] backdrop-blur-md transition-[left] duration-200 ${sidebarCollapsed ? 'lg:left-[72px]' : 'lg:left-64'} lg:h-16 lg:pl-space-xl lg:pr-space-xl lg:pt-0`}
+    >
       <div className="flex items-center gap-space-md">
         <Link to="/home" aria-label="Seminex home" className="flex min-h-11 items-center rounded-lg lg:hidden">
           <BrandMark />
@@ -75,10 +83,8 @@ export function TopBar({ workspaceIdentity }: { workspaceIdentity: OrgIdentity |
       </div>
 
       <Dialog open={notificationsOpen} onClose={() => setNotificationsOpen(false)} title="Notifications">
-        <div className="mt-space-md flex flex-col items-center gap-space-sm rounded-xl bg-surface-container-low px-space-lg py-space-xl text-center">
-          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-surface-card text-primary shadow-card">
-            <Icon name="notifications" size={24} />
-          </span>
+        <div className="mt-space-md flex flex-col items-center gap-space-sm py-space-lg text-center">
+          <Icon name="notifications" size={24} className="text-primary" />
           <p className="font-body-sm text-body-sm text-text-secondary">
             Notifications are not available yet.
           </p>

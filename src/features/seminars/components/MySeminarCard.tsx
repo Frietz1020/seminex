@@ -21,16 +21,16 @@ interface MySeminarCardProps {
 /** Cover image, or a plain illustration while seminars have no image. The caption names the venue. */
 function Cover({ seminar }: { seminar: Seminar }) {
   return (
-    <div className="relative h-36 w-full shrink-0 overflow-hidden rounded-lg bg-surface-container md:w-56">
+    <div className="relative aspect-video w-full shrink-0 overflow-hidden rounded-lg bg-maroon-container md:w-64">
       {seminar.imageUrl ? (
         <img src={seminar.imageUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
       ) : (
-        <svg aria-hidden="true" viewBox="0 0 200 130" preserveAspectRatio="xMidYMid slice" className="h-full w-full">
-          <rect width="200" height="130" className="fill-surface-container" />
-          <circle cx="50" cy="35" r="14" className="fill-secondary-fixed" />
-          <path d="M0 100 L60 50 L110 90 L160 40 L200 70 L200 130 L0 130 Z" className="fill-surface-variant" />
-          <path d="M0 118 L70 78 L130 110 L200 84 L200 130 L0 130 Z" className="fill-outline-variant" />
-        </svg>
+        <div
+          aria-hidden="true"
+          className="flex h-full w-full items-center justify-center text-primary-container"
+        >
+          <Icon name="event_available" size={32} />
+        </div>
       )}
       <div className="absolute inset-x-0 bottom-0 bg-linear-to-t from-inverse-surface/80 to-transparent px-2.5 pb-2 pt-8">
         <span className="font-caption text-caption text-white">{seminar.venue}</span>
@@ -63,7 +63,7 @@ export function MySeminarCard({ item, group, now, onCancel }: MySeminarCardProps
   return (
     <article
       aria-labelledby={titleId}
-      className="relative flex flex-col gap-space-lg rounded-xl border border-border-subtle bg-surface-card p-space-lg shadow-card transition duration-150 hover:shadow-card-hover motion-safe:active:scale-[0.97] md:flex-row"
+      className="relative flex flex-col gap-space-lg rounded-xl border border-border-subtle bg-surface-card p-space-lg transition duration-150 hover:border-outline-variant hover:shadow-card-hover motion-safe:active:scale-[0.97] md:flex-row"
     >
       <Link
         to={`/my-seminars/${seminar.id}`}
@@ -94,7 +94,7 @@ export function MySeminarCard({ item, group, now, onCancel }: MySeminarCardProps
           {seminar.title}
         </h3>
 
-        <dl className="grid grid-cols-1 gap-space-sm font-body-sm text-body-sm text-text-secondary sm:grid-cols-2">
+        <dl className="grid grid-cols-1 gap-space-sm font-body-sm text-body-sm tabular-nums text-text-secondary sm:grid-cols-2">
           <Detail icon="person" label="Speaker">
             {seminar.speaker.name}
           </Detail>

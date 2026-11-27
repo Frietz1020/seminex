@@ -20,22 +20,21 @@ import { questionCount } from '../surveyText';
 
 type HeadingRef = RefObject<HTMLHeadingElement | null>;
 
-function SubmittedPanel({ submittedAt }: { submittedAt: string }) {
+function SubmittedPanel({ seminarId, submittedAt }: { seminarId: string; submittedAt: string }) {
   return (
     <div className="flex flex-col items-center justify-center rounded-xl bg-surface-card px-space-xl py-16 text-center shadow-card">
       <div
         aria-hidden="true"
         className="mb-space-md flex h-16 w-16 items-center justify-center rounded-full bg-status-available-container text-status-available"
       >
-        <Icon name="check_circle" size={32} />
+        <Icon name="workspace_premium" size={32} />
       </div>
       <h2 className="font-headline-md text-headline-md text-on-surface">Evaluation submitted</h2>
       <p className="mt-space-xs max-w-md font-body-base text-body-base text-text-secondary">
-        You submitted your evaluation on {formatDate(submittedAt)}. Your responses are saved and cannot be edited. Your
-        certificate appears in History when it is ready.
+        You submitted your evaluation on {formatDate(submittedAt)}. Your responses are saved and your certificate is ready to view in History.
       </p>
-      <Link to="/history" className={`${actionPrimary} mt-space-lg`}>
-        <span>Go to History</span>
+      <Link to={`/history/${seminarId}`} className={`${actionPrimary} mt-space-lg`}>
+        <span>View certificate</span>
         <Icon name="arrow_forward" size={18} />
       </Link>
     </div>
@@ -189,7 +188,7 @@ export default function EvaluationPage() {
           {submitted ? (
             <>
               <SeminarContextCard item={item} record={record} headingRef={headingRef} />
-              <SubmittedPanel submittedAt={submitted.at} />
+              <SubmittedPanel seminarId={item.seminar.id} submittedAt={submitted.at} />
             </>
           ) : access.state === 'locked' ? (
             <>
@@ -199,7 +198,7 @@ export default function EvaluationPage() {
           ) : access.state === 'submitted' ? (
             <>
               <SeminarContextCard item={item} record={record} headingRef={headingRef} />
-              <SubmittedPanel submittedAt={access.submittedAt} />
+              <SubmittedPanel seminarId={item.seminar.id} submittedAt={access.submittedAt} />
             </>
           ) : (
             <UnlockedEvaluation item={item} record={record} headingRef={headingRef} onSubmitted={handleSubmitted} />
@@ -211,6 +210,7 @@ export default function EvaluationPage() {
         <SubmittedDialog
           open={dialogOpen}
           onClose={handleDialogClose}
+          seminarId={item.seminar.id}
           seminarTitle={item.seminar.title}
           certificateSerial={submitted?.result.certificateSerial}
         />

@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, Check, CircleAlert, TriangleAlert, WifiOff } from 'lucide-react';
 import { api, type ApiErrorCode, type Block, type Profile, type Program, type YearLevel } from '../../../api/client';
 import { Alert } from '../../../components/ui/Alert';
 import { InlineError } from '../../../components/ui/StateMessage';
 import { useResource } from '../../../hooks/useResource';
 import { Button } from '../../../components/ui/Button';
+import { Icon } from '../../../components/ui/Icon';
 import { BrandPanel } from '../../../components/auth/BrandPanel';
 import { OtpField } from '../../../components/auth/OtpField';
+import { StepProgress } from '../../../components/auth/StepProgress';
 import { BrandMark } from '../../../components/shell/BrandMark';
 import { PasswordField } from '../../../components/ui/PasswordField';
 import { PasswordRules } from '../../../components/auth/PasswordRules';
@@ -177,7 +178,6 @@ export default function OrganizationSignUpPage() {
   const organizationLabel = organizations.find((item) => item.value === values.organization)?.label;
   const identityName = [values.firstName, values.middleInitial && `${values.middleInitial}.`, values.lastName].filter(Boolean).join(' ');
   const personalFields: Field[] = ['firstName', 'lastName', 'program', 'yearLevel', 'block'];
-  const visibleSteps: Step[] = applicantSession ? [3] : [1, 2, 3];
   const stepTitle = step === 1 ? 'Create Officer Account' : step === 2 ? 'Personal Information' : 'Your Organization';
 
   return (
@@ -185,52 +185,58 @@ export default function OrganizationSignUpPage() {
       <BrandPanel
         message="Create and streamline your organization's seminars with Seminex."
         supportingText="Coordinate events, manage registrations, and support student participation in one place."
-        footer={`Organization onboarding · Step ${step} of 3`}
       />
 
       <main className="flex min-h-dvh flex-1 items-center justify-center px-5 py-8 sm:px-10 md:py-12">
         <div className="w-full max-w-[560px]">
-          <header className="mb-6 flex items-center justify-between">
-            <Link to="/organization/sign-in" className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-charcoal-700 hover:text-maroon"><ArrowLeft className="h-4 w-4" />Back to sign in</Link>
-            <span className="rounded-full bg-maroon/10 px-3 py-1 text-xs font-semibold text-maroon">Step {step} of 3</span>
+          <header className="mb-4">
+            <Link to="/organization/sign-in" className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-charcoal-700 hover:text-maroon"><Icon name="arrow_back" size={16} />Back to sign in</Link>
           </header>
-          <div className="mb-6 flex items-center gap-3 md:hidden"><BrandMark size={40} /><span><p className="font-heading text-xl font-bold text-charcoal-900">Seminex</p><p className="text-xs uppercase tracking-wide text-burnt">CCS Gordon College</p></span></div>
-          <h2 className="font-heading text-2xl font-bold text-charcoal-900 md:text-3xl">{stepTitle}</h2>
+          <div className="mb-6 flex items-center gap-3 md:hidden"><BrandMark size={40} /><span><p className="font-heading text-xl font-bold text-charcoal-900">Seminex</p><p className="font-caption text-caption text-burnt">CCS Gordon College</p></span></div>
+          <h1 className="font-heading text-2xl font-bold text-charcoal-900 md:text-3xl">{stepTitle}</h1>
           <p className="mt-2 text-sm leading-relaxed text-charcoal-700">Create and streamline your organization's seminars, coordinate events, and support student participation with Seminex.</p>
 
           {!applicantSession && (
-          <div className="my-5 grid grid-cols-3 gap-3" aria-label="Registration progress">
-            {visibleSteps.map((item) => <button key={item} type="button" onClick={() => {
-              if (item === 1) setStep(1);
-              else if (item === 2 && otpVerified) setStep(2);
-              else if (item === 3 && (applicantSession || (otpVerified && validateFields(personalFields)))) setStep(3);
-            }} aria-current={step === item ? 'step' : undefined} className={`flex min-h-16 items-center gap-3 rounded-xl border-2 p-3 text-left ${step === item ? 'border-maroon bg-white' : 'border-charcoal-200 bg-white/60'}`}><span className={`flex h-7 w-7 items-center justify-center rounded-lg text-xs font-bold ${step > item ? 'bg-success text-white' : step === item ? 'bg-maroon text-white' : 'bg-charcoal-200 text-charcoal-700'}`}>{step > item ? <Check className="h-4 w-4" /> : item}</span><span><span className="block font-label-sm text-label-sm font-semibold uppercase tracking-wider text-charcoal-500">Step {item}</span><span className="block text-xs font-bold text-charcoal-900">{item === 1 ? 'Credentials + OTP' : item === 2 ? 'Personal Information' : 'Your Organization'}</span></span></button>)}
-          </div>
+            <div className="mt-5">
+              <StepProgress
+                current={step}
+                steps={[
+                  { step: 1, label: 'Credentials' },
+                  { step: 2, label: 'Personal' },
+                  { step: 3, label: 'Organization' },
+                ]}
+                onSelect={(item) => {
+                  if (item === 1) setStep(1);
+                  else if (item === 2 && otpVerified) setStep(2);
+                  else if (item === 3 && (applicantSession || (otpVerified && validateFields(personalFields)))) setStep(3);
+                }}
+              />
+            </div>
           )}
 
-          {!online && <div className="mb-4"><Alert ref={offlineRef} variant="neutral" role="status" icon={WifiOff} title="You are offline">Connect to the internet to create your account. Your entries are kept.</Alert></div>}
-          {failure === 'network' && online && <div className="mb-4"><Alert variant="error" icon={TriangleAlert} title="Connection problem">Seminex could not be reached. Check your connection and try again.</Alert></div>}
+          {!online && <div className="mb-4"><Alert ref={offlineRef} variant="neutral" role="status" icon="cloud_off" title="You are offline">Connect to the internet to create your account. Your entries are kept.</Alert></div>}
+          {failure === 'network' && online && <div className="mb-4"><Alert variant="error" icon="warning" title="Connection problem">Seminex could not be reached. Check your connection and try again.</Alert></div>}
 
           {applicantSession && (applicantProfile.state.status === 'loading' || (applicantProfile.state.status === 'success' && !applicantProfile.state.data)) ? (
-            <p role="status" className="rounded-xl bg-white p-5 text-sm text-charcoal-700 shadow-control">Loading your applicant profile…</p>
+            <p role="status" className="rounded-xl border border-border-subtle bg-surface-card p-5 text-sm text-charcoal-700">Loading your applicant profile…</p>
           ) : applicantSession && applicantProfile.state.status === 'error' ? (
             <InlineError onRetry={applicantProfile.reload}>Your applicant profile could not be loaded.</InlineError>
           ) : step === 1 ? (
-            <form noValidate onSubmit={continueStep} className="space-y-5 rounded-2xl border border-charcoal-200 bg-white p-5 shadow-control md:p-6">
+            <form noValidate onSubmit={continueStep} className="space-y-5 rounded-2xl border border-border-subtle bg-surface-card p-5 md:p-6">
               <section className="space-y-4">
-                <div><p className="text-xs font-semibold uppercase tracking-wider text-burnt">Step 1 of 3</p><h3 className="font-heading text-lg font-bold text-charcoal-900">Credentials and OTP</h3></div>
+                <div className="border-b border-border-subtle pb-3"><h2 className="font-heading text-lg font-bold text-charcoal-900">Credentials and OTP</h2></div>
                 <StudentIdField id="org-signup-student-id" value={values.studentId} error={errors.studentId} onChange={(value) => setField('studentId', value)} onBlur={() => setErrors((current) => ({ ...current, studentId: validate('studentId', values) }))} />
                 <OtpField key={values.studentId} id="org-signup-otp" studentId={values.studentId} password={values.password} verified={otpVerified} onVerifiedChange={(verified) => { setOtpVerified(verified); if (verified) setOtpError(''); }} />
                 <div><PasswordField id="org-signup-password" label="Account password" required autoComplete="new-password" value={values.password} error={errors.password} onChange={(value) => setField('password', value)} onBlur={() => setErrors((current) => ({ ...current, password: validate('password', values) }))} /><PasswordRules password={values.password} /></div>
                 <div><PasswordField id="org-signup-confirm" label="Confirm password" required autoComplete="new-password" value={values.confirmPassword} error={errors.confirmPassword} onChange={(value) => setField('confirmPassword', value)} onBlur={() => setErrors((current) => ({ ...current, confirmPassword: validate('confirmPassword', values) }))} /></div>
               </section>
               {!otpVerified && otpError && <p role="alert" className="text-sm font-medium text-danger-ink">{otpError}</p>}
-              <Button type="submit" icon={<ArrowRight className="h-4 w-4" />}>Continue to personal information</Button>
+              <Button type="submit" icon={<Icon name="arrow_forward" size={16} />}>Continue to personal information</Button>
             </form>
           ) : step === 2 ? (
-            <form noValidate onSubmit={continueStep} className="space-y-5 rounded-2xl border border-charcoal-200 bg-white p-5 shadow-control md:p-6">
+            <form noValidate onSubmit={continueStep} className="space-y-5 rounded-2xl border border-border-subtle bg-surface-card p-5 md:p-6">
               <section className="space-y-4">
-                <div><p className="text-xs font-semibold uppercase tracking-wider text-burnt">Step 2 of 3</p><h3 className="font-heading text-lg font-bold text-charcoal-900">Personal information</h3></div>
+                <div className="border-b border-border-subtle pb-3"><h2 className="font-heading text-lg font-bold text-charcoal-900">Personal information</h2></div>
                 <div className="grid grid-cols-12 gap-3">
                   <div className="col-span-12 sm:col-span-5"><TextField id="org-signup-last-name" label="Last name" required autoComplete="family-name" value={values.lastName} error={errors.lastName} onChange={(value) => setField('lastName', value)} onBlur={() => setErrors((current) => ({ ...current, lastName: validate('lastName', values) }))} /></div>
                   <div className="col-span-8 sm:col-span-5"><TextField id="org-signup-first-name" label="First name" required autoComplete="given-name" value={values.firstName} error={errors.firstName} onChange={(value) => setField('firstName', value)} onBlur={() => setErrors((current) => ({ ...current, firstName: validate('firstName', values) }))} /></div>
@@ -239,22 +245,22 @@ export default function OrganizationSignUpPage() {
                 <SelectField id="org-signup-program" label="Academic program" required placeholder="Select CCS degree program" options={PROGRAMS} value={values.program} error={errors.program} onChange={(value) => setField('program', value)} onBlur={() => setErrors((current) => ({ ...current, program: validate('program', values) }))} />
                 <div className="grid grid-cols-2 gap-3"><SelectField id="org-signup-year" label="Year level" required placeholder="Select year" options={YEAR_LEVELS} value={values.yearLevel} error={errors.yearLevel} onChange={(value) => setField('yearLevel', value)} onBlur={() => setErrors((current) => ({ ...current, yearLevel: validate('yearLevel', values) }))} /><SelectField id="org-signup-block" label="Assigned block" required placeholder="Select block" options={BLOCKS} value={values.block} error={errors.block} onChange={(value) => setField('block', value)} onBlur={() => setErrors((current) => ({ ...current, block: validate('block', values) }))} /></div>
               </section>
-              <Button type="submit" icon={<ArrowRight className="h-4 w-4" />}>Continue to your organization</Button>
-              <Button variant="secondary" onClick={() => setStep(1)} icon={<ArrowLeft className="h-4 w-4" />}>Back to credentials</Button>
+              <Button type="submit" icon={<Icon name="arrow_forward" size={16} />}>Continue to your organization</Button>
+              <Button variant="secondary" onClick={() => setStep(1)} icon={<Icon name="arrow_back" size={16} />}>Back to credentials</Button>
             </form>
           ) : (
-            <form noValidate onSubmit={submitRequest} className="space-y-5 rounded-2xl border border-charcoal-200 bg-white p-5 shadow-control md:p-6">
-              <div><p className="text-xs font-semibold uppercase tracking-wider text-burnt">Step 3 of 3</p><h3 className="font-heading text-lg font-bold text-charcoal-900">Your Organization</h3><p className="mt-1 text-sm text-charcoal-700">Choose the organization and appointed role you represent.</p></div>
-              <div className="rounded-xl bg-cream-50 p-4"><p className="text-xs font-semibold uppercase tracking-wider text-charcoal-500">Account identity</p><p className="mt-1 font-semibold text-charcoal-900">{identityName || 'Your name'} · {values.studentId || 'Student ID'}</p><p className="mt-1 text-sm text-charcoal-600">{values.program ? programLabel(values.program as Program) : 'Program'} · {values.yearLevel ? yearLevelLabel(Number(values.yearLevel) as YearLevel) : 'Year level'} · {values.block ? blockLabel(values.block as Block) : 'Block'}</p></div>
+            <form noValidate onSubmit={submitRequest} className="space-y-5 rounded-2xl border border-border-subtle bg-surface-card p-5 md:p-6">
+              <div className="border-b border-border-subtle pb-3"><h2 className="font-heading text-lg font-bold text-charcoal-900">Your Organization</h2><p className="mt-1 text-sm text-charcoal-700">Choose the organization and appointed role you represent.</p></div>
+              <div className="rounded-xl bg-surface-container-low p-4"><p className="font-caption text-caption font-semibold text-text-subtle">Account identity</p><p className="mt-1 font-semibold text-charcoal-900">{identityName || 'Your name'} · {values.studentId || 'Student ID'}</p><p className="mt-1 text-sm text-text-secondary">{values.program ? programLabel(values.program as Program) : 'Program'} · {values.yearLevel ? yearLevelLabel(Number(values.yearLevel) as YearLevel) : 'Year level'} · {values.block ? blockLabel(values.block as Block) : 'Block'}</p></div>
               {orgState.status === 'error' && <InlineError onRetry={reloadOrgs}>Organizations could not be loaded.</InlineError>}
               <SelectField id="org-signup-organization" label="Student organization" required placeholder={orgState.status === 'loading' ? 'Loading organizations' : 'Select your organization'} disabled={orgState.status !== 'success'} options={organizations} value={values.organization} error={errors.organization} onChange={(value) => setField('organization', value)} />
               <SelectField id="org-signup-role" label="Constitutional role" required placeholder="Select your official role" options={ROLES} value={values.role} error={errors.role} onChange={(value) => setField('role', value)} />
               <div><label className="mb-2 block text-sm font-semibold text-charcoal-900">Term / Academic Year</label><div className="rounded-control border border-charcoal-200 bg-cream-50 px-3.5 py-3 text-sm text-charcoal-700">{period ? `Academic Year ${period.academicYear}` : 'Checking academic calendar…'}</div></div>
-              <div className="rounded-xl border border-charcoal-300 bg-white p-4 text-sm leading-relaxed text-charcoal-900"><strong className="block">Adviser approval</strong>Your adviser reviews your request. Until it is approved, you can use the participant portal only.</div>
-              <div className="rounded-xl bg-cream-100 p-4"><p className="text-xs font-semibold uppercase tracking-wider text-charcoal-500">Request summary</p><div className="mt-2 flex justify-between gap-3 text-sm"><span className="text-charcoal-600">Selected organization</span><strong className="text-right text-charcoal-900">{organizationLabel || 'Not selected'}</strong></div><div className="mt-2 flex justify-between gap-3 text-sm"><span className="text-charcoal-600">Appointed role</span><strong className="text-right text-maroon">{values.role || 'Not selected'}</strong></div></div>
+              <div className="rounded-xl border border-charcoal-300 bg-surface-card p-4 text-sm leading-relaxed text-charcoal-900"><strong className="block">Adviser approval</strong>Your adviser reviews your request. Until it is approved, you can use the participant portal only.</div>
+              <div className="rounded-xl bg-surface-container-low p-4"><p className="font-caption text-caption font-semibold text-text-subtle">Request summary</p><div className="mt-2 flex justify-between gap-3 text-sm"><span className="text-text-secondary">Selected organization</span><strong className="text-right text-charcoal-900">{organizationLabel || 'Not selected'}</strong></div><div className="mt-2 flex justify-between gap-3 text-sm"><span className="text-text-secondary">Appointed role</span><strong className="text-right text-maroon">{values.role || 'Not selected'}</strong></div></div>
               <Button type="submit" loading={pending} loadingLabel="Creating request...">{applicantSession ? 'Send organization access request' : 'Create account and send request'}</Button>
-              {!applicantSession && <Button variant="secondary" disabled={pending} icon={<ArrowLeft className="h-4 w-4" />} onClick={() => setStep(2)}>Back to personal information</Button>}
-              <p className="flex items-start gap-2 text-xs leading-relaxed text-charcoal-600"><CircleAlert aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-maroon" />By continuing, you confirm that your organization and role are correct.</p>
+              {!applicantSession && <Button variant="secondary" disabled={pending} icon={<Icon name="arrow_back" size={16} />} onClick={() => setStep(2)}>Back to personal information</Button>}
+              <p className="flex items-start gap-2 text-xs leading-relaxed text-text-secondary"><Icon name="error" size={16} className="mt-0.5 text-maroon" />By continuing, you confirm that your organization and role are correct.</p>
             </form>
           )}
           <p className="mt-5 text-center text-sm text-charcoal-700">Already have an account? <Link to="/organization/sign-in" className="font-semibold text-maroon hover:underline">Sign in</Link></p>

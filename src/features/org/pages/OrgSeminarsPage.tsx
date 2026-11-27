@@ -8,11 +8,11 @@ import { LoadingRegion, RetryButton, Skeleton, StateMessage } from '../../../com
 import { useNow } from '../../../hooks/useNow';
 import { useResource } from '../../../hooks/useResource';
 import { getDraftReadiness } from '../readiness';
-import { getOrgLifecycle, isOrgRecentlyFinished } from '../seminarStatus';
+import { getOrgLifecycle } from '../seminarStatus';
 import { OrgStatusBadge } from '../components/OrgStatusBadge';
 import { ProgressBar } from '../../../components/ui/ProgressBar';
 
-type View = 'all' | 'ongoing' | 'upcoming' | 'drafts' | 'recent';
+type View = 'all' | 'ongoing' | 'upcoming' | 'drafts';
 type Sort = 'nearest' | 'az' | 'registrants';
 type ExtraPages = {
   query: string;
@@ -36,7 +36,6 @@ const FILTERS: Array<{ value: View; label: string }> = [
   { value: 'ongoing', label: 'Ongoing' },
   { value: 'upcoming', label: 'Upcoming' },
   { value: 'drafts', label: 'Drafts' },
-  { value: 'recent', label: 'Finished recently' },
 ];
 
 function dateTime(value: string) {
@@ -56,43 +55,121 @@ function LiveAttendanceWidget({ seminar }: { seminar: OrgSeminar }) {
   const percentage = seminar.registeredCount > 0 ? Math.min(100, Math.round(timeIn / seminar.registeredCount * 100)) : 0;
   const circumference = 2 * Math.PI * 19;
 
-  return <aside aria-label="Live attendance summary" className="flex shrink-0 items-center gap-space-md rounded-xl bg-surface-container-low p-space-md lg:w-56 lg:flex-col lg:items-center lg:justify-center">
-    <div className="relative h-16 w-16 shrink-0" role="img" aria-label={ledgerAvailable ? `${percentage}% of registered students have checked in` : 'Attendance summary unavailable'}>
-      <svg viewBox="0 0 48 48" className="h-full w-full -rotate-90" aria-hidden="true"><circle cx="24" cy="24" r="19" fill="none" stroke="currentColor" strokeWidth="5" className="text-surface-container-highest" /><circle cx="24" cy="24" r="19" fill="none" stroke="currentColor" strokeWidth="5" strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={circumference * (1 - percentage / 100)} className="text-primary-container transition-[stroke-dashoffset]" /></svg>
-      <span className="absolute inset-0 flex items-center justify-center font-body-sm-medium text-body-sm-medium text-primary">{ledgerAvailable ? `${percentage}%` : '—'}</span>
-    </div>
-    <div className="min-w-0 flex-1 lg:text-center"><p className="font-label-sm text-label-sm uppercase tracking-wide text-text-secondary">Live attendance</p>{ledger.state.status === 'loading' ? <p className="mt-1 font-caption text-caption text-text-secondary">Loading scan totals…</p> : ledger.state.status === 'error' ? <button type="button" onClick={ledger.reload} className="mt-1 font-caption text-caption text-primary underline">Retry attendance summary</button> : <div className="mt-1 flex flex-wrap gap-x-space-md gap-y-1 font-caption text-caption text-text-secondary lg:justify-center"><span>{timeIn} checked in</span><span>{timeOut} checked out</span></div>}</div>
-  </aside>;
+  return (
+    <aside
+      aria-label="Live attendance summary"
+      className="flex shrink-0 items-center gap-space-md rounded-xl bg-surface-container-low p-space-md lg:w-56 lg:flex-col lg:items-center lg:justify-center"
+    >
+      <div
+        className="relative h-16 w-16 shrink-0"
+        role="img"
+        aria-label={ledgerAvailable ? `${percentage}% of registered students have checked in` : 'Attendance summary unavailable'}
+      >
+        <svg viewBox="0 0 48 48" className="h-full w-full -rotate-90" aria-hidden="true">
+          <circle cx="24" cy="24" r="19" fill="none" stroke="currentColor" strokeWidth="5" className="text-surface-container-highest" />
+          <circle
+            cx="24"
+            cy="24"
+            r="19"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="5"
+            strokeLinecap="round"
+            strokeDasharray={circumference}
+            strokeDashoffset={circumference * (1 - percentage / 100)}
+            className="text-primary-container transition-[stroke-dashoffset]"
+          />
+        </svg>
+        <span className="absolute inset-0 flex items-center justify-center font-body-sm-medium text-body-sm-medium tabular-nums text-primary">
+          {ledgerAvailable ? `${percentage}%` : '—'}
+        </span>
+      </div>
+      <div className="min-w-0 flex-1 lg:text-center">
+        <p className="font-label-sm text-label-sm text-text-secondary">Live attendance</p>
+        {ledger.state.status === 'loading' ? (
+          <p className="mt-1 font-caption text-caption text-text-secondary">Loading scan totals…</p>
+        ) : ledger.state.status === 'error' ? (
+          <button type="button" onClick={ledger.reload} className="mt-1 font-caption text-caption text-primary underline">
+            Retry attendance summary
+          </button>
+        ) : (
+          <div className="mt-1 flex flex-wrap gap-x-space-md gap-y-1 font-caption text-caption tabular-nums text-text-secondary lg:justify-center">
+            <span>{timeIn} checked in</span>
+            <span>{timeOut} checked out</span>
+          </div>
+        )}
+      </div>
+    </aside>
+  );
 }
 
 function SeminarCard({ seminar, now, ongoing = false }: { seminar: OrgSeminar; now: number; ongoing?: boolean }) {
   const status = getOrgLifecycle(seminar, now);
   const percent = seminar.capacity ? Math.min(100, Math.round(seminar.registeredCount / seminar.capacity * 100)) : 0;
   return (
-    <article className={`group flex min-w-0 flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface-card shadow-card transition hover:shadow-overlay ${ongoing ? 'lg:flex-row' : ''}`}>
-      <div className={`relative flex items-center justify-center overflow-hidden bg-surface-container-low ${ongoing ? 'h-40 lg:h-auto lg:min-h-60 lg:w-5/12' : 'h-40'}`}>
-        {seminar.imageUrl ? <img src={seminar.imageUrl} alt="" className="h-full w-full object-cover" /> : <Icon name="school" size={32} className="text-primary/70" />}
-        <span className="absolute left-3 top-3"><OrgStatusBadge status={status} /></span>
+    <article
+      className={`group flex min-w-0 flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface-card transition hover:shadow-card-hover ${ongoing ? 'lg:flex-row' : ''}`}
+    >
+      <div className={`relative flex aspect-video w-full items-center justify-center overflow-hidden bg-surface-container-low ${ongoing ? 'lg:w-5/12 lg:shrink-0' : ''}`}>
+        {seminar.imageUrl ? (
+          <img src={seminar.imageUrl} alt="" className="h-full w-full object-cover" />
+        ) : (
+          <Icon name="school" size={32} className="text-primary/70" />
+        )}
+        <span className="absolute left-3 top-3">
+          <OrgStatusBadge status={status} />
+        </span>
       </div>
       <div className={`flex flex-1 flex-col justify-between gap-space-md p-space-lg ${ongoing ? 'lg:flex-row lg:items-center' : ''}`}>
         <div className="flex min-w-0 flex-1 flex-col justify-between gap-space-md">
           <div>
-          <div className="flex flex-wrap items-center justify-between gap-2"><span className="font-label-sm text-label-sm uppercase tracking-wide text-text-secondary">{seminar.department}</span><span className="font-caption text-caption text-text-subtle">{seminar.reference}</span></div>
-          <h3 className="mt-1 font-title-lg text-title-lg text-on-surface group-hover:text-primary">{seminar.title}</h3>
-          <div className="mt-space-sm flex flex-col gap-1.5 font-body-sm text-body-sm text-text-secondary">
-            <p className="flex items-start gap-2"><Icon name="schedule" size={16} className="mt-0.5 shrink-0" />{dateTime(seminar.startsAt)}</p>
-            <p className="flex items-start gap-2"><Icon name="location_on" size={16} className="mt-0.5 shrink-0" />{seminar.venue}</p>
-            <p className="flex items-start gap-2"><Icon name="record_voice_over" size={16} className="mt-0.5 shrink-0" />{seminar.speaker.name}</p>
-          </div>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="font-caption text-caption text-text-secondary">{seminar.department}</span>
+              <span className="font-caption text-caption tabular-nums text-text-subtle">{seminar.reference}</span>
+            </div>
+            <h3 className="mt-1 font-title-md text-title-md text-on-surface group-hover:text-primary">{seminar.title}</h3>
+            <div className="mt-space-sm flex flex-col gap-1.5 font-body-sm text-body-sm text-text-secondary">
+              <p className="flex items-start gap-2 tabular-nums">
+                <Icon name="schedule" size={16} className="mt-0.5 shrink-0" />
+                {dateTime(seminar.startsAt)}
+              </p>
+              <p className="flex items-start gap-2">
+                <Icon name="location_on" size={16} className="mt-0.5 shrink-0" />
+                {seminar.venue}
+              </p>
+              <p className="flex items-start gap-2">
+                <Icon name="record_voice_over" size={16} className="mt-0.5 shrink-0" />
+                {seminar.speaker.name}
+              </p>
+            </div>
           </div>
           <div>
-            <div className="mb-1.5 flex items-center justify-between gap-2 font-caption text-caption"><span className="text-text-secondary">Slots reserved</span><span className="font-semibold text-primary">{seminar.registeredCount} of {seminar.capacity} ({percent}%)</span></div>
-            <ProgressBar value={seminar.registeredCount} max={seminar.capacity} label={`${seminar.title}: ${seminar.registeredCount} of ${seminar.capacity} seats reserved`} />
-            <div className="mt-1.5 flex items-center justify-between gap-2 font-caption text-caption text-text-secondary"><span>{Math.max(0, seminar.capacity - seminar.registeredCount)} slots remaining</span><span>Limit: {seminar.capacity}</span></div>
+            <div className="mb-1.5 flex items-center justify-between gap-2 font-caption text-caption tabular-nums">
+              <span className="text-text-secondary">Slots reserved</span>
+              <span className="font-semibold text-primary">
+                {seminar.registeredCount} of {seminar.capacity} ({percent}%)
+              </span>
+            </div>
+            <ProgressBar
+              value={seminar.registeredCount}
+              max={seminar.capacity}
+              label={`${seminar.title}: ${seminar.registeredCount} of ${seminar.capacity} seats reserved`}
+            />
+            <div className="mt-1.5 flex items-center justify-between gap-2 font-caption text-caption tabular-nums text-text-secondary">
+              <span>{Math.max(0, seminar.capacity - seminar.registeredCount)} slots remaining</span>
+              <span>Limit: {seminar.capacity}</span>
+            </div>
           </div>
           <div className="flex gap-space-sm">
-            <Link to={`/org/my-seminars/${seminar.id}`} className={`${ongoing ? actionPrimary : actionTonal} flex-1 justify-center`}>{ongoing ? 'Open live console' : 'Open seminar'}<Icon name="arrow_forward" size={16} /></Link>
-            {ongoing && <Link to={`/org/my-seminars/${seminar.id}/scanner`} aria-label={`Open scanner for ${seminar.title}`} className={actionTonal}><Icon name="qr_code_scanner" size={18} /></Link>}
+            <Link to={`/org/my-seminars/${seminar.id}`} className={`${ongoing ? actionPrimary : actionTonal} flex-1 justify-center`}>
+              {ongoing ? 'Open live console' : 'Open seminar'}
+              <Icon name="arrow_forward" size={16} />
+            </Link>
+            {ongoing && (
+              <Link to={`/org/my-seminars/${seminar.id}/scanner`} aria-label={`Open scanner for ${seminar.title}`} className={actionTonal}>
+                <Icon name="qr_code_scanner" size={18} />
+              </Link>
+            )}
           </div>
         </div>
         {ongoing && <LiveAttendanceWidget seminar={seminar} />}
@@ -104,9 +181,46 @@ function SeminarCard({ seminar, now, ongoing = false }: { seminar: OrgSeminar; n
 function DraftCard({ draft, onDelete }: { draft: SeminarDraft; onDelete: (draft: SeminarDraft) => void }) {
   const readiness = getDraftReadiness(draft);
   return (
-    <article className="flex flex-col justify-between gap-space-md rounded-xl border border-border-subtle bg-surface-card p-space-lg shadow-card sm:flex-row sm:items-center">
-      <div className="min-w-0"><div className="flex flex-wrap items-center gap-space-sm"><span className="rounded-md bg-surface-container-high px-2.5 py-1 font-label-sm text-label-sm text-text-secondary">Draft</span><span className="font-caption text-caption text-text-secondary">{readiness.items.filter((item) => item.passed).length} of {readiness.items.length} setup steps complete</span></div><h3 className="mt-space-sm font-title-lg text-title-lg text-on-surface">{draft.details.title || 'Untitled seminar'}</h3><p className="mt-1 font-body-sm text-body-sm text-text-secondary">{draft.deletionRequestedAt ? 'Draft deletion is in progress. Retry deletion to finish cover cleanup.' : readiness.firstBlockingReason || 'Review your seminar details before publishing.'}</p>{draft.details.startsAt && <p className="mt-1 font-caption text-caption text-text-subtle">Proposed date: {dateTime(draft.details.startsAt)}</p>}</div>
-      <div className="flex shrink-0 flex-col gap-space-sm sm:flex-row">{!draft.deletionRequestedAt && <Link to={`/org/seminars/${draft.id}/edit`} className={actionTonal}>Continue editing<Icon name="edit" size={16} /></Link>}<button type="button" onClick={() => onDelete(draft)} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-danger/30 px-4 font-body-sm-medium text-body-sm-medium text-danger hover:bg-danger-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-danger"><Icon name="delete" size={18}/>{draft.deletionRequestedAt ? 'Retry deletion' : 'Delete draft'}</button></div>
+    <article className="flex flex-col justify-between gap-space-md rounded-xl border border-border-subtle bg-surface-card p-space-lg sm:flex-row sm:items-center">
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-center gap-space-sm">
+          <span className="rounded-md bg-surface-container-high px-2.5 py-1 font-label-sm text-label-sm text-text-secondary">
+            Draft
+          </span>
+          <span className="font-caption text-caption tabular-nums text-text-secondary">
+            {readiness.items.filter((item) => item.passed).length} of {readiness.items.length} setup steps complete
+          </span>
+        </div>
+        <h3 className="mt-space-sm font-title-md text-title-md text-on-surface">
+          {draft.details.title || 'Untitled seminar'}
+        </h3>
+        <p className="mt-1 font-body-sm text-body-sm text-text-secondary">
+          {draft.deletionRequestedAt
+            ? 'Draft deletion is in progress. Retry deletion to finish cover cleanup.'
+            : readiness.firstBlockingReason || 'Review your seminar details before publishing.'}
+        </p>
+        {draft.details.startsAt && (
+          <p className="mt-1 font-caption text-caption tabular-nums text-text-subtle">
+            Proposed date: {dateTime(draft.details.startsAt)}
+          </p>
+        )}
+      </div>
+      <div className="flex shrink-0 flex-col gap-space-sm sm:flex-row">
+        {!draft.deletionRequestedAt && (
+          <Link to={`/org/seminars/${draft.id}/edit`} className={actionTonal}>
+            Continue editing
+            <Icon name="edit" size={16} />
+          </Link>
+        )}
+        <button
+          type="button"
+          onClick={() => onDelete(draft)}
+          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-danger/30 px-4 font-body-sm-medium text-body-sm-medium text-danger hover:bg-danger-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-danger"
+        >
+          <Icon name="delete" size={18} />
+          {draft.deletionRequestedAt ? 'Retry deletion' : 'Delete draft'}
+        </button>
+      </div>
     </article>
   );
 }
@@ -136,10 +250,9 @@ export default function OrgSeminarsPage() {
   const searched = useMemo(() => items.filter((item) => item.publicationStatus !== 'archived' && matchesQuery(item, query)), [items, query]);
   const ongoing = now === null ? [] : searched.filter((item) => getOrgLifecycle(item, now) === 'ongoing').sort((a, b) => a.startsAt.localeCompare(b.startsAt));
   const upcoming = now === null ? [] : searched.filter((item) => getOrgLifecycle(item, now) === 'upcoming').sort((a, b) => a.startsAt.localeCompare(b.startsAt));
-  const recentlyFinished = now === null ? [] : searched.filter((item) => isOrgRecentlyFinished(item, now)).sort((a, b) => b.endsAt.localeCompare(a.endsAt));
   const cancelled = now === null ? [] : searched.filter((item) => getOrgLifecycle(item, now) === 'cancelled');
   const visibleDrafts = drafts.filter((draft) => `${draft.details.title ?? ''} ${draft.details.venue ?? ''} ${draft.details.speakerName ?? ''}`.toLowerCase().includes(query.trim().toLowerCase()));
-  const total = ongoing.length + upcoming.length + recentlyFinished.length + cancelled.length + visibleDrafts.length;
+  const total = ongoing.length + upcoming.length + cancelled.length + visibleDrafts.length;
 
   const orderedUpcoming = useMemo(() => {
     const sorted = [...upcoming];
@@ -149,7 +262,13 @@ export default function OrgSeminarsPage() {
   }, [upcoming, sort]);
 
   if (now === null) {
-    return <PageContainer><p role="status" className="font-body-sm text-body-sm text-text-secondary">Loading current seminar times…</p></PageContainer>;
+    return (
+      <PageContainer>
+        <p role="status" className="font-body-sm text-body-sm text-text-secondary">
+          Loading current seminar times…
+        </p>
+      </PageContainer>
+    );
   }
 
   async function loadMoreSeminars() {
@@ -226,51 +345,287 @@ export default function OrgSeminarsPage() {
   return (
     <PageContainer>
       <header className="flex flex-col justify-between gap-space-md md:flex-row md:items-center">
-        <div className="max-w-3xl"><h1 className="font-headline-xl text-headline-xl-mobile text-on-surface md:text-headline-xl">My Seminars</h1></div>
-        <button type="button" onClick={() => void createDraft()} disabled={creating} className={actionPrimary}><Icon name="add" size={20} />{creating ? 'Creating draft…' : 'Create seminar'}</button>
+        <div className="max-w-3xl">
+          <h1 className="font-headline-xl text-headline-xl-mobile text-on-surface md:text-headline-xl">My Seminars</h1>
+        </div>
+        <button type="button" onClick={() => void createDraft()} disabled={creating} className={actionPrimary}>
+          <Icon name="add" size={20} />
+          {creating ? 'Creating draft…' : 'Create seminar'}
+        </button>
       </header>
 
-      {createError && <p role="alert" className="rounded-lg border border-danger-soft bg-danger-surface p-space-md text-danger-ink">Could not create a seminar draft. Please try again.</p>}
-      {deleteError && <p role="alert" className="rounded-lg border border-danger-soft bg-danger-surface p-space-md text-danger-ink">Draft deletion could not finish. Retry deletion to complete cover cleanup, or check your connection and try again.</p>}
+      {createError && (
+        <p role="alert" className="rounded-lg border border-danger-soft bg-danger-surface p-space-md text-danger-ink">
+          Could not create a seminar draft. Please try again.
+        </p>
+      )}
+      {deleteError && (
+        <p role="alert" className="rounded-lg border border-danger-soft bg-danger-surface p-space-md text-danger-ink">
+          Draft deletion could not finish. Retry deletion to complete cover cleanup, or check your connection and try again.
+        </p>
+      )}
 
-      <section aria-label="Seminar search and filters" className="flex flex-col gap-space-md rounded-xl border border-border-subtle bg-surface-card p-space-md shadow-card">
+      <section
+        aria-label="Seminar search and filters"
+        className="flex flex-col gap-space-md rounded-xl border border-border-subtle bg-surface-card p-space-md"
+      >
         <div className="flex flex-col gap-space-md lg:flex-row lg:items-center lg:justify-between">
           <form role="search" onSubmit={(event) => event.preventDefault()} className="relative min-w-0 flex-1">
             <Icon name="search" size={18} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" />
-            <input aria-label="Search seminars by title, speaker, or venue" type="search" value={query} onChange={(event) => { const value = event.target.value; setParams((previous) => { const next = new URLSearchParams(previous); if (value) next.set('q', value); else next.delete('q'); return next; }, { replace: true }); }} placeholder="Search seminar title, speaker, or venue…" className="h-12 w-full rounded-xl border border-outline-variant/60 bg-surface-container-lowest pl-10 pr-3 font-body-sm text-body-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20" />
+            <input
+              aria-label="Search seminars by title, speaker, or venue"
+              type="search"
+              value={query}
+              onChange={(event) => {
+                const value = event.target.value;
+                setParams(
+                  (previous) => {
+                    const next = new URLSearchParams(previous);
+                    if (value) next.set('q', value);
+                    else next.delete('q');
+                    return next;
+                  },
+                  { replace: true },
+                );
+              }}
+              placeholder="Search seminar title, speaker, or venue…"
+              className="h-12 w-full rounded-xl border border-outline-variant/60 bg-surface-container-lowest pl-10 pr-3 font-body-sm text-body-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+            />
           </form>
           <div className="flex flex-wrap items-center gap-space-sm">
-            <label htmlFor="seminar-sort" className="sr-only">Sort seminars</label><select id="seminar-sort" value={sort} onChange={(event) => setSort(event.target.value as Sort)} className="h-12 rounded-xl border border-outline-variant/60 bg-surface-container-lowest px-3 font-body-sm-medium text-body-sm-medium text-on-surface outline-none focus:border-primary"><option value="nearest">Nearest date</option><option value="az">Title (A–Z)</option><option value="registrants">Most registrants</option></select>
-            <span className="rounded-lg bg-surface-container-low px-3 py-2 font-label-sm text-label-sm text-text-secondary">{total} total</span>
+            <label htmlFor="seminar-sort" className="sr-only">
+              Sort seminars
+            </label>
+            <select
+              id="seminar-sort"
+              value={sort}
+              onChange={(event) => setSort(event.target.value as Sort)}
+              className="h-12 rounded-xl border border-outline-variant/60 bg-surface-container-lowest px-3 font-body-sm-medium text-body-sm-medium text-on-surface outline-none focus:border-primary"
+            >
+              <option value="nearest">Nearest date</option>
+              <option value="az">Title (A–Z)</option>
+              <option value="registrants">Most registrants</option>
+            </select>
+            <span className="rounded-lg bg-surface-container-low px-3 py-2 font-label-sm text-label-sm tabular-nums text-text-secondary">
+              {total} total
+            </span>
           </div>
         </div>
-        <div className="flex items-center gap-1 overflow-x-auto rounded-xl bg-surface-container-high p-1.5 pb-1.5" role="group" aria-label="Filter seminars">
+        <div
+          className="flex items-center gap-1 overflow-x-auto rounded-xl bg-surface-container-high p-1.5 pb-1.5"
+          role="group"
+          aria-label="Filter seminars"
+        >
           {FILTERS.map((item) => {
-            const count = item.value === 'all' ? total : item.value === 'ongoing' ? ongoing.length : item.value === 'upcoming' ? upcoming.length : item.value === 'drafts' ? visibleDrafts.length : recentlyFinished.length;
-            return <button key={item.value} type="button" aria-pressed={filter === item.value} onClick={() => setFilter(item.value)} className={`min-h-11 shrink-0 rounded-xl px-space-md font-body-sm-medium text-body-sm-medium transition ${filter === item.value ? 'bg-surface-container-lowest text-primary shadow-sm' : 'text-text-secondary hover:bg-surface-container-highest'}`}>{item.label} ({count})</button>;
+            const count =
+              item.value === 'all'
+                ? total
+                : item.value === 'ongoing'
+                  ? ongoing.length
+                  : item.value === 'upcoming'
+                    ? upcoming.length
+                    : visibleDrafts.length;
+            return (
+              <button
+                key={item.value}
+                type="button"
+                aria-pressed={filter === item.value}
+                onClick={() => setFilter(item.value)}
+                className={`min-h-11 shrink-0 rounded-xl px-space-md font-body-sm-medium text-body-sm-medium tabular-nums transition ${
+                  filter === item.value
+                    ? 'bg-surface-container-lowest text-primary shadow-sm'
+                    : 'text-text-secondary hover:bg-surface-container-highest'
+                }`}
+              >
+                {item.label} ({count})
+              </button>
+            );
           })}
         </div>
       </section>
 
-      {listing.state.status === 'loading' && <LoadingRegion label="Loading organization seminars" className="flex flex-col gap-space-xl"><Skeleton className="h-36 rounded-xl" /><div className="grid gap-space-md md:grid-cols-2 xl:grid-cols-3">{[0,1,2].map((key) => <Skeleton key={key} className="h-80 rounded-xl" />)}</div></LoadingRegion>}
-      {listing.state.status === 'error' && <StateMessage role="alert" icon="info" title="Seminars could not be loaded" action={<RetryButton onClick={listing.reload} />}>Check your connection and try again.</StateMessage>}
-      {pageState.error && <p role="alert" className="rounded-lg border border-danger-soft bg-danger-surface p-space-md text-danger-ink">More results could not be loaded. Please try again.</p>}
-      {listing.state.status === 'empty' && <StateMessage icon="event_note" title="No seminars or drafts yet" action={<button type="button" onClick={() => void createDraft()} className={actionPrimary}><Icon name="add" size={18} />Create a seminar</button>}>Start a seminar draft to add its details, certificate, and evaluation.</StateMessage>}
+      {listing.state.status === 'loading' && (
+        <LoadingRegion label="Loading organization seminars" className="flex flex-col gap-space-xl">
+          <Skeleton className="h-36 rounded-xl" />
+          <div className="grid gap-space-md md:grid-cols-2 xl:grid-cols-3">
+            {[0, 1, 2].map((key) => (
+              <Skeleton key={key} className="h-80 rounded-xl" />
+            ))}
+          </div>
+        </LoadingRegion>
+      )}
+      {listing.state.status === 'error' && (
+        <StateMessage
+          role="alert"
+          icon="info"
+          title="Seminars could not be loaded"
+          action={<RetryButton onClick={listing.reload} />}
+        >
+          Check your connection and try again.
+        </StateMessage>
+      )}
+      {pageState.error && (
+        <p role="alert" className="rounded-lg border border-danger-soft bg-danger-surface p-space-md text-danger-ink">
+          More results could not be loaded. Please try again.
+        </p>
+      )}
+      {listing.state.status === 'empty' && (
+        <StateMessage
+          icon="event_note"
+          title="No seminars or drafts yet"
+          action={
+            <button type="button" onClick={() => void createDraft()} className={actionPrimary}>
+              <Icon name="add" size={18} />
+              Create a seminar
+            </button>
+          }
+        >
+          Start a seminar draft to add its details, certificate, and evaluation.
+        </StateMessage>
+      )}
 
-      {listing.state.status === 'success' && <div className="flex flex-col gap-space-xl">
-        {(filter === 'all' || filter === 'ongoing') && <section className="flex flex-col gap-space-md" aria-labelledby="ongoing-heading"><div className="flex flex-wrap items-center justify-between gap-2"><div className="flex items-center gap-space-sm"><span className="h-3 w-3 rounded-full bg-secondary" /><h2 id="ongoing-heading" className="font-title-lg text-title-lg text-on-surface">Ongoing today</h2><span className="rounded-full bg-secondary-fixed px-2.5 py-1 font-caption text-caption text-on-secondary-fixed">{ongoing.length} active</span></div><span className="font-caption text-caption text-text-secondary">Live check-in available</span></div>{ongoing.length ? <div className="grid gap-space-md">{ongoing.map((seminar) => <SeminarCard key={seminar.id} seminar={seminar} now={now} ongoing />)}</div> : <StateMessage icon="event_busy" title="No seminars are ongoing right now">Upcoming sessions will appear below.</StateMessage>}</section>}
+      {listing.state.status === 'success' && (
+        <div className="flex flex-col gap-space-xl">
+          {(filter === 'all' || filter === 'ongoing') && (
+            <section className="flex flex-col gap-space-md" aria-labelledby="ongoing-heading">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-space-sm">
+                  <span className="h-3 w-3 rounded-full bg-secondary" />
+                  <h2 id="ongoing-heading" className="font-headline-sm text-headline-sm text-on-surface">
+                    Ongoing today
+                  </h2>
+                  <span className="rounded-full bg-secondary-fixed px-2.5 py-1 font-caption text-caption tabular-nums text-on-secondary-fixed">
+                    {ongoing.length} active
+                  </span>
+                </div>
+                <span className="font-caption text-caption text-text-secondary">Live check-in available</span>
+              </div>
+              {ongoing.length ? (
+                <div className="grid gap-space-md">
+                  {ongoing.map((seminar) => (
+                    <SeminarCard key={seminar.id} seminar={seminar} now={now} ongoing />
+                  ))}
+                </div>
+              ) : (
+                <StateMessage icon="event_busy" title="No seminars are ongoing right now">
+                  Upcoming sessions will appear below.
+                </StateMessage>
+              )}
+            </section>
+          )}
 
-        {(filter === 'all' || filter === 'upcoming') && <section className="flex flex-col gap-space-md" aria-labelledby="upcoming-heading"><div className="flex flex-wrap items-center justify-between gap-2"><div className="flex items-center gap-space-sm"><h2 id="upcoming-heading" className="font-title-lg text-title-lg text-on-surface">Upcoming seminars</h2><span className="rounded-full bg-surface-container-high px-2.5 py-1 font-caption text-caption text-text-secondary">{upcoming.length} scheduled</span></div></div>{orderedUpcoming.length ? <div className="grid gap-space-md md:grid-cols-2 xl:grid-cols-3">{orderedUpcoming.map((seminar) => <SeminarCard key={seminar.id} seminar={seminar} now={now} />)}</div> : <StateMessage icon="event_busy" title="No upcoming seminars">Create a draft when you are ready to plan your next session.</StateMessage>}</section>}
+          {(filter === 'all' || filter === 'upcoming') && (
+            <section className="flex flex-col gap-space-md" aria-labelledby="upcoming-heading">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-space-sm">
+                  <h2 id="upcoming-heading" className="font-headline-sm text-headline-sm text-on-surface">
+                    Upcoming seminars
+                  </h2>
+                  <span className="rounded-full bg-surface-container-high px-2.5 py-1 font-caption text-caption tabular-nums text-text-secondary">
+                    {upcoming.length} scheduled
+                  </span>
+                </div>
+              </div>
+              {orderedUpcoming.length ? (
+                <div className="grid gap-space-md md:grid-cols-2 xl:grid-cols-3">
+                  {orderedUpcoming.map((seminar) => (
+                    <SeminarCard key={seminar.id} seminar={seminar} now={now} />
+                  ))}
+                </div>
+              ) : (
+                <StateMessage icon="event_busy" title="No upcoming seminars">
+                  Create a draft when you are ready to plan your next session.
+                </StateMessage>
+              )}
+            </section>
+          )}
 
-        {(filter === 'all' || filter === 'drafts') && <section className="flex flex-col gap-space-md" aria-labelledby="drafts-heading"><div className="flex flex-wrap items-center justify-between gap-2"><div className="flex items-center gap-space-sm"><h2 id="drafts-heading" className="font-title-lg text-title-lg text-on-surface">Drafts</h2><span className="rounded-full bg-surface-container-high px-2.5 py-1 font-caption text-caption text-text-secondary">{visibleDrafts.length} in preparation</span></div><span className="font-caption text-caption text-text-secondary">Not published to the participant catalog</span></div>{visibleDrafts.length ? <div className="grid gap-space-md">{visibleDrafts.map((draft) => <DraftCard key={draft.id} draft={draft} onDelete={setPendingDraftDelete} />)}</div> : <StateMessage icon="draft" title="No drafts match your search">Create a seminar to begin a new draft.</StateMessage>}{!pageState.draftsExhausted && (pageState.draftCursor ?? draftPage?.nextCursor) && <button type="button" onClick={() => void loadMoreDrafts()} disabled={pageState.loadingDrafts} className={actionTonal}>{pageState.loadingDrafts ? 'Loading drafts…' : 'Load more drafts'}</button>}</section>}
+          {(filter === 'all' || filter === 'drafts') && (
+            <section className="flex flex-col gap-space-md" aria-labelledby="drafts-heading">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-space-sm">
+                  <h2 id="drafts-heading" className="font-headline-sm text-headline-sm text-on-surface">
+                    Drafts
+                  </h2>
+                  <span className="rounded-full bg-surface-container-high px-2.5 py-1 font-caption text-caption tabular-nums text-text-secondary">
+                    {visibleDrafts.length} in preparation
+                  </span>
+                </div>
+                <span className="font-caption text-caption text-text-secondary">Not published to the participant catalog</span>
+              </div>
+              {visibleDrafts.length ? (
+                <div className="grid gap-space-md">
+                  {visibleDrafts.map((draft) => (
+                    <DraftCard key={draft.id} draft={draft} onDelete={setPendingDraftDelete} />
+                  ))}
+                </div>
+              ) : (
+                <StateMessage icon="draft" title="No drafts match your search">
+                  Create a seminar to begin a new draft.
+                </StateMessage>
+              )}
+              {!pageState.draftsExhausted && (pageState.draftCursor ?? draftPage?.nextCursor) && (
+                <button type="button" onClick={() => void loadMoreDrafts()} disabled={pageState.loadingDrafts} className={actionTonal}>
+                  {pageState.loadingDrafts ? 'Loading drafts…' : 'Load more drafts'}
+                </button>
+              )}
+            </section>
+          )}
 
-        {(filter === 'all' || filter === 'recent') && <section className="flex flex-col gap-space-md" aria-labelledby="recent-heading"><div className="flex items-center gap-space-sm"><h2 id="recent-heading" className="font-title-lg text-title-lg text-on-surface">Finished recently</h2><span className="rounded-full bg-surface-container-high px-2.5 py-1 font-caption text-caption text-text-secondary">{recentlyFinished.length}</span></div>{recentlyFinished.length ? <div className="grid gap-space-md md:grid-cols-2 xl:grid-cols-3">{recentlyFinished.map((seminar) => <SeminarCard key={seminar.id} seminar={seminar} now={now} />)}</div> : <StateMessage icon="history" title="No recently finished seminars">Completed seminars are available in History.</StateMessage>}</section>}
+          {filter === 'all' && cancelled.length > 0 && (
+            <section className="flex flex-col gap-space-md" aria-labelledby="cancelled-heading">
+              <h2 id="cancelled-heading" className="font-headline-sm text-headline-sm text-on-surface">
+                Cancelled seminars
+              </h2>
+              <div className="grid gap-space-md md:grid-cols-2 xl:grid-cols-3">
+                {cancelled.map((seminar) => (
+                  <SeminarCard key={seminar.id} seminar={seminar} now={now} />
+                ))}
+              </div>
+            </section>
+          )}
 
-        {filter === 'all' && cancelled.length > 0 && <section className="flex flex-col gap-space-md" aria-labelledby="cancelled-heading"><h2 id="cancelled-heading" className="font-title-lg text-title-lg text-on-surface">Cancelled seminars</h2><div className="grid gap-space-md md:grid-cols-2 xl:grid-cols-3">{cancelled.map((seminar) => <SeminarCard key={seminar.id} seminar={seminar} now={now} />)}</div></section>}
-        {(filter === 'all' || filter === 'ongoing' || filter === 'upcoming' || filter === 'recent') && !pageState.seminarsExhausted && (pageState.seminarCursor ?? seminarPage?.nextCursor) && <button type="button" onClick={() => void loadMoreSeminars()} disabled={pageState.loadingSeminars} className={actionTonal}>{pageState.loadingSeminars ? 'Loading seminars…' : 'Load more seminars'}</button>}
-      </div>}
-      {pendingDraftDelete && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4" role="presentation"><section role="alertdialog" aria-modal="true" aria-labelledby="delete-draft-title" aria-describedby="delete-draft-copy" className="w-full max-w-md rounded-2xl bg-surface-card p-space-lg shadow-overlay"><h2 id="delete-draft-title" className="font-title-lg text-title-lg text-on-surface">Delete {pendingDraftDelete.details.title || 'Untitled seminar'}?</h2><p id="delete-draft-copy" className="mt-space-sm font-body-sm text-body-sm text-text-secondary">This permanently removes the unpublished draft and its cover images. It does not affect published seminar records.</p><div className="mt-space-lg flex justify-end gap-space-sm"><button type="button" autoFocus disabled={deletingDraft} onClick={() => setPendingDraftDelete(null)} className={actionTonal}>Keep draft</button><button type="button" disabled={deletingDraft} onClick={() => void deleteDraft()} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-danger px-4 font-body-sm-medium text-body-sm-medium text-white disabled:opacity-60">{deletingDraft ? 'Deleting…' : 'Delete draft'}</button></div></section></div>}
+          {(filter === 'all' || filter === 'ongoing' || filter === 'upcoming') &&
+            !pageState.seminarsExhausted &&
+            (pageState.seminarCursor ?? seminarPage?.nextCursor) && (
+              <button type="button" onClick={() => void loadMoreSeminars()} disabled={pageState.loadingSeminars} className={actionTonal}>
+                {pageState.loadingSeminars ? 'Loading seminars…' : 'Load more seminars'}
+              </button>
+            )}
+        </div>
+      )}
+
+      {pendingDraftDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4" role="presentation">
+          <section
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="delete-draft-title"
+            aria-describedby="delete-draft-copy"
+            className="w-full max-w-md rounded-2xl bg-surface-card p-space-lg shadow-overlay"
+          >
+            <h2 id="delete-draft-title" className="font-title-md text-title-md text-on-surface">
+              Delete {pendingDraftDelete.details.title || 'Untitled seminar'}?
+            </h2>
+            <p id="delete-draft-copy" className="mt-space-sm font-body-sm text-body-sm text-text-secondary">
+              This permanently removes the unpublished draft and its cover images. It does not affect published seminar records.
+            </p>
+            <div className="mt-space-lg flex justify-end gap-space-sm">
+              <button type="button" autoFocus disabled={deletingDraft} onClick={() => setPendingDraftDelete(null)} className={actionTonal}>
+                Keep draft
+              </button>
+              <button
+                type="button"
+                disabled={deletingDraft}
+                onClick={() => void deleteDraft()}
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-danger px-4 font-body-sm-medium text-body-sm-medium text-white disabled:opacity-60"
+              >
+                {deletingDraft ? 'Deleting…' : 'Delete draft'}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
     </PageContainer>
   );
 }
-

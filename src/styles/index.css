@@ -165,16 +165,10 @@
 /* Keep the audit header proportional to the space it actually receives. The sidebar consumes
    part of the viewport on desktop, so viewport breakpoints alone can otherwise squeeze its cards. */
 .audit-page-container {
-  width: 100vw;
+  width: 100%;
   max-width: none;
   align-items: stretch;
   container-type: inline-size;
-}
-
-@media (min-width: 64rem) {
-  .audit-page-container {
-    width: calc(100vw - 18rem);
-  }
 }
 
 .audit-overview-grid {
@@ -189,7 +183,7 @@
 }
 
 .admin-profile-page {
-  width: 100vw;
+  width: 100%;
   max-width: none;
   align-items: stretch;
   container-type: inline-size;
@@ -198,12 +192,6 @@
 .admin-profile-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-}
-
-@media (min-width: 64rem) {
-  .admin-profile-page {
-    width: calc(100vw - 18rem);
-  }
 }
 
 @container (min-width: 72rem) {
@@ -287,15 +275,28 @@
     outline: 3px solid var(--color-primary-container);
     outline-offset: 2px;
   }
+
+  input,
+  textarea {
+    caret-color: var(--color-primary-container);
+  }
+
+  a,
+  button {
+    text-underline-offset: 0.18em;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *,
+  html {
+    scroll-behavior: auto !important;
+  }
+
+  *:not(.animate-spin),
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
+    transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity !important;
   }
 }

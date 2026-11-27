@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
+import { useSidebarCollapsed } from '../../../hooks/useSidebarCollapsed';
 import { OrgIdentityProvider, useOrgIdentity } from '../../../session/OrgIdentityProvider';
 import { RetryButton, StateMessage } from '../../ui/StateMessage';
 import { ToastProvider } from '../../ui/Toast';
@@ -14,6 +15,7 @@ function ShellFrame() {
   const { pathname } = useLocation();
   const mainRef = useRef<HTMLElement>(null);
   const firstRender = useRef(true);
+  const [sidebarCollapsed, toggleSidebar] = useSidebarCollapsed();
 
   // After a route change, move focus to the page so keyboard and screen reader users start at the top.
   useEffect(() => {
@@ -26,24 +28,29 @@ function ShellFrame() {
 
   const identity = state.status === 'success' ? state.data : null;
   const items = identity?.role === 'adviser' ? ADVISER_NAV_ITEMS : ORG_NAV_ITEMS;
+  const desktopMainInset = sidebarCollapsed
+    ? 'lg:pl-[72px]'
+    : identity?.role === 'adviser'
+      ? 'lg:pl-72'
+      : 'lg:pl-64';
 
   return (
-    <div className="min-h-dvh bg-surface-light">
+    <div className="min-h-dvh bg-surface-container-low">
       <a
         href="#main"
         className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[60] focus:rounded-lg focus:bg-surface-card focus:px-4 focus:py-2 focus:font-body-sm-medium focus:text-body-sm-medium focus:text-primary focus:shadow-overlay"
       >
         Skip to main content
       </a>
-      <OrgSidebar items={items} identity={identity} />
-      <OrgTopBar state={state} />
+      <OrgSidebar items={items} identity={identity} collapsed={sidebarCollapsed} onToggleCollapse={toggleSidebar} />
+      <OrgTopBar state={state} sidebarCollapsed={sidebarCollapsed} />
       <main
         id="main"
         ref={mainRef}
         tabIndex={-1}
-        className={`min-h-dvh pb-[calc(5rem+env(safe-area-inset-bottom))] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] pt-[calc(3.5rem+env(safe-area-inset-top))] outline-none lg:pb-0 ${identity?.role === 'adviser' ? 'lg:pl-72' : 'lg:pl-64'} lg:pr-0 lg:pt-16`}
+        className={`min-h-dvh pb-[calc(5rem+env(safe-area-inset-bottom))] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] pt-[calc(3.5rem+env(safe-area-inset-top))] outline-none transition-[padding-left] duration-200 lg:pb-0 ${desktopMainInset} lg:pr-0 lg:pt-16`}
       >
-        <div className="mx-auto flex w-full max-w-7xl flex-col gap-space-sm px-gutter pt-space-md md:px-margin">
+        <div className="flex w-full flex-col gap-space-sm px-gutter pt-space-md md:px-margin">
           <OfflineBanner />
         </div>
         {state.status === 'error' ? (
