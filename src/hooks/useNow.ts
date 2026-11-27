@@ -1,27 +1,22 @@
 import { useEffect, useState } from 'react';
-import { api } from '../api/client';
+import { checkServerClock, getEstimatedServerNow, subscribeServerClock } from './serverClock';
+
 /** Current lifecycle time. Remains unavailable until the database returns a valid sample. */
 export function useNow(intervalMs = 30_000): number | null {
-  const [now, setNow] = useState<number | null>(null);
+  const [now, setNow] = useState<number | null>(() => getEstimatedServerNow());
 
   useEffect(() => {
     let active = true;
-    const refresh = async () => {
-      const result = await api.getServerTime();
-      if (!active) return;
-      const timestamp = result.ok ? Date.parse(result.data.now) : Number.NaN;
-      setNow(Number.isFinite(timestamp) ? timestamp : null);
+    const syncState = () => {
+      if (active) setNow(checkServerClock());
     };
-    void refresh();
-    const id = window.setInterval(() => { void refresh(); }, intervalMs);
-    const onVisible = () => {
-      if (document.visibilityState === 'visible') void refresh();
-    };
-    document.addEventListener('visibilitychange', onVisible);
+    const unsubscribe = subscribeServerClock(syncState);
+    queueMicrotask(syncState);
+    const id = window.setInterval(syncState, intervalMs);
     return () => {
       active = false;
       window.clearInterval(id);
-      document.removeEventListener('visibilitychange', onVisible);
+      unsubscribe();
     };
   }, [intervalMs]);
 

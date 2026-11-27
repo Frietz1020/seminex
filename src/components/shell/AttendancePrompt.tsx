@@ -9,7 +9,7 @@ import { getConfirmationWindow } from '../../features/seminars/confirmationWindo
 
 /** Prompts confirmed participants at the one-hour point, or immediately after a late signup. */
 export function AttendancePrompt() {
-  const now = useNow(1000);
+  const now = useNow(15_000);
   const online = useOnlineStatus();
   const seminars = useResource(() => api.listSeminars(), 'attendance-prompt-seminars');
   const [pending, setPending] = useState(false);

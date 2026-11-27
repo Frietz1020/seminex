@@ -30,16 +30,16 @@ export function EvaluationBanner({ state, onRetry }: EvaluationBannerProps) {
       {state.data.map((due) => (
         <div
           key={due.seminarId}
-          className="flex w-full flex-col items-start justify-between gap-space-md rounded-lg border border-border-subtle bg-status-finished-container p-space-md shadow-card sm:flex-row sm:items-center"
+          className="flex w-full flex-col items-start justify-between gap-space-md rounded-lg border border-border-subtle bg-status-finished-container p-space-md sm:flex-row sm:items-center"
         >
           <div className="flex items-start gap-3">
             <Icon name="assignment_turned_in" size={24} className="mt-0.5 text-status-finished" />
             <div className="flex flex-col">
               <h2 className="font-headline-sm text-headline-sm text-status-finished">
-                Finished: {due.seminarTitle}
+                {due.seminarTitle}
               </h2>
               <p className="mt-0.5 font-body-sm text-body-sm text-text-secondary">
-                This seminar has concluded. Answer the evaluation form to qualify for your certificate.
+                Your attendance meets the requirement. Complete the evaluation to make your certificate ready.
               </p>
             </div>
           </div>

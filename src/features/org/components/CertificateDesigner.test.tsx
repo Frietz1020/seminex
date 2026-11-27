@@ -84,7 +84,7 @@ describe('certificate designer', () => {
     expect(updateField).toHaveBeenNthCalledWith(5, 'color', '#326B9A');
   });
 
-  it('supports keyboard movement and resizing of the QR placement', () => {
+  it('supports keyboard movement and aspect-locked resizing of the QR placement', () => {
     const updateQr = vi.fn();
     render(<CertificateDesigner certificate={certificate} qrValue="preview" onChangeBackground={vi.fn()} onUpdateCanvasSize={vi.fn()} onUpdateField={vi.fn()} onUpdateGeometry={vi.fn()} onUpdateQrCodeGeometry={updateQr} onReset={vi.fn()} />);
     const qr = screen.getByRole('group', { name: /certificate qr code/i });
@@ -92,6 +92,8 @@ describe('certificate designer', () => {
     fireEvent.keyDown(qr, { key: 'ArrowLeft' });
     expect(updateQr).toHaveBeenLastCalledWith({ x: 1639, y: 800, width: 180, height: 180 });
     fireEvent.keyDown(qr, { key: 'ArrowRight', shiftKey: true });
-    expect(updateQr).toHaveBeenLastCalledWith({ x: 1640, y: 800, width: 190, height: 180 });
+    expect(updateQr).toHaveBeenLastCalledWith({ x: 1640, y: 800, width: 190, height: 190 });
+    expect(screen.queryByRole('button', { name: 'Resize QR code from e' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Resize QR code from se' })).not.toBeNull();
   });
 });

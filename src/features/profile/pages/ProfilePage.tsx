@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { PageContainer } from '../../../components/shell/PageContainer';
+import { PageHeader } from '../../../components/shell/PageHeader';
 import { errorText } from '../../../components/ui/errorText';
 import { Icon } from '../../../components/ui/Icon';
 import { LoadingRegion, RetryButton, Skeleton, StateMessage } from '../../../components/ui/StateMessage';
@@ -19,21 +20,18 @@ export default function ProfilePage() {
 
   return (
     <PageContainer>
-      <header className="flex flex-col justify-between gap-space-md md:flex-row md:items-end">
-        <div className="flex flex-col gap-space-xs">
-          <h1 className="font-headline-xl text-headline-xl-mobile text-primary md:text-headline-xl">
-            Profile
-          </h1>
-        </div>
-      </header>
+      <PageHeader
+        title="Profile"
+        subtitle="Manage your student details, avatar, and active session."
+      />
 
       {state.status === 'loading' && (
-        <LoadingRegion label="Loading your profile" className="grid grid-cols-1 gap-space-lg lg:grid-cols-12">
-          <div className="flex flex-col gap-space-lg lg:col-span-4">
-            <Skeleton className="h-96 w-full rounded-xl" />
+        <LoadingRegion label="Loading your profile" className="grid grid-cols-1 gap-space-lg lg:grid-cols-[22rem_minmax(0,1fr)]">
+          <div className="flex flex-col gap-space-lg">
+            <Skeleton className="h-80 w-full rounded-xl" />
             <Skeleton className="h-40 w-full rounded-xl" />
           </div>
-          <Skeleton className="h-[34rem] w-full rounded-xl lg:col-span-8" />
+          <Skeleton className="h-[34rem] w-full rounded-xl" />
         </LoadingRegion>
       )}
 
@@ -60,19 +58,17 @@ export default function ProfilePage() {
             </p>
           )}
 
-          <div className="grid grid-cols-1 items-start gap-space-lg lg:grid-cols-12">
-            <div className="flex flex-col gap-space-lg lg:col-span-4 lg:row-start-1">
+          <div className="grid grid-cols-1 items-start gap-space-lg lg:grid-cols-[22rem_minmax(0,1fr)]">
+            <div className="flex flex-col gap-space-lg">
               <IdentityCard
                 profile={profile}
                 onAvatarUploaded={(avatarUrl) => replace({ ...profile, avatarUrl })}
               />
               <ActivityCard />
-            </div>
-            <div className="lg:col-span-8 lg:row-span-2 lg:row-start-1">
-              <ProfileForm profile={profile} onSaved={replace} />
-            </div>
-            <div className="lg:col-span-4 lg:row-start-2">
               <SignOutCard />
+            </div>
+            <div>
+              <ProfileForm profile={profile} onSaved={replace} />
             </div>
           </div>
         </>

@@ -1,5 +1,5 @@
 import { forwardRef, useState } from 'react';
-import { Eye, EyeOff } from 'lucide-react';
+import { Icon } from './Icon';
 import { TextField, type TextFieldProps } from './TextField';
 
 type PasswordFieldProps = Omit<TextFieldProps, 'type' | 'trailing' | 'suffix'>;
@@ -24,7 +24,7 @@ export const PasswordField = forwardRef<HTMLInputElement, PasswordFieldProps>(fu
           onClick={() => setVisible((current) => !current)}
           className="absolute inset-y-0 right-0 flex w-11 items-center justify-center rounded-control text-charcoal-500 hover:text-charcoal-900"
         >
-          {visible ? <EyeOff aria-hidden="true" className="h-5 w-5" /> : <Eye aria-hidden="true" className="h-5 w-5" />}
+          <Icon name={visible ? 'visibility_off' : 'visibility'} size={20} />
         </button>
       }
     />

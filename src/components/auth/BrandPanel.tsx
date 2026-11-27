@@ -20,7 +20,7 @@ export function BrandPanel({
         <BrandMark size={48} variant="onDark" />
         <div>
           <span className="block font-heading text-2xl font-bold leading-none tracking-tight">Seminex</span>
-          <span className="mt-1 block text-xs font-medium uppercase tracking-wider text-cream-200">
+          <span className="mt-1 block font-caption text-caption text-cream-200">
             CCS Gordon College
           </span>
         </div>
@@ -30,7 +30,7 @@ export function BrandPanel({
         <p className="font-heading text-3xl font-bold leading-tight lg:text-4xl">
           {message}
         </p>
-        {supportingText && <p className="mt-4 leading-relaxed text-cream-100/85">{supportingText}</p>}
+        {supportingText && <p className="mt-4 leading-relaxed text-on-primary/85">{supportingText}</p>}
       </div>
 
       <p className="text-xs font-medium text-cream-200/80">{footer}</p>
@@ -46,7 +46,7 @@ export function MobileBrandHeader() {
         <span className="block font-heading text-xl font-bold leading-none tracking-tight text-charcoal-900">
           Seminex
         </span>
-        <span className="mt-1 block text-xs font-medium uppercase tracking-wide text-burnt">
+        <span className="mt-1 block font-caption text-caption text-burnt">
           CCS Gordon College
         </span>
       </div>

@@ -82,7 +82,7 @@ export function RecordCard({ record }: { record: HistoryRecord }) {
   return (
     <article
       aria-labelledby={titleId}
-      className="flex flex-col justify-between gap-space-lg rounded-xl border border-border-subtle bg-surface-card p-space-lg shadow-card transition-shadow hover:shadow-card-hover lg:flex-row lg:items-center"
+      className="flex flex-col justify-between gap-space-lg rounded-xl border border-border-subtle bg-surface-card p-space-lg transition duration-200 hover:-translate-y-0.5 hover:border-outline-variant hover:shadow-card-hover lg:flex-row lg:items-center"
     >
       <div className="flex min-w-0 flex-1 flex-col lg:max-w-2xl">
         <div className="mb-space-xs flex flex-wrap items-center gap-space-sm">
@@ -95,7 +95,7 @@ export function RecordCard({ record }: { record: HistoryRecord }) {
           </Link>
         </h2>
         <div className="mt-1 flex flex-wrap items-center gap-x-space-md gap-y-1 font-body-sm text-body-sm text-text-secondary">
-          <span className="inline-flex items-center gap-1">
+          <span className="inline-flex items-center gap-1 tabular-nums">
             <Icon name="calendar_today" size={16} className="text-text-subtle" />
             {formatDate(seminar.startsAt)} {'\u00b7'} {formatTimeRange(seminar.startsAt, seminar.endsAt)}
           </span>
@@ -111,7 +111,7 @@ export function RecordCard({ record }: { record: HistoryRecord }) {
             <AttendanceMeter percent={record.attendancePercent} met={status === 'ready' || status === 'evaluation_pending'} />
             <div className="flex flex-col">
               <span className="font-caption text-caption text-text-secondary">{attendanceHeading(record)}</span>
-              <span className="font-body-sm-medium text-body-sm-medium text-on-surface">{attendanceDetail(record)}</span>
+              <span className="font-body-sm-medium text-body-sm-medium tabular-nums text-on-surface">{attendanceDetail(record)}</span>
             </div>
           </div>
           <div className="flex items-center gap-space-sm">
@@ -126,7 +126,7 @@ export function RecordCard({ record }: { record: HistoryRecord }) {
             </span>
             <div className="flex flex-col">
               <span className="font-caption text-caption text-text-secondary">Evaluation status</span>
-              <span className="font-body-sm-medium text-body-sm-medium text-on-surface">
+              <span className="font-body-sm-medium text-body-sm-medium tabular-nums text-on-surface">
                 {evaluationDone ? `Submitted${evaluationDate ? ` (${evaluationDate})` : ''}` : 'Not submitted'}
               </span>
             </div>

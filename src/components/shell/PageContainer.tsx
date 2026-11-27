@@ -13,9 +13,9 @@ interface PageContainerProps {
 
 const WIDTHS = {
   full: 'max-w-none',
-  standard: 'max-w-7xl',
-  narrow: 'max-w-5xl',
-  reading: 'max-w-[45rem]',
+  standard: 'max-w-none',
+  narrow: 'max-w-none',
+  reading: 'max-w-none',
 } as const;
 
 /** Shared page width and padding, using the Available Seminars values. */

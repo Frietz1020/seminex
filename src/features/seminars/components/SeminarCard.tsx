@@ -56,13 +56,13 @@ export function SeminarCard({
       : null;
 
   return (
-    <article className="group relative flex flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface-card shadow-card transition duration-150 hover:shadow-card-hover motion-safe:active:scale-[0.97]">
+    <article className="group relative flex flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface-card transition duration-150 hover:border-outline-variant hover:shadow-card-hover motion-safe:active:scale-[0.97]">
       <Link
         to={`/seminars/${seminar.id}`}
         aria-label={`View seminar details: ${seminar.title}`}
         className="absolute inset-0 z-0 rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       />
-      <div className={cx('pointer-events-none relative z-10 w-full overflow-hidden bg-maroon-container', detailed ? 'h-48' : 'h-44')}>
+      <div className="pointer-events-none relative z-10 aspect-video w-full overflow-hidden bg-maroon-container">
         {seminar.imageUrl ? (
           <>
             <img
@@ -92,11 +92,11 @@ export function SeminarCard({
         )}
 
         {!detailed && (
-          <div className="absolute bottom-3 left-3 rounded-md bg-surface-card/90 px-2.5 py-1 font-caption text-caption text-on-surface shadow-card backdrop-blur-md">
+          <div className="absolute bottom-3 left-3 rounded-md bg-surface-card/95 px-2.5 py-1 font-caption text-caption tabular-nums text-on-surface">
             <time dateTime={seminar.startsAt}>{formatDate(seminar.startsAt)}</time>
           </div>
         )}
-        <div className="absolute bottom-3 right-3 rounded-md bg-surface-card/90 px-2 py-0.5 font-caption text-caption font-medium text-on-surface shadow-card backdrop-blur-md">
+        <div className="absolute bottom-3 right-3 rounded-md bg-surface-card/95 px-2 py-0.5 font-caption text-caption font-medium tabular-nums text-on-surface">
           {slotsText}
         </div>
       </div>
@@ -116,7 +116,7 @@ export function SeminarCard({
                   size={16}
                   className={lifecycle === 'ongoing' ? 'text-secondary-accent' : 'text-text-subtle'}
                 />
-                <span>
+                <span className="tabular-nums">
                   {formatDayLabel(seminar.startsAt, now)}, {formatTimeRange(seminar.startsAt, seminar.endsAt)}
                 </span>
               </p>
@@ -163,7 +163,7 @@ export function SeminarCard({
             <div className="flex flex-col gap-1.5 font-body-sm text-body-sm text-text-secondary">
               <p className="flex items-center gap-2">
                 <Icon name="schedule" size={16} className="text-text-subtle" />
-                <span>{formatTimeRange(seminar.startsAt, seminar.endsAt)}</span>
+                <span className="tabular-nums">{formatTimeRange(seminar.startsAt, seminar.endsAt)}</span>
               </p>
               <p className="flex items-center gap-2">
                 <Icon name="location_on" size={16} className="text-text-subtle" />

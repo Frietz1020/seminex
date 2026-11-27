@@ -14,30 +14,39 @@ interface SurveyFormProps {
   answers: EvaluationAnswers;
   errors: Record<string, string>;
   onAnswer: (questionId: string, value: string) => void;
+  /** When provided, renders only that section (GForms multi-page pagination). */
+  activeSectionIndex?: number;
 }
 
 /** Renders whatever survey the Org Member defined. Nothing about the questions is hardcoded here. */
-export function SurveyForm({ survey, speaker, answers, errors, onAnswer }: SurveyFormProps) {
+export function SurveyForm({ survey, speaker, answers, errors, onAnswer, activeSectionIndex }: SurveyFormProps) {
   const numbers = new Map(numberQuestions(survey).map(({ question, number }) => [question.id, number]));
+  const visibleSections =
+    activeSectionIndex !== undefined && survey.sections[activeSectionIndex]
+      ? [{ section: survey.sections[activeSectionIndex]!, index: activeSectionIndex }]
+      : survey.sections.map((section, index) => ({ section, index }));
 
   return (
     <>
-      {survey.sections.map((section, index) => (
+      {visibleSections.map(({ section, index }) => (
         <section
           key={section.id}
           aria-labelledby={`section-${section.id}`}
-          className="flex flex-col gap-space-xl rounded-xl bg-surface-card p-space-lg shadow-card"
+          className="flex flex-col gap-space-xl rounded-xl border border-border-subtle bg-surface-card p-space-lg"
         >
           <div className="flex items-start justify-between gap-space-md">
             <div className="flex flex-col gap-0.5">
-              <p className="font-label-sm text-label-sm uppercase tracking-widest text-secondary">
-                Section {String(index + 1).padStart(2, '0')}
+              <p className="font-caption text-caption tabular-nums text-secondary">
+                Section {index + 1} of {survey.sections.length}
               </p>
               <h2 id={`section-${section.id}`} className="font-title-md text-title-md text-on-surface">
                 {section.title}
               </h2>
+              {section.description && (
+                <p className="mt-1 font-body-sm text-body-sm text-text-secondary">{section.description}</p>
+              )}
             </div>
-            <span className="shrink-0 font-caption text-caption text-text-secondary">
+            <span className="shrink-0 font-caption text-caption tabular-nums text-text-secondary">
               {formatQuestionCount(section.questions.length)}
             </span>
           </div>

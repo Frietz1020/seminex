@@ -21,6 +21,10 @@ export default function HomePage() {
 
   const baseItems = seminars.state.status === 'success' ? seminars.state.data.items : null;
   const registration = useRegistration(baseItems);
+  const ongoingItems = now === null
+    ? []
+    : (registration.items ?? []).filter((item) => item.registration !== null && getStudentSeminarPlacement(item.seminar, now) === 'home');
+  const isEmptyState = seminars.state.status !== 'loading' && seminars.state.status !== 'error' && ongoingItems.length === 0;
   const historyItems = now === null ? null : registration.items?.filter((item) => getStudentSeminarPlacement(item.seminar, now) === 'history') ?? null;
   const sectionState = seminars.state.status === 'success'
     ? { ...seminars.state, data: seminars.state.data.items }
@@ -36,17 +40,17 @@ export default function HomePage() {
 
   return (
     <PageContainer>
-      <GreetingHeader />
+      <GreetingHeader showActions={!isEmptyState} />
+      <HistoryLinkCard
+        state={sectionState}
+        items={historyItems}
+        now={now}
+        onRetry={seminars.reload}
+      />
       <EvaluationBanner state={evaluations.state} onRetry={evaluations.reload} />
       <OngoingSection
         state={sectionState}
         items={registration.items}
-        now={now}
-        onRetry={seminars.reload}
-      />
-      <HistoryLinkCard
-        state={sectionState}
-        items={historyItems}
         now={now}
         onRetry={seminars.reload}
       />

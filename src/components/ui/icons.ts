@@ -85,6 +85,25 @@ import error_icon from '@material-symbols/svg-400/outlined/error.svg?raw';
 import publish from '@material-symbols/svg-400/outlined/publish.svg?raw';
 import person_add from '@material-symbols/svg-400/outlined/person_add.svg?raw';
 import manage_accounts from '@material-symbols/svg-400/outlined/manage_accounts.svg?raw';
+import left_panel_close from '@material-symbols/svg-400/outlined/left_panel_close.svg?raw';
+import left_panel_open from '@material-symbols/svg-400/outlined/left_panel_open.svg?raw';
+import open_in_new from '@material-symbols/svg-400/outlined/open_in_new.svg?raw';
+import visibility_off from '@material-symbols/svg-400/outlined/visibility_off.svg?raw';
+import warning from '@material-symbols/svg-400/outlined/warning.svg?raw';
+import archive from '@material-symbols/svg-400/outlined/archive.svg?raw';
+import chevron_left from '@material-symbols/svg-400/outlined/chevron_left.svg?raw';
+import radio_button_unchecked from '@material-symbols/svg-400/outlined/radio_button_unchecked.svg?raw';
+import format_bold from '@material-symbols/svg-400/outlined/format_bold.svg?raw';
+import format_italic from '@material-symbols/svg-400/outlined/format_italic.svg?raw';
+import format_underlined from '@material-symbols/svg-400/outlined/format_underlined.svg?raw';
+import format_align_left from '@material-symbols/svg-400/outlined/format_align_left.svg?raw';
+import format_align_center from '@material-symbols/svg-400/outlined/format_align_center.svg?raw';
+import format_align_right from '@material-symbols/svg-400/outlined/format_align_right.svg?raw';
+import add_circle from '@material-symbols/svg-400/outlined/add_circle.svg?raw';
+import content_copy from '@material-symbols/svg-400/outlined/content_copy.svg?raw';
+import arrow_upward from '@material-symbols/svg-400/outlined/arrow_upward.svg?raw';
+import arrow_downward from '@material-symbols/svg-400/outlined/arrow_downward.svg?raw';
+import view_agenda from '@material-symbols/svg-400/outlined/view_agenda.svg?raw';
 
 export const ICONS = {
   home,
@@ -172,6 +191,25 @@ export const ICONS = {
   publish,
   person_add,
   manage_accounts,
+  visibility_off,
+  warning,
+  archive,
+  chevron_left,
+  radio_button_unchecked,
+  left_panel_close,
+  left_panel_open,
+  open_in_new,
+  format_bold,
+  format_italic,
+  format_underlined,
+  format_align_left,
+  format_align_center,
+  format_align_right,
+  add_circle,
+  content_copy,
+  arrow_upward,
+  arrow_downward,
+  view_agenda,
 } as const;
 
 export type IconName = keyof typeof ICONS;

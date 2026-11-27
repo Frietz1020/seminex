@@ -386,6 +386,7 @@ export type AuthoredQuestion = SurveyQuestion | CheckboxQuestion;
 export interface AuthoredSection {
   id: string;
   title: string;
+  description?: string;
   questions: AuthoredQuestion[];
 }
 

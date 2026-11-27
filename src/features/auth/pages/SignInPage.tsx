@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Clock, TriangleAlert, WifiOff } from 'lucide-react';
 import { api, type ApiErrorCode } from '../../../api/client';
 import { useOnlineStatus } from '../../../hooks/useOnlineStatus';
 import { AuthLayout } from '../../../components/auth/AuthLayout';
 import { StudentIdField } from '../../../components/auth/StudentIdField';
 import { Alert } from '../../../components/ui/Alert';
 import { Button } from '../../../components/ui/Button';
+import { Icon } from '../../../components/ui/Icon';
 import { PasswordField } from '../../../components/ui/PasswordField';
 import { validateSignInPassword, validateStudentId } from '../validation';
 
@@ -107,7 +107,7 @@ export default function SignInPage() {
       }
     >
       <Link to="/" className="mb-5 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-charcoal-700 hover:text-maroon">
-        <ArrowLeft aria-hidden="true" className="h-4 w-4" />
+        <Icon name="arrow_back" size={16} />
         Back to portal selection
       </Link>
       <div className="mb-6 md:mb-8">
@@ -118,27 +118,27 @@ export default function SignInPage() {
       {showAlerts && (
         <div className="mb-5 space-y-3">
           {!online && (
-            <Alert ref={offlineRef} variant="neutral" role="status" icon={WifiOff} title="You are offline">
+            <Alert ref={offlineRef} variant="neutral" role="status" icon="cloud_off" title="You are offline">
               Connect to the internet to sign in. What you typed is kept.
             </Alert>
           )}
           {sessionExpired && (
-            <Alert variant="warning" icon={Clock} title="Session expired">
+            <Alert variant="warning" icon="schedule" title="Session expired">
               Your session ended. Sign in again to continue.
             </Alert>
           )}
           {failure === 'invalid_credentials' && (
-            <Alert variant="error" icon={TriangleAlert} title="Authentication failed">
+            <Alert variant="error" icon="warning" title="Authentication failed">
               Student ID or password is incorrect. Check both and try again.
             </Alert>
           )}
           {failure === 'network' && online && (
-            <Alert variant="error" icon={TriangleAlert} title="Connection problem">
+            <Alert variant="error" icon="warning" title="Connection problem">
               Seminex could not be reached. Check your connection and try again.
             </Alert>
           )}
           {failure === 'configuration_error' && (
-            <Alert variant="error" icon={TriangleAlert} title="Sign in is not configured">
+            <Alert variant="error" icon="warning" title="Sign in is not configured">
               Set the Supabase project URL and publishable key in the app environment, then reload.
             </Alert>
           )}

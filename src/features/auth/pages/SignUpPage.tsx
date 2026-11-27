@@ -1,14 +1,15 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Check, ChevronLeft, ChevronRight, TriangleAlert, WifiOff } from 'lucide-react';
 import { api, type ApiErrorCode, type Block, type Program, type YearLevel } from '../../../api/client';
 import { useOnlineStatus } from '../../../hooks/useOnlineStatus';
 import { AuthLayout } from '../../../components/auth/AuthLayout';
 import { PasswordRules } from '../../../components/auth/PasswordRules';
 import { OtpField } from '../../../components/auth/OtpField';
+import { StepProgress } from '../../../components/auth/StepProgress';
 import { StudentIdField } from '../../../components/auth/StudentIdField';
 import { Alert } from '../../../components/ui/Alert';
 import { Button } from '../../../components/ui/Button';
+import { Icon } from '../../../components/ui/Icon';
 import { PasswordField } from '../../../components/ui/PasswordField';
 import { SelectField } from '../../../components/ui/SelectField';
 import { BLOCKS, PROGRAMS, YEAR_LEVELS } from '../../../data/academic';
@@ -76,25 +77,22 @@ function validateField(field: FieldName, values: FormValues): string | undefined
 
 function Section({
   id,
-  eyebrow,
   title,
   children,
 }: {
   id: string;
-  eyebrow: string;
   title: string;
   children: ReactNode;
 }) {
   return (
     <section
       aria-labelledby={id}
-      className="space-y-4 rounded-2xl border border-charcoal-200 bg-white p-5 shadow-control md:space-y-5 md:p-6"
+      className="space-y-4 rounded-2xl border border-border-subtle bg-surface-card p-5 md:space-y-5 md:p-6"
     >
-      <div className="md:border-b md:border-charcoal-200 md:pb-3">
-        <p className="text-xs font-semibold uppercase tracking-wider text-burnt">{eyebrow}</p>
+      <div className="border-b border-border-subtle pb-3">
         <h2
           id={id}
-          className="mt-0.5 font-heading text-lg font-bold text-charcoal-900"
+          className="font-heading text-lg font-bold text-charcoal-900"
         >
           {title}
         </h2>
@@ -111,7 +109,7 @@ export default function SignUpPage() {
   const resumeSignup = session?.onboardingComplete === false;
 
   const fieldRefs = useRef<Partial<Record<FieldName, HTMLInputElement | HTMLSelectElement | null>>>({});
-  const stepBadgeRef = useRef<HTMLParagraphElement>(null);
+  const stepNavRef = useRef<HTMLElement>(null);
   const offlineRef = useRef<HTMLDivElement>(null);
 
   const [step, setStep] = useState<Step>(1);
@@ -133,7 +131,7 @@ export default function SignUpPage() {
   useEffect(() => {
     if (!focusTarget) return;
     if (focusTarget === 'step') {
-      stepBadgeRef.current?.focus();
+      stepNavRef.current?.focus();
     } else {
       fieldRefs.current[focusTarget]?.focus();
     }
@@ -281,17 +279,14 @@ export default function SignUpPage() {
         </p>
       }
     >
-      <div className="mb-4 flex items-center justify-between md:mb-3">
+      <div className="mb-4 md:mb-3">
         <Link
           to="/"
           className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-charcoal-700 hover:text-maroon"
         >
-          <ArrowLeft aria-hidden="true" className="h-4 w-4" />
+          <Icon name="arrow_back" size={16} />
           Back to portal selection
         </Link>
-        <p ref={stepBadgeRef} tabIndex={-1} className="rounded-full bg-maroon/10 px-2.5 py-1 text-xs font-semibold text-maroon">
-          Step {step} of 2
-        </p>
       </div>
 
       <div className="mb-5 md:mb-6">
@@ -304,46 +299,32 @@ export default function SignUpPage() {
       {showAlerts && (
         <div className="mb-5 space-y-3">
           {!online && (
-            <Alert ref={offlineRef} variant="neutral" role="status" icon={WifiOff} title="You are offline">
+            <Alert ref={offlineRef} variant="neutral" role="status" icon="cloud_off" title="You are offline">
               Connect to the internet to create your account. What you typed is kept.
             </Alert>
           )}
           {failure === 'network' && online && (
-            <Alert variant="error" icon={TriangleAlert} title="Connection problem">
+            <Alert variant="error" icon="warning" title="Connection problem">
               Seminex could not be reached. Check your connection and try again.
             </Alert>
           )}
         </div>
       )}
 
-      <div aria-label="Registration progress" className="mb-4 grid grid-cols-2 gap-3">
-        {[1, 2].map((item) => {
-          const active = step === item;
-          const complete = step === 2 && item === 1;
-          return (
-            <button
-              key={item}
-              type="button"
-              disabled={locked}
-              onClick={() => item === 1 ? goToStep(1) : handleContinue()}
-              aria-current={active ? 'step' : undefined}
-              className={`flex min-h-[68px] items-center gap-3 rounded-xl border-2 p-3 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${active ? 'border-maroon bg-white' : 'border-charcoal-200 bg-cream-50/70 hover:border-charcoal-300'}`}
-            >
-              <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs font-bold ${active ? 'bg-maroon text-white' : complete ? 'bg-success text-white' : 'bg-charcoal-200 text-charcoal-700'}`}>
-                {complete ? <Check aria-hidden="true" className="h-4 w-4" strokeWidth={3} /> : item}
-              </span>
-              <span className="min-w-0">
-                <span className={`block font-label-sm text-label-sm font-semibold uppercase tracking-wider ${active ? 'text-maroon' : 'text-charcoal-500'}`}>Step {item}</span>
-                <span className="block truncate text-xs font-bold text-charcoal-900">{item === 1 ? 'Credentials' : 'Personal information'}</span>
-              </span>
-            </button>
-          );
-        })}
-      </div>
+      <StepProgress
+        focusRef={stepNavRef}
+        current={step}
+        disabled={locked}
+        steps={[
+          { step: 1, label: 'Credentials' },
+          { step: 2, label: 'Personal information' },
+        ]}
+        onSelect={(item) => (item === 1 ? goToStep(1) : handleContinue())}
+      />
 
       <form noValidate onSubmit={handleSubmit} aria-busy={locked} className="space-y-5 md:space-y-6">
         {showCredentials && (
-          <Section id="credentials-heading" eyebrow="Step 1 of 2" title="Login credentials">
+          <Section id="credentials-heading" title="Login credentials">
             <StudentIdField
               ref={(element) => {
                 fieldRefs.current.studentId = element;
@@ -382,7 +363,7 @@ export default function SignUpPage() {
         )}
 
         {showPersonal && (
-          <Section id="personal-heading" eyebrow="Step 2 of 2" title="Personal information">
+          <Section id="personal-heading" title="Personal information">
             <div className="grid grid-cols-12 gap-3">
               <div className="col-span-12 sm:col-span-5">
                 <TextField
@@ -489,7 +470,7 @@ export default function SignUpPage() {
             <Button onClick={handleContinue}>
               <>
                 Continue to step 2
-                <ChevronRight aria-hidden="true" className="ml-2 inline-block h-4 w-4 align-middle" />
+                <Icon name="chevron_right" size={16} className="ml-2 align-middle" />
               </>
             </Button>
           </div>
@@ -500,7 +481,7 @@ export default function SignUpPage() {
             {createAccount}
             <Button
               variant="secondary"
-              icon={<ChevronLeft aria-hidden="true" className="h-4 w-4" />}
+              icon={<Icon name="chevron_left" size={16} />}
               disabled={locked}
               onClick={() => goToStep(1)}
             >

@@ -14,7 +14,7 @@ export function ActivityCard() {
   const history = useResource(() => api.listHistory({ pageSize: 999 }), 'profile-history');
 
   return (
-    <section aria-labelledby="activity-heading" className="flex flex-col gap-space-md rounded-xl border border-border-subtle bg-surface-card p-space-lg shadow-card">
+    <section aria-labelledby="activity-heading" className="flex flex-col gap-space-md rounded-xl border border-border-subtle bg-surface-card p-space-lg">
       <div className="flex items-center justify-between gap-space-sm">
         <h2 id="activity-heading" className="font-title-md text-title-md text-on-surface">
           Academic activity
@@ -54,7 +54,7 @@ function ActivityCounts({ records: items, now }: { records: SeminarListItem[]; n
         {tiles.map((tile) => (
           <div key={tile.label} className="flex flex-col-reverse items-center justify-center gap-1 rounded-lg bg-surface-light p-3">
             <dt className="font-caption text-caption text-text-secondary">{tile.label}</dt>
-            <dd className={`font-headline-md text-headline-md font-bold ${tile.tone}`}>{tile.value}</dd>
+            <dd className={`font-headline-md text-headline-md font-bold tabular-nums ${tile.tone}`}>{tile.value}</dd>
           </div>
         ))}
       </dl>

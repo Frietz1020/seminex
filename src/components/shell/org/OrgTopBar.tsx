@@ -12,16 +12,27 @@ import { WorkspaceSwitcher } from './WorkspaceSwitcher';
  * Desktop: notification bell, name with Student ID and position, then avatar. Below lg there is no sidebar,
  * so the logo and workspace button sit on the left.
  */
-export function OrgTopBar({ state }: { state: ResourceState<OrgIdentity> }) {
+export function OrgTopBar({
+  state,
+  sidebarCollapsed = false,
+}: {
+  state: ResourceState<OrgIdentity>;
+  sidebarCollapsed?: boolean;
+}) {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const identity = state.status === 'success' ? state.data : null;
 
   const detail = identity
     ? [identity.studentId, identity.position].filter(Boolean).join(' \u00b7 ')
     : '';
+  const desktopLeftOffset = sidebarCollapsed
+    ? 'lg:left-[72px]'
+    : identity?.role === 'adviser'
+      ? 'lg:left-72'
+      : 'lg:left-64';
 
   return (
-    <header className={`fixed inset-x-0 top-0 z-40 flex h-[calc(3.5rem+env(safe-area-inset-top))] items-center justify-between gap-space-sm bg-surface-light/90 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pt-[env(safe-area-inset-top)] shadow-shell backdrop-blur-xl ${identity?.role === 'adviser' ? 'lg:left-72' : 'lg:left-64'} lg:h-16 lg:pl-space-xl lg:pr-space-xl lg:pt-0`}>
+    <header className={`fixed inset-x-0 top-0 z-40 flex h-[calc(3.5rem+env(safe-area-inset-top))] items-center justify-between gap-space-sm border-b border-border-subtle bg-surface-card/95 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pt-[env(safe-area-inset-top)] backdrop-blur-md transition-[left] duration-200 ${desktopLeftOffset} lg:h-16 lg:pl-space-xl lg:pr-space-xl lg:pt-0`}>
       <div className="flex min-w-0 items-center gap-space-md">
         <Link to="/org" aria-label="Seminex organization home" className="flex min-h-11 items-center rounded-lg lg:hidden">
           <BrandMark />
@@ -60,10 +71,8 @@ export function OrgTopBar({ state }: { state: ResourceState<OrgIdentity> }) {
       </div>
 
       <Dialog open={notificationsOpen} onClose={() => setNotificationsOpen(false)} title="Notifications">
-        <div className="mt-space-md flex flex-col items-center gap-space-sm rounded-xl bg-surface-container-low px-space-lg py-space-xl text-center">
-          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-surface-card text-primary shadow-card">
-            <Icon name="notifications" size={24} />
-          </span>
+        <div className="mt-space-md flex flex-col items-center gap-space-sm py-space-lg text-center">
+          <Icon name="notifications" size={24} className="text-primary" />
           <p className="font-body-sm text-body-sm text-text-secondary">Notifications are not available yet.</p>
         </div>
       </Dialog>

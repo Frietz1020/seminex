@@ -6,6 +6,8 @@ import { RequireSession } from './RequireSession';
 import { RequireRole } from './RequireRole';
 import { OrgShell } from '../components/shell/org/OrgShell';
 const LandingPage = lazy(() => import('../features/home/pages/LandingPage'));
+const TermsOfUsePage = lazy(() => import('../features/legal/PolicyPage').then((m) => ({ default: m.TermsOfUsePage })));
+const SecurityPolicyPage = lazy(() => import('../features/legal/PolicyPage').then((m) => ({ default: m.SecurityPolicyPage })));
 const SignInPage = lazy(() => import('../features/auth/pages/SignInPage'));
 const SignUpPage = lazy(() => import('../features/auth/pages/SignUpPage'));
 const OrganizationSignInPage = lazy(() => import('../features/auth/pages/OrganizationSignInPage'));
@@ -40,17 +42,19 @@ const AdminAuditLogPage = lazy(() => import('../features/admin/pages/AdminAuditL
 const AdminProfilePage = lazy(() => import('../features/admin/pages/AdminProfilePage'));
 
 function OrgPage({ children }: { children: ReactNode }) {
-  return <Suspense fallback={<div role="status" className="mx-auto w-full max-w-7xl px-gutter py-space-xl md:px-margin">Loading organization page…</div>}>{children}</Suspense>;
+  return <Suspense fallback={<div role="status" className="w-full px-gutter py-space-xl md:px-margin">Loading organization page…</div>}>{children}</Suspense>;
 }
 
 function StudentPage({ children }: { children: ReactNode }) {
-  return <Suspense fallback={<div role="status" className="mx-auto w-full max-w-7xl px-gutter py-space-xl md:px-margin">Loading page…</div>}>{children}</Suspense>;
+  return <Suspense fallback={<div role="status" className="w-full px-gutter py-space-xl md:px-margin">Loading page…</div>}>{children}</Suspense>;
 }
 
 export function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<StudentPage><LandingPage /></StudentPage>} />
+      <Route path="/terms" element={<StudentPage><TermsOfUsePage /></StudentPage>} />
+      <Route path="/security" element={<StudentPage><SecurityPolicyPage /></StudentPage>} />
       <Route path="/sign-in" element={<StudentPage><SignInPage /></StudentPage>} />
       <Route path="/sign-up" element={<StudentPage><SignUpPage /></StudentPage>} />
       <Route path="/organization/sign-in" element={<StudentPage><OrganizationSignInPage /></StudentPage>} />

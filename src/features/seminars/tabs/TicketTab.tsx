@@ -139,7 +139,7 @@ export function TicketTab({ seminar, registration, now }: TicketTabProps) {
     <div className="grid grid-cols-1 items-start gap-space-lg lg:grid-cols-12">
       <section
         aria-labelledby="ticket-heading"
-        className="flex flex-col items-center rounded-xl border border-border-subtle bg-surface-card p-space-xl shadow-card-hover lg:col-span-5"
+        className="flex flex-col items-center rounded-xl border border-border-subtle bg-surface-card p-space-xl lg:col-span-5"
       >
         <div className="mb-space-lg flex w-full items-center gap-space-xs border-b border-border-subtle pb-space-md">
           <Icon name="badge" size={20} className="text-primary-container" />
@@ -148,7 +148,7 @@ export function TicketTab({ seminar, registration, now }: TicketTabProps) {
           </h2>
         </div>
 
-        <div className="mb-space-lg flex w-full flex-col items-start justify-between gap-space-md rounded-lg border border-border-subtle bg-surface-container-low p-space-md sm:flex-row sm:items-center">
+        <div className="mb-space-lg flex w-full flex-col items-start justify-between gap-space-md rounded-lg bg-surface-container-low p-space-md sm:flex-row sm:items-center">
           {profile ? (
             <>
               <div className="flex min-w-0 flex-col">
@@ -177,7 +177,7 @@ export function TicketTab({ seminar, registration, now }: TicketTabProps) {
         </div>
 
         {seminar.seminarType === 'webinar' ? (
-          <div className="w-full rounded-xl border border-border-subtle bg-surface-container-low p-space-md">
+          <div className="w-full rounded-xl bg-surface-container-low p-space-md">
             <h3 className="font-title-md text-title-md text-on-surface">Attendance proof</h3>
             <p className="mt-1 font-body-sm text-body-sm text-text-secondary">Upload a screenshot that shows your name. PNG or JPG, up to 5 MB. An organization officer reviews each image.</p>
             <div className="mt-space-md grid gap-space-md sm:grid-cols-2">
@@ -207,16 +207,10 @@ export function TicketTab({ seminar, registration, now }: TicketTabProps) {
 
         {ticketData && (
           <>
-            <div className="aspect-square w-full max-w-60 rounded-xl bg-white p-space-md shadow-card [&>div]:block [&>div]:h-full [&>div]:w-full [&_svg]:h-full [&_svg]:w-full">
-              <AttendanceQr seminarId={seminar.id} title={seminar.title} size={240} acknowledged={Boolean(registration.attendanceAckAt)} endsAt={seminar.endsAt} serverNow={now} />
+            <div className="flex w-full flex-col items-center justify-center">
+              <AttendanceQr seminarId={seminar.id} title={seminar.title} size={220} acknowledged={Boolean(registration.attendanceAckAt)} endsAt={seminar.endsAt} serverNow={now} />
             </div>
 
-            <p className="mt-space-md max-w-sm text-center font-body-sm text-body-sm text-text-secondary">
-              Show this QR code to the CCS Student Council marshal at the venue door.
-            </p>
-            <span className="mt-1 font-mono text-caption text-text-subtle">
-              Ticket reference: {registration.reference}
-            </span>
             {fromCache && (
               <p role="status" className="mt-space-xs text-center font-caption text-caption text-text-secondary">
                 You are offline. Showing your saved ticket. Attendance below may be out of date.
@@ -228,7 +222,7 @@ export function TicketTab({ seminar, registration, now }: TicketTabProps) {
               </p>
             )}
 
-            <button type="button" onClick={() => setQrOpen(true)} className={cx(actionTonal, 'mt-space-lg shadow-card')}>
+            <button type="button" onClick={() => setQrOpen(true)} className={cx(actionTonal, 'mt-space-lg')}>
               <Icon name="open_in_full" size={18} />
               <span>Expand for scanning</span>
             </button>
@@ -240,7 +234,7 @@ export function TicketTab({ seminar, registration, now }: TicketTabProps) {
       <div className="flex flex-col gap-space-lg lg:col-span-7">
         <section
           aria-labelledby="attendance-heading"
-          className="flex flex-col gap-space-md rounded-xl border border-border-subtle bg-surface-card p-space-xl shadow-card"
+          className="flex flex-col gap-space-md rounded-xl border border-border-subtle bg-surface-card p-space-xl"
         >
           <div className="flex items-center justify-between gap-space-sm border-b border-border-subtle pb-space-sm">
             <h2
@@ -261,14 +255,14 @@ export function TicketTab({ seminar, registration, now }: TicketTabProps) {
           </div>
 
           <p className="font-body-sm text-body-sm text-text-secondary">
-            {seminar.seminarType === 'webinar' ? 'Attendance is recorded after an officer reviews your time-in and time-out proof.' : 'Marshals scan you in and out at the venue. Both scans are required for your certificate.'}
+            {seminar.seminarType === 'webinar' ? 'Attendance is recorded after an officer reviews your time-in and time-out proof.' : 'Time-In and Time-Out scans are recorded with this ticket. Meeting the seminar’s attendance requirement and submitting the evaluation complete certificate eligibility.'}
           </p>
 
           <div className="flex flex-col gap-space-sm">
             <CheckpointCard title="Time-In (entry)" state={timeInState}>
               {registration.timeIn ? (
                 <div className="flex flex-wrap items-center justify-between gap-x-space-md">
-                  <span className="font-medium">
+                  <span className="font-medium tabular-nums">
                     {formatDate(registration.timeIn.at)} at {formatClockTime(registration.timeIn.at)}
                   </span>
                   {registration.timeIn.station && (
@@ -285,7 +279,7 @@ export function TicketTab({ seminar, registration, now }: TicketTabProps) {
             <CheckpointCard title="Time-Out (exit)" state={timeOutState}>
               {registration.timeOut ? (
                 <div className="flex flex-wrap items-center justify-between gap-x-space-md">
-                  <span className="font-medium">
+                  <span className="font-medium tabular-nums">
                     {formatDate(registration.timeOut.at)} at {formatClockTime(registration.timeOut.at)}
                   </span>
                   <span className="font-caption text-caption text-text-secondary">
@@ -300,10 +294,10 @@ export function TicketTab({ seminar, registration, now }: TicketTabProps) {
             </CheckpointCard>
           </div>
 
-          <div className="mt-space-xs flex flex-col gap-space-xs rounded-lg border border-border-subtle bg-surface-container p-space-md">
+          <div className="mt-space-xs flex flex-col gap-space-xs rounded-lg bg-surface-container-low p-space-md">
             <div className="flex items-center justify-between gap-space-sm font-body-sm text-body-sm">
               <span className="text-text-secondary">Required attendance</span>
-              <span className="font-body-sm-medium text-body-sm-medium text-on-surface">
+              <span className="font-body-sm-medium text-body-sm-medium tabular-nums text-on-surface">
                 {seminar.requiredAttendancePercent}% of the session
               </span>
             </div>
@@ -314,9 +308,10 @@ export function TicketTab({ seminar, registration, now }: TicketTabProps) {
               label="Attendance toward the minimum"
             />
             <div className="flex flex-wrap items-center justify-between gap-x-space-md font-caption text-caption">
-              <span className="text-text-secondary">Minimum: {formatDuration(attendance.requiredMinutes)}</span>
+              <span className="tabular-nums text-text-secondary">Minimum: {formatDuration(attendance.requiredMinutes)}</span>
               <span
                 className={cx(
+                  'tabular-nums',
                   attendance.satisfied ? 'font-medium text-status-available' : 'text-text-secondary',
                 )}
               >
@@ -324,24 +319,6 @@ export function TicketTab({ seminar, registration, now }: TicketTabProps) {
               </span>
             </div>
           </div>
-
-          <p className="flex items-start gap-space-xs pt-space-xs font-caption text-caption text-text-secondary">
-            <Icon name="info" size={16} className="mt-0.5 shrink-0" />
-            <span>Leaving before the seminar ends will invalidate your attendance and certificate eligibility.</span>
-          </p>
-        </section>
-
-        <section
-          aria-labelledby="help-heading"
-          className="flex flex-col gap-space-xs rounded-xl border border-border-subtle bg-surface-card p-space-lg shadow-card"
-        >
-          <h2 id="help-heading" className="font-label-sm text-label-sm text-text-subtle">
-            Need assistance?
-          </h2>
-          <p className="font-body-sm text-body-sm text-text-secondary">
-            If your QR code does not scan at the entrance, show your student ID card to a CCS Student Council
-            officer at the tech desk.
-          </p>
         </section>
       </div>
 
@@ -350,8 +327,8 @@ export function TicketTab({ seminar, registration, now }: TicketTabProps) {
           Show this screen to the marshal's scanner.
         </p>
         {ticketData && (
-          <div className="mx-auto my-space-lg aspect-square w-full max-w-[300px] rounded-xl border border-border-subtle bg-white p-space-sm [&>div]:block [&>div]:h-full [&>div]:w-full [&_svg]:h-full [&_svg]:w-full">
-            <AttendanceQr seminarId={seminar.id} title={seminar.title} size={300} acknowledged={Boolean(registration.attendanceAckAt)} endsAt={seminar.endsAt} serverNow={now} />
+          <div className="mx-auto my-space-lg flex flex-col items-center justify-center">
+            <AttendanceQr seminarId={seminar.id} title={seminar.title} size={260} acknowledged={Boolean(registration.attendanceAckAt)} endsAt={seminar.endsAt} serverNow={now} />
           </div>
         )}
         {profile && (

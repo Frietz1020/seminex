@@ -22,11 +22,13 @@ export function OngoingSeminarCard({ seminar, registration, now }: OngoingSemina
   const ticket = useResource(() => api.getTicket(seminar.id), `ticket-${seminar.id}`);
   const attendance = getAttendance(seminar, registration, now);
   const recentlyFinished = getStudentSeminarPlacement(seminar, now) === 'home' && Date.parse(seminar.endsAt) <= now;
+  const timeOutConfirmed = Boolean(registration.timeOut?.validated);
+  const evaluationSubmitted = Boolean(registration.evaluationSubmittedAt);
 
   return (
     <section
       aria-labelledby={`ongoing-${seminar.id}`}
-      className="flex w-full flex-col justify-between gap-space-xl rounded-xl border border-border-subtle bg-surface-card p-space-lg shadow-card lg:flex-row"
+      className="flex w-full flex-col justify-between gap-space-xl rounded-xl border border-border-subtle bg-surface-card p-space-lg lg:flex-row"
     >
       <div className="flex flex-1 flex-col justify-between gap-space-lg">
         <div className="flex flex-col gap-space-sm">
@@ -41,7 +43,7 @@ export function OngoingSeminarCard({ seminar, registration, now }: OngoingSemina
           <p className="flex items-center gap-2 font-body-base text-body-base text-text-secondary">
             <Icon name="person" size={18} className="text-primary-container" />
             <span>
-              {seminar.speaker.name} ({seminar.speaker.role})
+              {seminar.speaker.role ? `${seminar.speaker.name} (${seminar.speaker.role})` : seminar.speaker.name}
             </span>
           </p>
         </div>
@@ -58,7 +60,7 @@ export function OngoingSeminarCard({ seminar, registration, now }: OngoingSemina
             <Icon name="schedule" size={20} className="text-text-subtle" />
             <div className="flex flex-col">
               <dt className="font-caption text-caption text-text-subtle">Schedule</dt>
-              <dd className="font-body-sm-medium text-body-sm-medium text-on-surface">
+              <dd className="font-body-sm-medium text-body-sm-medium tabular-nums text-on-surface">
                 {formatTimeRange(seminar.startsAt, seminar.endsAt)}
               </dd>
             </div>
@@ -67,17 +69,17 @@ export function OngoingSeminarCard({ seminar, registration, now }: OngoingSemina
             <Icon name="group" size={20} className="text-text-subtle" />
             <div className="flex flex-col">
               <dt className="font-caption text-caption text-text-subtle">Capacity</dt>
-              <dd className="font-body-sm-medium text-body-sm-medium text-on-surface">
+              <dd className="font-body-sm-medium text-body-sm-medium tabular-nums text-on-surface">
                 {seminar.registeredCount} of {seminar.capacity} attendees
               </dd>
             </div>
           </div>
         </dl>
 
-        <div className="flex flex-col gap-space-xs rounded-lg bg-surface-container-low p-space-md">
+        <div className="flex flex-col gap-space-xs border-t border-border-subtle pt-space-md">
           <div className="flex flex-wrap items-center justify-between gap-x-space-md gap-y-1">
             {registration.timeIn ? (
-              <p className="flex items-center gap-1.5 font-body-sm-medium text-body-sm-medium text-on-surface">
+              <p className="flex items-center gap-1.5 font-body-sm-medium text-body-sm-medium tabular-nums text-on-surface">
                 <Icon name="check" size={16} className="text-status-available" />
                 Time-In recorded at {formatClockTime(registration.timeIn.at)}
               </p>
@@ -97,13 +99,13 @@ export function OngoingSeminarCard({ seminar, registration, now }: OngoingSemina
             max={attendance.requiredMinutes}
             label="Attendance toward the minimum"
           />
-          <p className="font-caption text-caption text-text-secondary">
+          <p className="font-caption text-caption tabular-nums text-text-secondary">
             {formatDuration(attendance.attendedMinutes)} of {formatDuration(attendance.requiredMinutes)} minimum
             {attendance.satisfied && (
               <span className="ml-2 font-medium text-status-available">Minimum attendance reached</span>
             )}
           </p>
-          <p className="font-caption text-caption text-text-subtle">
+          <p className="font-caption text-caption tabular-nums text-text-subtle">
             {registration.timeOut
               ? `Time-Out recorded at ${formatClockTime(registration.timeOut.at)}`
               : 'Time-Out: pending exit scan'}
@@ -111,42 +113,93 @@ export function OngoingSeminarCard({ seminar, registration, now }: OngoingSemina
         </div>
       </div>
 
-      <div className="flex shrink-0 flex-col items-center justify-center gap-space-md rounded-lg bg-surface-container-low p-space-md text-center lg:w-72">
-        {seminar.seminarType === 'webinar' ? <div className="flex min-h-36 w-full flex-col items-center justify-center gap-space-sm rounded-lg bg-surface-card p-space-md"><Icon name="play_circle" size={26} className="text-primary"/><p className="font-body-sm-medium text-body-sm-medium text-on-surface">Webinar attendance proof</p><p className="font-caption text-caption text-text-secondary">Upload Time-In and Time-Out screenshots from your ticket.</p></div> : <>
-        <div className="flex h-36 w-36 items-center justify-center rounded-lg bg-white shadow-card">
-          {ticket.state.status === 'success' ? (
-            <AttendanceQr seminarId={seminar.id} title={seminar.title} size={128} acknowledged={Boolean(registration.attendanceAckAt)} endsAt={seminar.endsAt} serverNow={now} />
-          ) : ticket.state.status === 'loading' ? (
-            <div role="status">
-              <span className="sr-only">Loading your QR code</span>
-              <Skeleton className="h-28 w-28" />
-            </div>
-          ) : (
-            <div role="alert" className="flex flex-col items-center px-2">
-              <p className="font-caption text-caption text-text-secondary">QR code unavailable</p>
-              <button
-                type="button"
-                onClick={ticket.reload}
-                className="inline-flex min-h-11 items-center font-caption text-caption font-semibold text-primary underline"
+      <div className="flex shrink-0 flex-col items-center justify-center gap-space-md border-t border-border-subtle pt-space-lg text-center lg:w-72 lg:border-l lg:border-t-0 lg:pl-space-lg lg:pt-0">
+        {timeOutConfirmed ? (
+          <>
+            <div className="flex flex-col items-center gap-space-xs">
+              <span
+                className={cx(
+                  'flex h-12 w-12 items-center justify-center rounded-xl',
+                  evaluationSubmitted
+                    ? 'bg-status-available-container text-status-available'
+                    : 'bg-maroon-container text-primary',
+                )}
               >
-                Try again
-              </button>
+                <Icon name={evaluationSubmitted ? 'workspace_premium' : 'fact_check'} size={24} />
+              </span>
+              <p className="mt-1 font-title-sm text-title-sm text-on-surface">
+                {evaluationSubmitted ? 'Evaluation submitted' : 'Attendance confirmed'}
+              </p>
+              <p className="font-caption text-caption leading-snug text-text-secondary">
+                {evaluationSubmitted
+                  ? 'Your seminar record and certificate are ready in History.'
+                  : 'Complete the evaluation to unlock your certificate.'}
+              </p>
             </div>
-          )}
-        </div>
-        </>}
+            <Link
+              to={evaluationSubmitted ? `/history/${seminar.id}` : `/my-seminars/${seminar.id}?tab=evaluation`}
+              className={cx(actionPrimary, 'w-full')}
+            >
+              <Icon name={evaluationSubmitted ? 'workspace_premium' : 'fact_check'} size={18} />
+              <span>{evaluationSubmitted ? 'View certificate' : 'Complete evaluation'}</span>
+            </Link>
+          </>
+        ) : (
+          <>
+            {seminar.seminarType === 'webinar' ? (
+              <div className="flex min-h-36 w-full flex-col items-center justify-center gap-space-sm p-space-sm">
+                <Icon name="play_circle" size={26} className="text-primary" />
+                <p className="font-body-sm-medium text-body-sm-medium text-on-surface">Webinar attendance proof</p>
+                <p className="font-caption text-caption text-text-secondary">
+                  Upload Time-In and Time-Out screenshots from your ticket.
+                </p>
+              </div>
+            ) : (
+              <div className="flex w-full flex-col items-center justify-center">
+                {ticket.state.status === 'success' ? (
+                  <AttendanceQr
+                    seminarId={seminar.id}
+                    title={seminar.title}
+                    size={136}
+                    acknowledged={Boolean(registration.attendanceAckAt)}
+                    endsAt={seminar.endsAt}
+                    serverNow={now}
+                  />
+                ) : ticket.state.status === 'loading' ? (
+                  <div role="status" className="flex h-36 w-36 items-center justify-center rounded-lg border border-border-subtle bg-white">
+                    <span className="sr-only">Loading your QR code</span>
+                    <Skeleton className="h-28 w-28" />
+                  </div>
+                ) : (
+                  <div role="alert" className="flex h-36 w-36 flex-col items-center justify-center rounded-lg border border-border-subtle bg-white px-2">
+                    <p className="font-caption text-caption text-text-secondary">QR code unavailable</p>
+                    <button
+                      type="button"
+                      onClick={ticket.reload}
+                      className="inline-flex min-h-11 items-center font-caption text-caption font-semibold text-primary underline"
+                    >
+                      Try again
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
 
-        <div className="flex w-full flex-col gap-1">
-          <Link to={`/my-seminars/${seminar.id}?tab=ticket`} className={cx(actionPrimary, 'w-full')}>
-            <Icon name={seminar.seminarType === 'webinar' ? 'fact_check' : 'qr_code'} size={18} />
-            <span>{seminar.seminarType === 'webinar' ? 'Open attendance proof' : 'View QR code'}</span>
-          </Link>
-          <span className="font-caption text-caption text-text-subtle">
-            {seminar.seminarType === 'webinar' ? 'Attendance proof uploads need a connection.' : ticket.state.status === 'success' && ticket.state.fromCache
-              ? 'Showing your saved ticket.'
-              : 'Show this code at the exit to record your Time-Out.'}
-          </span>
-        </div>
+            <div className="flex w-full flex-col gap-1">
+              <Link to={`/my-seminars/${seminar.id}?tab=ticket`} className={cx(actionPrimary, 'w-full')}>
+                <Icon name={seminar.seminarType === 'webinar' ? 'fact_check' : 'qr_code'} size={18} />
+                <span>{seminar.seminarType === 'webinar' ? 'Open attendance proof' : 'View QR code'}</span>
+              </Link>
+              <span className="font-caption text-caption text-text-subtle">
+                {seminar.seminarType === 'webinar'
+                  ? 'Attendance proof uploads need a connection.'
+                  : ticket.state.status === 'success' && ticket.state.fromCache
+                    ? 'Showing your saved ticket.'
+                    : 'Show this code at the exit to record your Time-Out.'}
+              </span>
+            </div>
+          </>
+        )}
       </div>
     </section>
   );

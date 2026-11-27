@@ -4,6 +4,7 @@ import { useOnlineStatus } from '../../hooks/useOnlineStatus';
 import { QrCode } from './QrCode';
 
 const QR_GRACE_PERIOD_MS = 60 * 60 * 1_000;
+const MAX_TIMEOUT_MS = 2_147_483_647;
 
 export function attendanceChallengePayload(challenge: string): string {
   if (!/^[a-f0-9]{64}$/.test(challenge)) throw new Error('Invalid attendance challenge.');
@@ -87,10 +88,23 @@ export function AttendanceQr({
     void issue();
   }, [canIssue, eligibilityKey, issueAttemptKey, seminarId]);
 
+  const effectiveServerNowRef = useRef<number | null>(effectiveServerNow);
+  useEffect(() => {
+    effectiveServerNowRef.current = effectiveServerNow;
+  }, [effectiveServerNow]);
+
   useEffect(() => {
     if (!challenge) return;
     let active = true;
     let timer = 0;
+
+    const scheduleCheck = (referenceNow: number) => {
+      window.clearTimeout(timer);
+      const remainingMs = challenge.expiresAt - referenceNow;
+      const delay = Math.min(MAX_TIMEOUT_MS, Math.max(1, remainingMs + 1));
+      timer = window.setTimeout(() => { void checkExpiry(); }, delay);
+    };
+
     const checkExpiry = async () => {
       const result = await api.getServerTime();
       if (!active) return;
@@ -99,10 +113,12 @@ export function AttendanceQr({
       setRefreshedServerNow(currentServerTime);
       if (!Number.isFinite(currentServerTime) || currentServerTime > challenge.expiresAt) {
         setChallengeState(null);
+      } else {
+        scheduleCheck(currentServerTime);
       }
     };
-    const remainingMs = challenge.expiresAt - (effectiveServerNow ?? challenge.expiresAt);
-    timer = window.setTimeout(() => { void checkExpiry(); }, Math.max(1, remainingMs + 1));
+
+    scheduleCheck(effectiveServerNowRef.current ?? challenge.expiresAt);
     const onVisible = () => {
       if (document.visibilityState === 'visible') void checkExpiry();
     };
@@ -112,13 +128,22 @@ export function AttendanceQr({
       window.clearTimeout(timer);
       document.removeEventListener('visibilitychange', onVisible);
     };
-  }, [challenge, effectiveServerNow]);
+  }, [challenge]);
 
-  if (!online) return <p role="status">Connect to show your attendance QR.</p>;
-  if (effectiveServerNow === null || !Number.isFinite(effectiveServerNow)) return <p role="status">Checking seminar time…</p>;
-  if (!acknowledged) return <p role="status">Attendance acknowledgement is required before your QR becomes available.</p>;
-  if (expired) return <p role="status">This attendance QR has expired.</p>;
-  if (failed) return <div><p role="alert">A live attendance QR could not be loaded.</p><button type="button" onClick={() => { setFailedKey(null); setRetry((value) => value + 1); }}>Try again</button></div>;
-  if (!challenge) return <p role="status">Loading a secure attendance QR…</p>;
-  return <div aria-label={`Attendance QR for ${title}`}><QrCode value={attendanceChallengePayload(challenge.value)} size={size} label={`Attendance QR for ${title}`} /><p role="status">Use this QR for Time-In and Time-Out until {new Date(challenge.expiresAt).toLocaleTimeString()}.</p></div>;
+  if (!online) return <p role="status" className="font-caption text-caption text-text-secondary">Connect to show your attendance QR.</p>;
+  if (effectiveServerNow === null || !Number.isFinite(effectiveServerNow)) return <p role="status" className="font-caption text-caption text-text-secondary">Checking seminar time…</p>;
+  if (!acknowledged) return <p role="status" className="font-caption text-caption text-text-secondary">Attendance acknowledgement is required before your QR becomes available.</p>;
+  if (expired) return <p role="status" className="font-caption text-caption text-text-secondary">This attendance QR has expired.</p>;
+  if (failed) return <div className="flex flex-col items-center gap-1 text-center"><p role="alert" className="font-caption text-caption text-danger">A live attendance QR could not be loaded.</p><button type="button" onClick={() => { setFailedKey(null); setRetry((value) => value + 1); }} className="font-caption text-caption font-semibold text-primary underline">Try again</button></div>;
+  if (!challenge) return <p role="status" className="font-caption text-caption text-text-secondary">Loading a secure attendance QR…</p>;
+  return (
+    <div aria-label={`Attendance QR for ${title}`} className="flex flex-col items-center gap-2 text-center">
+      <div className="inline-flex items-center justify-center rounded-xl border border-border-subtle bg-white p-2.5 shadow-xs">
+        <QrCode value={attendanceChallengePayload(challenge.value)} size={size} label={`Attendance QR for ${title}`} />
+      </div>
+      <p role="status" className="max-w-[15rem] font-caption text-caption leading-snug tabular-nums text-text-secondary">
+        Use this QR for Time-In and Time-Out until {new Date(challenge.expiresAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}.
+      </p>
+    </div>
+  );
 }

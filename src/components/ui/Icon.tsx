@@ -10,7 +10,9 @@ const SIZES = {
   22: 'h-[22px] w-[22px]',
   24: 'h-6 w-6',
   26: 'h-[26px] w-[26px]',
+  28: 'h-7 w-7',
   32: 'h-8 w-8',
+  56: 'h-14 w-14',
 } as const;
 
 interface IconProps {

@@ -2,15 +2,14 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../../../api/client';
 import { PageContainer } from '../../../components/shell/PageContainer';
+import { PageHeader } from '../../../components/shell/PageHeader';
 import { actionPrimary, actionTonal } from '../../../components/ui/actionStyles';
 import { errorText } from '../../../components/ui/errorText';
 import { Icon } from '../../../components/ui/Icon';
 import { LoadingRegion, RetryButton, Skeleton, StateMessage } from '../../../components/ui/StateMessage';
 import { useNow } from '../../../hooks/useNow';
 import { useResource } from '../../../hooks/useResource';
-import { HistoryMetrics } from '../components/HistoryMetrics';
 import { HistoryToolbar } from '../components/HistoryToolbar';
-import { PolicyBanner } from '../components/PolicyBanner';
 import { RecordCard } from '../components/RecordCard';
 import { countByFilter, viewRecords, type HistoryFilter, type HistorySort } from '../historyView';
 import { buildHistoryRecords, summarizeHistory } from '../records';
@@ -45,14 +44,18 @@ export default function HistoryPage() {
 
   return (
     <PageContainer>
-      <header className="flex flex-col justify-between gap-space-lg lg:flex-row lg:items-end">
-        <div className="flex max-w-2xl flex-col gap-space-xs">
-          <h1 className="font-headline-xl text-headline-xl-mobile text-primary md:text-headline-xl">
-            History
-          </h1>
-        </div>
-        {hasRecords && <HistoryMetrics summary={summary} />}
-      </header>
+      <PageHeader
+        title="History"
+        subtitle="Review completed seminars, attendance records, and issued certificates."
+        meta={
+          hasRecords ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-maroon-container px-3 py-1 font-label-sm text-label-sm tabular-nums text-primary">
+              <Icon name="workspace_premium" size={14} />
+              {summary.ready} / {summary.completed} certificates ready
+            </span>
+          ) : null
+        }
+      />
 
       {state.status === 'loading' && (
         <LoadingRegion label="Loading your history" className="flex flex-col gap-space-md">
@@ -99,8 +102,6 @@ export default function HistoryPage() {
               You are offline. Showing the history saved on this device.
             </p>
           )}
-
-          <PolicyBanner />
 
           <HistoryToolbar
             query={query}

@@ -2,13 +2,12 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { api } from '../../../api/client';
 import { PageContainer } from '../../../components/shell/PageContainer';
-import { actionDisabled, actionPrimary, actionTonal } from '../../../components/ui/actionStyles';
+import { actionDisabled, actionPrimary } from '../../../components/ui/actionStyles';
 import { errorText } from '../../../components/ui/errorText';
 import { Icon } from '../../../components/ui/Icon';
 import { LoadingRegion, RetryButton, Skeleton, StateMessage } from '../../../components/ui/StateMessage';
 import { useNow } from '../../../hooks/useNow';
 import { useResource } from '../../../hooks/useResource';
-import { useProfile } from '../../../session/ProfileProvider';
 import { expireSession } from '../../../session/storage';
 import { formatClockTime, formatDate, formatTimeRange } from '../../seminars/format';
 import { getAttendance } from '../../seminars/status';
@@ -50,7 +49,7 @@ function AttendanceProgress({ record, attendedMinutes, durationMinutes }: {
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap items-baseline justify-between gap-1">
         <span className="font-body-sm text-body-sm text-text-secondary">Logged duration</span>
-        <div className="flex items-baseline gap-2">
+        <div className="flex items-baseline gap-2 tabular-nums">
           <span className="font-title-md text-title-md text-on-surface">
             {attendedMinutes === null ? 'Not counted' : `${attendedMinutes} of ${durationMinutes} minutes`}
           </span>
@@ -76,7 +75,7 @@ function AttendanceProgress({ record, attendedMinutes, durationMinutes }: {
         </div>
         <div className="absolute bottom-0 top-0 flex -translate-x-1/2 flex-col items-center" style={{ left: `${marker}%` }}>
           <div className="h-5 w-0.5 bg-on-surface" />
-          <span className="mt-1 whitespace-nowrap font-caption text-caption text-text-subtle">
+          <span className="mt-1 whitespace-nowrap font-caption text-caption tabular-nums text-text-subtle">
             Required: {Math.ceil((durationMinutes * threshold) / 100)} minutes ({threshold}%)
           </span>
         </div>
@@ -104,8 +103,8 @@ function Checkpoint({
   const stateText = state === 'met' ? 'Validated' : state === 'pending' ? 'Awaiting validation' : 'Not recorded';
   return (
     <div className="flex flex-col gap-1.5 rounded-lg bg-surface-light p-4">
-      <span className="font-caption text-caption uppercase tracking-wider text-text-subtle">{title}</span>
-      <span className="font-body-base-medium text-body-base-medium text-on-surface">
+      <span className="font-caption text-caption text-text-subtle">{title}</span>
+      <span className="font-body-base-medium text-body-base-medium tabular-nums text-on-surface">
         {detail}: {at ? formatClockTime(at) : 'Not recorded'}
       </span>
       <span className={`inline-flex items-center gap-1 pt-1 font-body-sm-medium text-body-sm-medium ${state === 'met' ? 'text-status-available' : state === 'pending' ? 'text-secondary-accent' : 'text-text-subtle'}`}>
@@ -120,20 +119,76 @@ export default function HistorySummaryPage() {
   const { id = '' } = useParams();
   const now = useNow();
   const resource = useResource(() => api.getSeminar(id), `history-summary-${id}`);
-  const { state: profileState } = useProfile();
-  const profile = profileState.status === 'success' ? profileState.data : null;
   const [downloading, setDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
+  const [preview, setPreview] = useState<{
+    key: string;
+    blob: Blob | null;
+    url: string | null;
+    error: string | null;
+  } | null>(null);
+  const [previewAttempt, setPreviewAttempt] = useState(0);
   const item = resource.state.status === 'success' ? resource.state.data : null;
   const record = item && now !== null ? (buildHistoryRecords([item], now)[0] ?? null) : null;
+  const readySeminarId = record?.status === 'ready' ? record.seminar.id : null;
+  const previewKey = readySeminarId ? `${readySeminarId}:${previewAttempt}` : null;
+  const activePreview = previewKey && preview?.key === previewKey ? preview : null;
+  const previewStatus = !previewKey
+    ? 'idle'
+    : !activePreview
+      ? 'loading'
+      : activePreview.url
+        ? 'ready'
+        : 'error';
+  const previewBlob = activePreview?.blob ?? null;
+  const previewUrl = activePreview?.url ?? null;
+  const previewError = activePreview?.error ?? null;
 
   useEffect(() => {
     document.title = record ? `${record.seminar.title} summary - Seminex` : 'History summary - Seminex';
   }, [record]);
 
+  useEffect(() => {
+    if (!readySeminarId || !previewKey) return;
+
+    let cancelled = false;
+    let objectUrl: string | null = null;
+
+    void api.getCertificate(readySeminarId).then((result) => {
+      if (cancelled) return;
+      if (result.ok) {
+        objectUrl = URL.createObjectURL(result.data);
+        setPreview({ key: previewKey, blob: result.data, url: objectUrl, error: null });
+        return;
+      }
+      if (result.error.code === 'session_expired') {
+        expireSession();
+        return;
+      }
+      setPreview({
+        key: previewKey,
+        blob: null,
+        url: null,
+        error:
+          result.error.code === 'not_available'
+            ? 'Your certificate preview is not available yet.'
+            : errorText(result.error.code),
+      });
+    });
+
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [readySeminarId, previewKey]);
+
   async function handleDownload() {
     if (!record || record.status !== 'ready' || downloading) return;
     setDownloadError(null);
+    if (previewBlob) {
+      saveBlob(previewBlob, `${record.seminar.reference}-certificate.pdf`);
+      return;
+    }
     setDownloading(true);
     const result = await api.getCertificate(record.seminar.id);
     setDownloading(false);
@@ -222,21 +277,21 @@ export default function HistorySummaryPage() {
 
   return (
     <PageContainer>
-      <header className="flex flex-col gap-space-md">
+      <header className="flex flex-col gap-space-md border-b border-border-subtle pb-space-lg">
         <Link to="/history" className="inline-flex min-h-11 w-fit items-center gap-1.5 font-body-sm-medium text-body-sm-medium text-text-secondary transition-colors hover:text-primary">
           <Icon name="arrow_back" size={18} />
           History
         </Link>
         <div className="flex flex-col gap-space-xs">
           <div className="flex flex-wrap items-center gap-space-sm">
-            <h1 className="font-headline-lg text-headline-lg-mobile text-on-surface md:text-headline-lg">{seminar.title}</h1>
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-status-finished-container px-2.5 py-1 font-label-sm text-label-sm uppercase tracking-wider text-status-finished">
+            <h1 className="font-headline-xl text-headline-xl-mobile tracking-[-0.02em] text-on-surface md:text-headline-xl">{seminar.title}</h1>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-status-finished-container px-2.5 py-1 font-label-sm text-label-sm text-status-finished">
               <Icon name="flag" size={14} />Finished
             </span>
             <RecordStatusBadge status={record.status} />
           </div>
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2 pt-1 font-body-sm text-body-sm text-text-secondary">
-            <span className="inline-flex items-center gap-1.5">
+            <span className="inline-flex items-center gap-1.5 tabular-nums">
               <Icon name="calendar_today" size={18} className="text-text-subtle" />
               {formatDate(seminar.startsAt)}, {formatTimeRange(seminar.startsAt, seminar.endsAt)} ({attendance.durationMinutes} minutes)
             </span>
@@ -258,7 +313,7 @@ export default function HistorySummaryPage() {
 
       <div className="grid grid-cols-1 items-start gap-space-lg lg:grid-cols-12">
         <div className="flex flex-col gap-space-lg lg:col-span-7">
-          <section className="flex flex-col gap-space-lg rounded-lg bg-surface-card p-5 shadow-card md:p-6">
+          <section className="flex flex-col gap-space-lg rounded-xl border border-border-subtle bg-surface-card p-5 md:p-6">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-subtle pb-3">
               <SummaryHeading>Attendance</SummaryHeading>
               <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-label-sm text-label-sm uppercase ${checkpointsValidated ? 'bg-status-available-container text-status-available' : registration.timeOut && !registration.timeOut.validated ? 'bg-status-finished-container text-status-finished' : 'bg-status-full-container text-status-full'}`}>
@@ -285,7 +340,7 @@ export default function HistorySummaryPage() {
             </div>
           </section>
 
-          <section className="flex flex-col gap-space-md rounded-lg bg-surface-card p-5 shadow-card md:p-6">
+          <section className="flex flex-col gap-space-md rounded-xl border border-border-subtle bg-surface-card p-5 md:p-6">
             <div className="flex items-center gap-2 border-b border-border-subtle pb-3">
               <Icon name="rate_review" size={24} className="text-primary-container" />
               <h2 className="font-headline-sm text-headline-sm text-on-surface">Evaluation</h2>
@@ -294,7 +349,7 @@ export default function HistorySummaryPage() {
               <div className="flex flex-col gap-3 rounded-lg bg-surface-light p-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-2.5">
                   <Icon name="check_circle" size={20} className="text-status-available" />
-                  <span className="font-body-base-medium text-body-base-medium text-on-surface">Submitted on {formatDate(evaluationDate)} at {formatClockTime(evaluationDate)}</span>
+                  <span className="font-body-base-medium text-body-base-medium tabular-nums text-on-surface">Submitted on {formatDate(evaluationDate)} at {formatClockTime(evaluationDate)}</span>
                 </div>
                 <span className="font-caption text-caption text-text-subtle">Completed</span>
               </div>
@@ -305,7 +360,7 @@ export default function HistorySummaryPage() {
                   <span className="font-body-base-medium text-body-base-medium text-on-surface">Post-seminar feedback required</span>
                 </div>
                 {record.evaluationDue ? (
-                  <Link to={`/my-seminars/${seminar.id}/evaluation`} className={`${actionPrimary} min-h-9 self-start px-4 sm:self-auto`}>
+                  <Link to={`/my-seminars/${seminar.id}/evaluation`} className={`${actionPrimary} self-start px-4 sm:self-auto`}>
                     <Icon name="rate_review" size={16} />Answer evaluation
                   </Link>
                 ) : (
@@ -317,7 +372,7 @@ export default function HistorySummaryPage() {
         </div>
 
         <aside className="lg:col-span-5">
-          <section className="flex flex-col gap-space-lg rounded-lg bg-surface-card p-5 shadow-card md:p-6">
+          <section className="flex flex-col gap-space-lg rounded-xl border border-border-subtle bg-surface-card p-5 md:p-6">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-subtle pb-3">
               <div className="flex items-center gap-2">
                 <Icon name="workspace_premium" size={24} className="text-primary-container" />
@@ -330,20 +385,55 @@ export default function HistorySummaryPage() {
             </div>
 
             <div className="flex flex-col gap-1">
-              <span className="font-caption text-caption font-semibold uppercase tracking-wider text-text-subtle">Eligibility verification</span>
+              <span className="font-caption text-caption font-semibold text-text-subtle">Eligibility verification</span>
               <CheckResult met={hasMinimumAttendance}>Attended at least {record.requiredPercent}%</CheckResult>
               <CheckResult met={checkpointsValidated}>Time-In and Time-Out validated</CheckResult>
               <CheckResult met={record.evaluationSubmitted}>Evaluation submitted</CheckResult>
             </div>
 
             {certificateReady ? (
-              <div className="flex flex-col items-center gap-3 rounded-lg bg-surface-light p-6 text-center">
-                <span className="font-caption text-caption uppercase tracking-widest text-text-subtle">Certificate of attendance</span>
-                <span className="font-headline-md text-headline-md text-maroon-dark">
-                  {profile ? `${profile.firstName} ${profile.lastName}` : 'Seminex Student'}
-                </span>
-                <p className="max-w-xs font-body-sm text-body-sm leading-snug text-text-secondary">for completing {seminar.title}</p>
-                <span className="mt-1 font-caption text-caption text-text-subtle">{formatDate(seminar.endsAt)}</span>
+              <div className="flex flex-col gap-space-sm">
+                {previewStatus === 'loading' || previewStatus === 'idle' ? (
+                  <LoadingRegion label="Loading certificate preview">
+                    <Skeleton className="aspect-[1.414/1] w-full rounded-lg" />
+                  </LoadingRegion>
+                ) : previewStatus === 'ready' && previewUrl ? (
+                  <>
+                    <div className="overflow-hidden rounded-lg border border-border-subtle bg-surface-container-low">
+                      <iframe
+                        title={`Certificate for ${seminar.title}`}
+                        src={`${previewUrl}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
+                        className="aspect-[1.414/1] w-full bg-white"
+                      />
+                    </div>
+                    <div className="flex justify-end">
+                      <a
+                        href={previewUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex min-h-11 items-center gap-1.5 px-2 font-body-sm-medium text-body-sm-medium text-primary transition-colors hover:text-maroon-dark"
+                      >
+                        <span>Open full screen</span>
+                        <Icon name="open_in_new" size={16} />
+                      </a>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex flex-col items-center gap-space-sm rounded-lg bg-surface-container-low p-space-lg text-center">
+                    <Icon name="workspace_premium" size={28} className="text-primary" />
+                    <p className="font-body-sm text-body-sm text-text-secondary">
+                      {previewError ?? 'Could not load certificate preview.'}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setPreviewAttempt((attempt) => attempt + 1)}
+                      className="inline-flex min-h-11 items-center gap-1.5 font-body-sm-medium text-body-sm-medium text-primary underline"
+                    >
+                      <Icon name="refresh" size={16} />
+                      <span>Retry preview</span>
+                    </button>
+                  </div>
+                )}
               </div>
             ) : (
               <div className={`flex items-start gap-2 rounded-lg p-3 font-body-sm text-body-sm ${record.status === 'evaluation_pending' ? 'bg-status-ongoing-container text-on-secondary-container' : 'bg-error-container text-on-error-container'}`}>
@@ -371,12 +461,6 @@ export default function HistorySummaryPage() {
             </div>
           </section>
         </aside>
-      </div>
-
-      <div className="flex justify-start">
-        <Link to="/history" className={actionTonal}>
-          <Icon name="arrow_back" size={18} />Back to History
-        </Link>
       </div>
     </PageContainer>
   );

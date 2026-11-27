@@ -1,0 +1,9 @@
+{
+  "useMarkdownLinks": false,
+  "newLinkFormat": "shortest",
+  "attachmentFolderPath": "Attachments",
+  "alwaysUpdateLinks": true,
+  "strictLineBreaks": false,
+  "livePreview": true,
+  "showFrontmatter": true
+}

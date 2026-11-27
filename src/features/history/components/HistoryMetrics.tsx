@@ -10,7 +10,7 @@ function Metric({ icon, value, label, tone }: { icon: IconName; value: string; l
       </span>
       <div className="flex flex-col-reverse">
         <dt className="font-caption text-caption text-text-secondary">{label}</dt>
-        <dd className="font-headline-sm text-headline-sm font-bold leading-tight text-on-surface">{value}</dd>
+        <dd className="font-headline-sm text-headline-sm font-bold leading-tight tabular-nums text-on-surface">{value}</dd>
       </div>
     </div>
   );
@@ -19,7 +19,7 @@ function Metric({ icon, value, label, tone }: { icon: IconName; value: string; l
 /** Both numbers are computed from the records, never typed in. */
 export function HistoryMetrics({ summary }: { summary: HistorySummary }) {
   return (
-    <dl className="flex items-center gap-space-md self-start rounded-lg bg-surface-card p-space-md shadow-card">
+    <dl className="flex items-center gap-space-md self-start rounded-lg border border-border-subtle bg-surface-card p-space-md">
       <Metric
         icon="workspace_premium"
         value={`${summary.ready} / ${summary.completed}`}

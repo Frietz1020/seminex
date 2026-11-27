@@ -1,0 +1,20 @@
+{
+  "collapse-filter": false,
+  "search": "",
+  "showTags": true,
+  "showAttachments": false,
+  "hideUnresolved": false,
+  "showOrphans": true,
+  "colorGroups": [
+    { "query": "tag:#moc", "color": { "a": 1, "rgb": 8002588 } },
+    { "query": "tag:#architecture", "color": { "a": 1, "rgb": 11897381 } },
+    { "query": "tag:#workflow", "color": { "a": 1, "rgb": 1467700 } },
+    { "query": "tag:#schema", "color": { "a": 1, "rgb": 1920728 } },
+    { "query": "tag:#edge-function", "color": { "a": 1, "rgb": 14251782 } },
+    { "query": "tag:#frontend", "color": { "a": 1, "rgb": 6983016 } }
+  ],
+  "showArrow": true,
+  "textFadeMultiplier": 0,
+  "nodeSizeMultiplier": 1.15,
+  "lineSizeMultiplier": 1
+}

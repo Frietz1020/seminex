@@ -17,17 +17,17 @@ export function StateMessage({ icon, title, children, action, role }: StateMessa
   return (
     <div
       role={role}
-      className="flex flex-col items-center justify-center rounded-xl bg-surface-card p-space-xl text-center shadow-card"
+      className="flex flex-col items-center justify-center rounded-xl border border-border-subtle bg-surface-card px-space-lg py-12 text-center"
     >
       <div
         aria-hidden="true"
-        className="mb-space-sm flex h-12 w-12 items-center justify-center rounded-full bg-surface-container text-text-subtle"
+        className="mb-space-md flex h-14 w-14 items-center justify-center rounded-full bg-maroon-container text-primary ring-4 ring-maroon-container/40"
       >
-        <Icon name={icon} size={24} />
+        <Icon name={icon} size={26} />
       </div>
-      <h3 className="font-title-md text-title-md text-on-surface">{title}</h3>
-      <p className="mt-1 max-w-sm font-body-sm text-body-sm text-text-secondary">{children}</p>
-      {action && <div className="mt-space-md">{action}</div>}
+      <h3 className="font-headline-sm text-headline-sm text-on-surface">{title}</h3>
+      <p className="mt-2 max-w-md font-body-sm text-body-sm text-text-secondary">{children}</p>
+      {action && <div className="mt-space-lg">{action}</div>}
     </div>
   );
 }

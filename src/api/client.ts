@@ -79,16 +79,36 @@ function cached<T>(data: T): ApiResult<T> {
   return { ok: true, data, fromCache: true };
 }
 
+let prefetchTimeCache: { nowMs: number; fetchedAt: number } | null = null;
+let prefetchTimeInFlight: Promise<number | null> | null = null;
+
+async function getPrefetchNow(): Promise<number | null> {
+  if (prefetchTimeCache && Date.now() - prefetchTimeCache.fetchedAt < 60_000) {
+    return prefetchTimeCache.nowMs + (Date.now() - prefetchTimeCache.fetchedAt);
+  }
+  if (prefetchTimeInFlight) return prefetchTimeInFlight;
+  prefetchTimeInFlight = serverTimeApi.getServerTime()
+    .then((result) => {
+      if (!result.ok) return null;
+      const nowMs = Date.parse(result.data.now);
+      if (!Number.isFinite(nowMs)) return null;
+      prefetchTimeCache = { nowMs, fetchedAt: Date.now() };
+      return nowMs;
+    })
+    .finally(() => {
+      prefetchTimeInFlight = null;
+    });
+  return prefetchTimeInFlight;
+}
+
 /** Downloads tickets for registered seminars that have not finished, so they work offline. */
 async function prefetchTickets(student: string, items: SeminarListItem[]): Promise<void> {
-  const serverTime = await serverTimeApi.getServerTime();
-  if (!serverTime.ok) return;
-  const now = Date.parse(serverTime.data.now);
-  if (!Number.isFinite(now)) return;
-  for (const item of items) {
-    if (!item.registration) continue;
+  const uncached = items.filter((item) => item.registration && !readTicket(student, item.seminar.id));
+  if (uncached.length === 0) return;
+  const now = await getPrefetchNow();
+  if (now === null) return;
+  for (const item of uncached) {
     if (new Date(item.seminar.endsAt).getTime() <= now) continue;
-    if (readTicket(student, item.seminar.id)) continue;
     void seminarApi.getTicket(item.seminar.id).then((result) => {
       if (result.ok) cacheTicket(student, result.data);
     });
